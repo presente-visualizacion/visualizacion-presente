@@ -14,6 +14,10 @@ import { ListaDiapositivas } from './ListaDiapositivas';
 
 interface Props {
   presentacion: Presentacion;
+  /** Revisión con la que se cargó la página. */
+  revision: number;
+  /** Si se muestra el botón "Editar". */
+  editable: boolean;
   indiceInicial: number;
   periodoInicial: IdPeriodo;
 }

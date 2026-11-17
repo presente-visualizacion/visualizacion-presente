@@ -5,6 +5,8 @@ import './globals.css';
 export const metadata: Metadata = {
   title: { default: 'Visualización Presente', template: '%s | Visualización Presente' },
   description: 'Herramienta para crear y presentar informes con datos por mes.',
+  // Herramienta interna: que los buscadores no la listen.
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = { themeColor: '#D4145A' };

@@ -490,11 +490,12 @@ y dejar el desarrollo local con la muestra; no cambiar el resto del diseño.
 
 ### Acceso
 
-Archivo nuevo `src/lib/acceso.ts` con `puedeEditar(request): Promise<boolean>`.
-Hoy devuelve siempre `true` (lo acordado: edita cualquiera con el enlace). La
-ruta de guardado y el botón "Editar" preguntan **solo** ahí. Para poner clave
+Archivo `src/lib/acceso.ts` con `puedeEditar(): Promise<boolean>`. Hoy
+devuelve siempre `true` (lo acordado: edita cualquiera con el enlace). La ruta
+de guardado y el botón "Editar" preguntan **solo** ahí. Para poner clave
 después: variable `CLAVE_EDICION` en Vercel, una pantalla que la pide y una
-cookie; se cambia este archivo y nada más. No se programa en la 2A.
+cookie que se lee ahí con `cookies()` de `next/headers`; se cambia este archivo
+y nada más. No se programa en la 2A.
 
 ### Guardado en el navegador
 
@@ -613,7 +614,7 @@ Si el uso se acaba a mitad, lo anterior queda publicado y funcionando.
 - [x] **2A.1 Operaciones y validación.** `.gitignore`, `operaciones.ts`,
   `validar.ts`, `interpretarNumero` y sus pruebas. Sin pantallas ni base. La
   muestra debe pasar la validación.
-- [ ] **2A.2 Base de datos.** Motor, esquema, almacén, siembra, las dos rutas,
+- [x] **2A.2 Base de datos.** Motor, esquema, almacén, siembra, las dos rutas,
   inicio dinámico, `robots`. Pruebas sobre PGlite: crear, guardar, choque de
   revisiones con reintento, copia cada 10 minutos, tope de copias. El sitio se
   ve igual que antes, pero ya lee de la base.

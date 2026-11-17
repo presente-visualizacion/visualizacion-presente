@@ -1,18 +1,67 @@
 // Almacén de presentaciones.
 //
 // Todo el resto de la aplicación lee y guarda presentaciones a través de esta
-// interfaz. En la etapa 1 la única implementación es la de muestra (solo
-// lectura, desde un archivo del repositorio). En la etapa 2 se agrega la de
-// base de datos sin tocar las pantallas.
+// interfaz. Hay dos implementaciones: la de base de datos (`bd.ts`) y la de
+// muestra (`muestra.ts`), de solo lectura, que sirve mientras no se haya
+// conectado una base. El diseño está en "Diseño de la etapa 2A" de PLAN.md.
 
+import type { Operacion } from '../edicion/operaciones';
 import type { Presentacion, ResumenPresentacion } from '../tipos';
-import { almacenMuestra } from './muestra';
 
-export interface Almacen {
-  listar(): Promise<ResumenPresentacion[]>;
-  obtener(id: string): Promise<Presentacion | null>;
+export interface Guardada {
+  presentacion: Presentacion;
+  /** Sube en 1 con cada guardado. */
+  revision: number;
 }
 
-export function obtenerAlmacen(): Almacen {
-  return almacenMuestra;
+export type ResultadoGuardado =
+  | {
+      ok: true;
+      revision: number;
+      actualizado: string;
+      /** Otra persona guardó desde `revisionBase`: hay que traer la presentación de nuevo. */
+      ajenos: boolean;
+      /** Operaciones que se saltaron porque su destino ya no existe o cambió. */
+      omitidas: number;
+    }
+  | { ok: false; motivo: 'no-existe' | 'invalido' | 'ocupado'; detalle?: string };
+
+export interface Almacen {
+  /** true en el almacén de muestra: el visor esconde "Editar". */
+  soloLectura: boolean;
+  listar(): Promise<ResumenPresentacion[]>;
+  obtener(id: string): Promise<Guardada | null>;
+  /** Solo el número de revisión, para saber si hay cambios sin traer todo. */
+  revision(id: string): Promise<number | null>;
+  /** Aplica las operaciones sobre la versión más reciente y guarda. */
+  aplicar(id: string, revisionBase: number, ops: Operacion[]): Promise<ResultadoGuardado>;
+  /** Para importar presentaciones completas (etapas 3 a 5). */
+  crear(presentacion: Presentacion): Promise<void>;
+}
+
+// El almacén se guarda en `globalThis` para que sobreviva a las recargas de
+// `next dev`: la base local (PGlite) no admite dos instancias sobre la misma
+// carpeta.
+const global = globalThis as typeof globalThis & { __vpAlmacen?: Promise<Almacen> };
+
+async function crearAlmacen(): Promise<Almacen> {
+  const { almacenMuestra, presentacionMuestra } = await import('./muestra');
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+
+  // Producción sin base conectada: el sitio sigue funcionando, solo lectura.
+  if (!url && process.env.NODE_ENV === 'production') return almacenMuestra;
+
+  const { almacenBd } = await import('./bd');
+  const { motorNeon, motorPglite } = await import('./motor');
+  return almacenBd(() => (url ? motorNeon(url) : motorPglite('.datos-locales/pg')), { muestra: presentacionMuestra });
+}
+
+/**
+ * - Con `DATABASE_URL` (o `POSTGRES_URL`): base de datos de Neon.
+ * - Sin ella, en desarrollo: base local en `.datos-locales/` (ignorada por git).
+ * - Sin ella, en producción: presentación de muestra, solo lectura.
+ */
+export function obtenerAlmacen(): Promise<Almacen> {
+  global.__vpAlmacen ??= crearAlmacen();
+  return global.__vpAlmacen;
 }

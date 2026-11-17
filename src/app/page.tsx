@@ -3,10 +3,13 @@ import { Logo } from '@/components/Logo';
 import { obtenerAlmacen } from '@/lib/almacen';
 import { nombrePeriodo } from '@/lib/periodos';
 
+// La lista sale de la base de datos: se arma en cada visita, no al compilar.
+export const dynamic = 'force-dynamic';
+
 const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'UTC' });
 
 export default async function Inicio() {
-  const presentaciones = await obtenerAlmacen().listar();
+  const presentaciones = await (await obtenerAlmacen()).listar();
 
   return (
     <div className="min-h-full bg-white">
