@@ -18,7 +18,7 @@ original y sus datos reales no están en él; ver "Datos reales" más abajo.
 | Tema | Decisión |
 |---|---|
 | Dónde vive | En línea, con enlace para compartir. Repositorio `presente-visualizacion/visualizacion-presente`, publicación en Vercel en un proyecto nuevo, separado de la presentación original. |
-| Quién edita | Por ahora cualquiera con el enlace, sin clave. Debe quedar preparado para agregar usuarios o clave después. |
+| Quién edita | Quien tenga la clave del sitio (variable `CLAVE_EDICION` en Vercel, puesta el 2026-11-17). Sin la clave no se ve ni se edita nada. |
 | Presentaciones | Varias. Cada una con sus diapositivas y sus meses. |
 | Meses | Una presentación contiene todos sus meses. Barra de meses siempre visible: al elegir un mes cambia toda la presentación. La presentación se hace cada mes con información de mes vencido. Botón "Nuevo mes" que copia el último mes. Opción de comparar con el mes anterior. |
 | Excel | Se puede cargar cualquier Excel: se elige hoja, columna del eje y columnas de series, tipo de gráfico y mes. La herramienta recuerda esa configuración para el mes siguiente. |
@@ -44,9 +44,8 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
   datos. Y el enlace no es secreto: el repositorio es público y GitHub suele
   mostrar el enlace del sitio en la página del repositorio (sección
   "Deployments"). Mientras solo haya datos inventados no importa. Antes de
-  cargar los datos reales (etapas 3 y 4) conviene decidir si se pone una clave;
-  la etapa 2A deja el punto de control listo (ver "Acceso" en el diseño de la
-  2A) y activarla después es un cambio pequeño.
+  cargar los datos reales se puso una clave (2026-11-17, ver "Acceso" en el
+  diseño de la 2A): el enlace solo muestra la pantalla de entrada.
 
 ## Etapas
 
@@ -150,7 +149,8 @@ src/
     periodos.ts           meses: nombres, agrupación, {mes} en textos
     formato.ts            números en formato colombiano
     datos.ts              filas y valores del mes seleccionado
-    acceso.ts             quién puede editar (hoy, cualquiera)
+    acceso.ts, clave.ts   quién puede ver y editar (la clave del sitio)
+  proxy.ts                pide la clave antes de cada página (src/proxy.ts)
     edicion/              operaciones de edición, validación, pegado de Excel,
                           plantillas (ids, bloques nuevos, duplicar)
     color.ts              contraste de colores (aviso en el tema)
@@ -533,12 +533,27 @@ en local, detener el servidor y borrar la carpeta `.datos-locales/`.
 
 ### Acceso
 
-Archivo `src/lib/acceso.ts` con `puedeEditar(): Promise<boolean>`. Hoy
-devuelve siempre `true` (lo acordado: edita cualquiera con el enlace). La ruta
-de guardado y el botón "Editar" preguntan **solo** ahí. Para poner clave
-después: variable `CLAVE_EDICION` en Vercel, una pantalla que la pide y una
-cookie que se lee ahí con `cookies()` de `next/headers`; se cambia este archivo
-y nada más. No se programa en la 2A.
+**Clave puesta el 2026-11-17.** Cómo funciona:
+
+- La clave vive solo en la variable `CLAVE_EDICION` de Vercel (Settings →
+  Environment Variables). Nunca en el repositorio ni en el chat.
+- `src/proxy.ts` corre antes de cada página y ruta. Sin una cookie válida,
+  las páginas van a `/entrar?desde=...` y la API responde 401. Pasan sin
+  clave: `/entrar`, `/api/entrar`, `/api/salir`, `/_next/`, el ícono y los
+  logos.
+- `/entrar` pide la clave; el formulario va a `POST /api/entrar`. Si es
+  correcta, pone la cookie `vp_acceso` (httpOnly, secure, 30 días) y vuelve a
+  la página de origen (solo rutas del mismo sitio). Si no, espera 1 segundo y
+  muestra el aviso.
+- La cookie no guarda la clave sino una ficha HMAC-SHA256 de ella
+  (`src/lib/clave.ts`). Cambiar la clave en Vercel (y volver a publicar)
+  cierra la sesión de todos.
+- `puedeEditar()` en `src/lib/acceso.ts` revisa la misma cookie: segunda
+  barrera para la ruta de guardado y el botón "Editar".
+- "Salir" en el inicio borra la cookie.
+- Sin `CLAVE_EDICION` (desarrollo local, pruebas) el sitio queda abierto.
+- Es una clave compartida, no usuarios: no se sabe quién cambió qué. Si más
+  adelante hace falta, se cambia `clave.ts` por usuarios sin tocar lo demás.
 
 ### Guardado en el navegador
 
@@ -721,9 +736,8 @@ Una sola vez, cuando el paso 2A.2 esté subido:
 
 ### Riesgos y cosas a vigilar
 
-- **Edición abierta y datos reales.** Ver "Pendiente de decidir". Mientras no
-  haya clave, cualquiera con el enlace puede cambiar los datos; el historial
-  permite recuperarlos, pero no impide que los vean.
+- **Datos reales.** Resuelto con la clave del sitio (2026-11-17). Si la clave
+  se filtra, se cambia en Vercel y se vuelve a publicar.
 - **Vista previa de Vercel con la base de verdad.** Si Preview queda conectado
   a la misma base, una rama de prueba edita los datos reales. Por eso el paso
   3 de arriba.
@@ -1351,8 +1365,8 @@ subirlo):
 
 ### Lo que hace la usuaria
 
-1. Poner la clave de edición antes de importar (los datos son reales y la
-   edición está abierta): ver "Acceso" en el diseño de la 2A.
+1. ~~Poner la clave antes de importar~~ Hecho el 2026-11-17 (ver "Acceso" en
+   el diseño de la 2A).
 2. En el sitio publicado, en el inicio: "Importar la presentación anterior" →
    elegir `InfoComite.json` (o descargar de nuevo
    `https://presentacion-comite-2026.vercel.app/api/presentation/shared` y

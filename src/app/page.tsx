@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Importar } from '@/components/inicio/Importar';
 import { Logo } from '@/components/Logo';
-import { puedeEditar } from '@/lib/acceso';
+import { hayClave, puedeEditar } from '@/lib/acceso';
 import { obtenerAlmacen } from '@/lib/almacen';
 import { nombrePeriodo } from '@/lib/periodos';
 
@@ -22,6 +22,13 @@ export default async function Inicio() {
         <div className="flex items-center gap-3">
           <Logo alto={40} />
           <span className="text-lg font-semibold">Visualización Presente</span>
+          {hayClave() && (
+            <form method="post" action="/api/salir" className="ml-auto">
+              <button type="submit" className="text-sm text-tinta-suave underline-offset-4 hover:text-primario hover:underline">
+                Salir
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="mt-12 flex flex-wrap items-end justify-between gap-4">

@@ -24,6 +24,8 @@ Abre http://localhost:3000.
   cascada.
 - Modo presentación en pantalla completa, navegación con teclado y versión
   para celular.
+- **Clave**: si la variable `CLAVE_EDICION` está en Vercel, el sitio pide la
+  clave antes de mostrar o editar nada (ver "Acceso" en PLAN.md).
 - **Edición** (en computador): botón "Editar" con un panel para cambiar el
   nombre de la presentación, títulos, textos, cifras y los datos de gráficos y
   tablas, con pegado directo desde Excel. También agregar, duplicar, mover y
