@@ -380,7 +380,8 @@ la 2B):
    operaciones por celda.
 4. `periodo: null` es el valor único (cuando `porPeriodo` es falso);
    `periodo: "AAAA-MM"` es el valor de ese mes (cuando es verdadero). Si no
-   coincide con el `porPeriodo` actual, la operación se rechaza.
+   coincide con el `porPeriodo` actual, la operación se salta igual que en la
+   regla 7 (pasa cuando otra persona cambió el interruptor entre tanto).
 5. `valor: null` borra el valor de ese mes (hace falta para deshacer "empecé a
    llenar un mes que estaba vacío").
 6. `porPeriodo` a verdadero copia el valor único a todos los meses de la
@@ -609,7 +610,7 @@ puede llegar a tener datos reales y el repositorio es público.
 Cada paso termina compilando, con sus pruebas, subido a GitHub y marcado aquí.
 Si el uso se acaba a mitad, lo anterior queda publicado y funcionando.
 
-- [ ] **2A.1 Operaciones y validación.** `.gitignore`, `operaciones.ts`,
+- [x] **2A.1 Operaciones y validación.** `.gitignore`, `operaciones.ts`,
   `validar.ts`, `interpretarNumero` y sus pruebas. Sin pantallas ni base. La
   muestra debe pasar la validación.
 - [ ] **2A.2 Base de datos.** Motor, esquema, almacén, siembra, las dos rutas,

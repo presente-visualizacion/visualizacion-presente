@@ -10,3 +10,6 @@ next-env.d.ts
 
 # Datos reales: nunca se suben (ver PLAN.md)
 /referencia/
+
+# Base de datos local de desarrollo: puede tener datos reales (ver PLAN.md)
+/.datos-locales/
