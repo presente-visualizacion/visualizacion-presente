@@ -44,3 +44,9 @@ export function mesParaCopiar(periodos: IdPeriodo[], periodo: IdPeriodo, tiene: 
   if (anteriores.length) return anteriores[anteriores.length - 1];
   return periodos.find((p) => p > periodo && tiene(p)) ?? null;
 }
+
+/** El mes anterior a `periodo` en la lista, o null si es el primero. */
+export function mesAnterior(periodos: IdPeriodo[], periodo: IdPeriodo): IdPeriodo | null {
+  const i = periodos.indexOf(periodo);
+  return i > 0 ? periodos[i - 1] : null;
+}

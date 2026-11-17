@@ -10,7 +10,7 @@ const cargar = cache(async (id: string) => (await obtenerAlmacen()).obtener(id))
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ d?: string; mes?: string }>;
+  searchParams: Promise<{ d?: string; mes?: string; comparar?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PaginaPresentacion({ params, searchParams }: Props) {
-  const [{ id }, { d, mes }] = await Promise.all([params, searchParams]);
+  const [{ id }, { d, mes, comparar }] = await Promise.all([params, searchParams]);
   const guardada = await cargar(id);
   if (!guardada) notFound();
   const { presentacion, revision } = guardada;
@@ -30,5 +30,8 @@ export default async function PaginaPresentacion({ params, searchParams }: Props
   const indice = Math.min(Math.max((Number(d) || 1) - 1, 0), presentacion.diapositivas.length - 1);
   const periodo = mes && presentacion.periodos.includes(mes) ? mes : presentacion.periodos[presentacion.periodos.length - 1];
 
-  return <Visor presentacion={presentacion} revision={revision} editable={editable} indiceInicial={indice} periodoInicial={periodo} />;
+  // ?comparar=anterior o ?comparar=2026-08: abre comparando con ese mes.
+  const compararInicial = comparar === undefined ? false : presentacion.periodos.includes(comparar) ? comparar : true;
+
+  return <Visor presentacion={presentacion} revision={revision} editable={editable} indiceInicial={indice} periodoInicial={periodo} compararInicial={compararInicial} />;
 }

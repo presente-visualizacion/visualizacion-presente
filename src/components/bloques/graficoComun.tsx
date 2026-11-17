@@ -1,5 +1,6 @@
 // Piezas que comparten los dibujos de gráficos (Grafico.tsx y GraficosEspeciales.tsx).
 
+import { createContext, useContext } from 'react';
 import { ReferenceLine } from 'recharts';
 import type { BloqueGrafico, Columna, ConjuntoDatos, Fila, RangoEje, Tema } from '@/lib/tipos';
 
@@ -87,6 +88,14 @@ export function partirTexto(texto: string, tamano: number, ancho: number, lineas
 
 export function reducirMovimiento(): boolean {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** true en la página para PDF: los gráficos se dibujan quietos, ya terminados. */
+export const SinAnimacion = createContext(false);
+
+/** Si los gráficos se animan al aparecer. */
+export function usarAnimar(): boolean {
+  return !useContext(SinAnimacion) && !reducirMovimiento();
 }
 
 // Recharts mide el texto ya escalado por el lienzo y se queda corto, así que

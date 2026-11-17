@@ -26,6 +26,30 @@ export type ResultadoGuardado =
     }
   | { ok: false; motivo: 'no-existe' | 'invalido' | 'ocupado'; detalle?: string };
 
+/** Una copia del historial, sin su contenido. */
+export interface ResumenVersion {
+  id: number;
+  /** Revisión que tenía la presentación cuando se hizo la copia. */
+  revision: number;
+  /**
+   * - auto: estado antes de una tanda de cambios (se hace sola cada 10 minutos de edición).
+   * - manual: guardada a mano con un nombre.
+   * - restauracion: estado justo antes de volver a otra copia.
+   * - importacion: estado antes de importar encima.
+   */
+  motivo: 'auto' | 'manual' | 'restauracion' | 'importacion';
+  nota?: string;
+  creado: string;
+  diapositivas: number;
+  periodos: string[];
+  /** Bytes que ocupa en la base (ya comprimida). */
+  tamano: number;
+}
+
+export type ResultadoRestaurar =
+  | { ok: true; revision: number }
+  | { ok: false; motivo: 'no-existe' | 'invalido'; detalle?: string };
+
 export interface Almacen {
   /** true en el almacén de muestra: el visor esconde "Editar". */
   soloLectura: boolean;
@@ -43,6 +67,14 @@ export interface Almacen {
   recuperar(id: string): Promise<boolean>;
   /** Las que están en la papelera, la más reciente primero. */
   listarEliminadas(): Promise<ResumenPresentacion[]>;
+  /** Copias del historial, la más reciente primero. */
+  listarVersiones(id: string): Promise<ResumenVersion[]>;
+  /** Una copia con su contenido. null si no existe o es de otra presentación. */
+  obtenerVersion(id: string, version: number): Promise<(ResumenVersion & { presentacion: Presentacion }) | null>;
+  /** Guarda el estado actual como copia con nombre. null si la presentación no existe. */
+  guardarVersion(id: string, nota: string): Promise<ResumenVersion | null>;
+  /** Vuelve a una copia. Antes deja el estado actual en el historial. */
+  restaurar(id: string, version: number, nota: string): Promise<ResultadoRestaurar>;
 }
 
 // El almacén se guarda en `globalThis` para que sobreviva a las recargas de

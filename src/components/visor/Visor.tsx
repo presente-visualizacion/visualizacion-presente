@@ -3,18 +3,19 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Maximize, Pencil, Redo2, Undo2, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Columns2, History, Maximize, Pencil, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
 import { Diapositiva } from '@/components/diapositivas/Diapositiva';
 import { EstadoGuardado } from '@/components/editor/EstadoGuardado';
 import { usarEdicion } from '@/components/editor/usarEdicion';
 import { TOPES } from '@/lib/edicion/validar';
 import type { DestinoExcel } from '@/lib/excel/cargar';
 import { Logo } from '@/components/Logo';
-import { nombrePeriodo } from '@/lib/periodos';
-import { degradadoCss } from '@/lib/tema';
+import { mesAnterior, nombrePeriodo } from '@/lib/periodos';
+import { variablesTema } from '@/lib/tema';
 import type { IdPeriodo, Presentacion } from '@/lib/tipos';
 import { BarraMeses } from './BarraMeses';
 import { Lienzo } from './Lienzo';
+import { MenuMas } from './MenuMas';
 import { ListaDiapositivas } from './ListaDiapositivas';
 
 // El panel y el editor de datos solo se descargan al entrar a editar.
@@ -31,12 +32,17 @@ interface Props {
   editable: boolean;
   indiceInicial: number;
   periodoInicial: IdPeriodo;
+  /** Abrir comparando: true (con el mes anterior) o el mes con el que comparar. */
+  compararInicial?: boolean | IdPeriodo;
+  /** Se está viendo una copia del historial, no la presentación actual. */
+  copia?: { id: number; etiqueta: string; restaurable: boolean };
 }
 
-export function Visor({ presentacion: inicial, revision, editable, indiceInicial, periodoInicial }: Props) {
+export function Visor({ presentacion: inicial, revision, editable: puedeEditar, indiceInicial, periodoInicial, compararInicial = false, copia }: Props) {
   // La presentación que se dibuja es la del estado de edición: trae aplicados
   // los cambios locales, aunque todavía se estén guardando.
-  const edicion = usarEdicion(inicial, revision);
+  const edicion = usarEdicion(inicial, revision, { seguir: !copia });
+  const editable = puedeEditar && !copia;
   const { presentacion, cambiar, deshacer, rehacer } = edicion;
   const { diapositivas, periodos, tema } = presentacion;
   const total = diapositivas.length;
@@ -47,6 +53,13 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
   const [periodoElegido, setPeriodo] = useState(periodoInicial);
   const periodo = periodos.includes(periodoElegido) ? periodoElegido : periodos[periodos.length - 1];
   const [editando, setEditando] = useState(false);
+
+  // Comparar con otro mes: por defecto el anterior al que se está viendo.
+  const [comparando, setComparando] = useState(Boolean(compararInicial));
+  const [comparadoElegido, setComparado] = useState<IdPeriodo | null>(typeof compararInicial === 'string' ? compararInicial : null);
+  const comparado = comparadoElegido && comparadoElegido !== periodo && periodos.includes(comparadoElegido)
+    ? comparadoElegido
+    : mesAnterior(periodos, periodo);
   /** Diapositiva a la que ir en cuanto aparezca (al agregar, duplicar o quitar). */
   const [irA, setIrA] = useState<string | null>(null);
   useEffect(() => {
@@ -72,8 +85,14 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
   // El enlace siempre refleja la diapositiva y el mes, para poder compartirlo.
   useEffect(() => {
     const parametros = new URLSearchParams({ d: String(indice + 1), mes: periodo });
+    if (comparando) parametros.set('comparar', comparadoElegido && comparado === comparadoElegido ? comparado : 'anterior');
     window.history.replaceState(null, '', `?${parametros}`);
-  }, [indice, periodo]);
+  }, [indice, periodo, comparando, comparado, comparadoElegido]);
+
+  const alternarComparar = useCallback(() => {
+    setComparando((v) => !v);
+    setComparado(null);
+  }, []);
 
   const presentar = useCallback(() => {
     setDatosAbiertos(null);
@@ -122,11 +141,12 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
       else if (e.key === 'Home') { e.preventDefault(); ir(0); }
       else if (e.key === 'End') { e.preventDefault(); ir(total - 1); }
       else if (e.key === 'f' || e.key === 'F') { if (presentando) salir(); else presentar(); }
+      else if (e.key === 'c' || e.key === 'C') alternarComparar();
       else if (e.key === 'Escape' && presentando) salir();
     };
     window.addEventListener('keydown', alTeclear);
     return () => window.removeEventListener('keydown', alTeclear);
-  }, [anterior, siguiente, ir, total, presentando, presentar, salir, editando, datosAbiertos, excel, deshacer, rehacer]);
+  }, [anterior, siguiente, ir, total, presentando, presentar, salir, editando, datosAbiertos, excel, deshacer, rehacer, alternarComparar]);
 
   // En modo presentación los controles aparecen al mover el mouse o tocar la
   // pantalla y se esconden solos.
@@ -156,11 +176,7 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
     }
   };
 
-  const variablesTema = {
-    '--vp-primario': tema.primario,
-    '--vp-degradado': degradadoCss(tema),
-    '--vp-degradado-h': degradadoCss(tema, 'to right'),
-  } as React.CSSProperties;
+  const estiloTema = variablesTema(tema) as React.CSSProperties;
 
   const diapositiva = (
     <div key={diapositivas[indice].id} className="aparecer h-full w-full">
@@ -168,17 +184,62 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
     </div>
   );
 
+  const otraDiapositiva = (mes: IdPeriodo) => (
+    <div key={`${diapositivas[indice].id}-${mes}`} className="aparecer h-full w-full">
+      <Diapositiva presentacion={presentacion} diapositiva={diapositivas[indice]} periodo={mes} numero={indice + 1} />
+    </div>
+  );
+
+  /** Las dos diapositivas, la del mes más antiguo a la izquierda (o arriba). */
+  const vistaComparada = (oscuro: boolean) => {
+    const elegir = (
+      <label className="inline-flex items-center gap-1.5">
+        <span className="sr-only">Mes con el que comparar</span>
+        <select
+          value={comparado ?? ''}
+          onChange={(e) => setComparado(e.target.value || null)}
+          className={`h-8 rounded-full px-2.5 text-sm font-semibold ${oscuro ? 'bg-white/12 text-white' : 'border border-linea-fuerte bg-white text-tinta'}`}
+        >
+          {!comparado && <option value="">Elige un mes</option>}
+          {periodos.filter((p) => p !== periodo).map((p) => <option key={p} value={p} className="text-tinta">{nombrePeriodo(p)}</option>)}
+        </select>
+      </label>
+    );
+    const panelOtro = (
+      <PanelMes key="otro" titulo={elegir} nota={comparado && comparado === mesAnterior(periodos, periodo) ? 'mes anterior' : undefined} oscuro={oscuro}>
+        {comparado ? (
+          <Lienzo marco={!oscuro}>{otraDiapositiva(comparado)}</Lienzo>
+        ) : (
+          <p className={`flex h-full items-center justify-center px-6 text-center ${oscuro ? 'text-white/80' : 'text-tinta-suave'}`}>
+            No hay un mes anterior a {nombrePeriodo(periodo)}. Elige otro mes para comparar.
+          </p>
+        )}
+      </PanelMes>
+    );
+    const panelActual = (
+      <PanelMes key="actual" titulo={<span className="font-semibold">{nombrePeriodo(periodo)}</span>} nota="el que estás viendo" oscuro={oscuro} destacado>
+        <Lienzo marco={!oscuro}>{diapositiva}</Lienzo>
+      </PanelMes>
+    );
+    const primeroElOtro = !comparado || comparado < periodo;
+    return (
+      <div className={`flex h-full w-full gap-4 ${oscuro ? 'flex-row px-6 pb-20 pt-6' : 'flex-col lg:flex-row lg:gap-6'}`}>
+        {primeroElOtro ? [panelOtro, panelActual] : [panelActual, panelOtro]}
+      </div>
+    );
+  };
+
   if (presentando) {
     return (
       <div
         ref={raiz}
-        style={variablesTema}
-        className={`fixed inset-0 z-50 bg-white ${controles ? '' : 'cursor-none'}`}
+        style={estiloTema}
+        className={`fixed inset-0 z-50 ${comparando ? 'bg-tinta' : 'bg-white'} ${controles ? '' : 'cursor-none'}`}
         onMouseMove={mostrarControles}
         onTouchStart={(e) => { mostrarControles(); alTocar(e); }}
         onTouchEnd={alSoltar}
       >
-        <Lienzo marco={false}>{diapositiva}</Lienzo>
+        {comparando ? vistaComparada(true) : <Lienzo marco={false}>{diapositiva}</Lienzo>}
         <div
           className={`absolute inset-x-0 bottom-4 flex justify-center px-3 transition-opacity duration-200 focus-within:opacity-100 ${controles ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         >
@@ -204,7 +265,7 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
   }
 
   return (
-    <div ref={raiz} style={variablesTema} className="flex h-dvh flex-col bg-fondo-app">
+    <div ref={raiz} style={estiloTema} className="flex h-dvh flex-col bg-fondo-app">
       <header className="shrink-0 border-b border-linea bg-white">
         <div className="flex h-16 items-center gap-3 px-4 lg:px-6">
           <Link href="/" title="Todas las presentaciones" className="shrink-0 rounded-lg">
@@ -238,6 +299,18 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
             )}
           <button
             type="button"
+            onClick={alternarComparar}
+            aria-pressed={comparando}
+            aria-label="Comparar con otro mes"
+            title="Comparar con el mes anterior u otro mes (tecla C)"
+            className={`flex h-10 shrink-0 items-center gap-2 rounded-full border px-3 font-semibold transition-colors ${comparando ? 'border-primario bg-tinte text-primario' : 'border-linea-fuerte bg-white text-tinta hover:bg-tinte'}`}
+          >
+            <Columns2 size={18} aria-hidden />
+            <span className="hidden md:inline">Comparar</span>
+          </button>
+          {!copia && <MenuMas id={presentacion.id} periodo={periodo} numero={indice + 1} historial={editable} />}
+          <button
+            type="button"
             onClick={presentar}
             aria-label="Presentar"
             title="Presentar en pantalla completa (tecla F)"
@@ -249,17 +322,18 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
           </div>
         </div>
         <BarraMeses periodos={periodos} actual={periodo} onCambiar={setPeriodo} />
+        {copia && <AvisoCopia presentacion={presentacion.id} copia={copia} />}
       </header>
 
       <div className="flex min-h-0 flex-1">
         {/* Al editar en pantallas medianas la lista cede su sitio al panel. */}
-        <aside aria-label="Diapositivas" className={`hidden w-72 shrink-0 overflow-y-auto border-r border-linea bg-white ${editando ? 'xl:block' : 'lg:block'}`}>
+        <aside aria-label="Diapositivas" className={`hidden w-72 shrink-0 overflow-y-auto border-r border-linea bg-white ${comparando ? '' : editando ? 'xl:block' : 'lg:block'}`}>
           <ListaDiapositivas diapositivas={diapositivas} indice={indice} periodo={periodo} onIr={ir} />
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col">
           <div className="relative m-3 min-h-0 flex-1 lg:mx-8 lg:mt-7" onTouchStart={alTocar} onTouchEnd={alSoltar}>
-            <Lienzo>{diapositiva}</Lienzo>
+            {comparando ? vistaComparada(false) : <Lienzo>{diapositiva}</Lienzo>}
           </div>
           <div className="flex shrink-0 items-center justify-center gap-2 pb-3 lg:pb-5">
             <BotonRedondo etiqueta="Diapositiva anterior" onClick={anterior} inactivo={indice === 0}><ChevronLeft size={20} /></BotonRedondo>
@@ -355,5 +429,76 @@ function BotonRedondo({ etiqueta, onClick, inactivo = false, oscuro = false, chi
     >
       {children}
     </button>
+  );
+}
+
+/** Un lado de la comparación: el mes arriba y la diapositiva debajo. */
+function PanelMes({ titulo, nota, oscuro, destacado = false, children }: {
+  titulo: React.ReactNode;
+  nota?: string;
+  oscuro: boolean;
+  destacado?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col justify-center">
+      <div className={`mb-2 flex h-9 shrink-0 items-center gap-2 text-[15px] ${oscuro ? 'text-white' : destacado ? 'text-primario' : 'text-tinta'}`}>
+        {titulo}
+        {nota && <span className={`text-sm ${oscuro ? 'text-white/70' : 'text-tinta-suave'}`}>{nota}</span>}
+      </div>
+      {/* Del alto de la diapositiva, para que el mes quede justo encima. */}
+      <div className="relative aspect-video max-h-full min-h-0 w-full">{children}</div>
+    </section>
+  );
+}
+
+/** Franja que avisa que se está viendo una copia del historial. */
+function AvisoCopia({ presentacion, copia }: { presentacion: string; copia: { id: number; etiqueta: string; restaurable: boolean } }) {
+  const [estado, setEstado] = useState<'nada' | 'confirmar' | 'enviando'>('nada');
+  const [error, setError] = useState<string | null>(null);
+  const ruta = encodeURIComponent(presentacion);
+
+  const restaurar = async () => {
+    setEstado('enviando');
+    setError(null);
+    try {
+      const respuesta = await fetch(`/api/presentaciones/${ruta}/versiones/${copia.id}/restaurar`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const datos = (await respuesta.json().catch(() => null)) as { error?: string } | null;
+      if (!respuesta.ok) throw new Error(datos?.error ?? `No se pudo (error ${respuesta.status}).`);
+      window.location.href = `/p/${ruta}`;
+    } catch (e) {
+      setError((e as Error).message);
+      setEstado('confirmar');
+    }
+  };
+
+  return (
+    <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-linea bg-tinte px-4 py-2.5 text-[15px] lg:px-6">
+      <History size={18} className="shrink-0 text-primario" aria-hidden />
+      <p className="min-w-0 flex-1"><strong className="font-semibold">Estás viendo una copia del historial</strong> (no se puede editar): {copia.etiqueta}</p>
+      {error && <p className="basis-full text-[#8A1C1C]">{error}</p>}
+      <div className="flex flex-wrap items-center gap-2">
+        {estado === 'nada' ? (
+          <>
+            <a href={`/p/${ruta}/historial`} className="flex h-9 items-center gap-1.5 rounded-full border border-linea-fuerte bg-white px-3 hover:bg-white/70">
+              <ArrowLeft size={16} aria-hidden /> Historial
+            </a>
+            {copia.restaurable && (
+              <button type="button" onClick={() => setEstado('confirmar')} className="flex h-9 items-center gap-1.5 rounded-full bg-primario px-3 font-semibold text-white hover:brightness-90">
+                <RotateCcw size={16} aria-hidden /> Volver a esta copia
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <span>¿Seguro? Lo de ahora queda guardado en el historial.</span>
+            <button type="button" disabled={estado === 'enviando'} onClick={restaurar} className="flex h-9 items-center rounded-full bg-primario px-3 font-semibold text-white hover:brightness-90 disabled:opacity-60">
+              {estado === 'enviando' ? 'Restaurando…' : 'Sí, volver a esta'}
+            </button>
+            <button type="button" disabled={estado === 'enviando'} onClick={() => setEstado('nada')} className="flex h-9 items-center rounded-full border border-linea-fuerte bg-white px-3">Cancelar</button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

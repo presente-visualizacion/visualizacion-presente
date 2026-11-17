@@ -9,7 +9,7 @@
 import { aplicarVarias, type Operacion } from '../edicion/operaciones';
 import { validarPresentacion } from '../edicion/validar';
 import type { Presentacion, ResumenPresentacion } from '../tipos';
-import type { Almacen, Guardada, ResultadoGuardado } from './index';
+import type { Almacen, Guardada, ResultadoGuardado, ResumenVersion } from './index';
 import { prepararEsquema } from './esquema';
 import type { Motor } from './motor';
 
@@ -25,7 +25,38 @@ export interface OpcionesBd {
 }
 
 const INTENTOS = 3;
-const ISO = `to_char(actualizado at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+const iso = (columna: string) => `to_char(${columna} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+const ISO = iso('actualizado');
+
+/** Columnas del resumen de una copia (tabla `versiones` con alias v). */
+const COLUMNAS_VERSION = `v.id, v.revision, v.motivo, v.nota, ${iso('v.creado')} as creado,
+  jsonb_array_length(v.contenido->'diapositivas') as diapositivas,
+  v.contenido->'periodos' as periodos,
+  pg_column_size(v.contenido) as tamano`;
+
+interface FilaVersion {
+  id: number | string;
+  revision: number;
+  motivo: ResumenVersion['motivo'];
+  nota: string | null;
+  creado: string;
+  diapositivas: number;
+  periodos: unknown;
+  tamano: number | string;
+}
+
+function resumenVersion(f: FilaVersion): ResumenVersion {
+  return {
+    id: Number(f.id),
+    revision: Number(f.revision),
+    motivo: f.motivo,
+    ...(f.nota ? { nota: f.nota } : {}),
+    creado: f.creado,
+    diapositivas: Number(f.diapositivas),
+    periodos: json<string[]>(f.periodos) ?? [],
+    tamano: Number(f.tamano),
+  };
+}
 
 const GUARDAR = `
   with anterior as (
@@ -183,6 +214,69 @@ export function almacenBd(obtenerMotor: () => Promise<Motor>, opciones: Opciones
         // sobre lo más reciente.
       }
       return { ok: false, motivo: 'ocupado' };
+    },
+
+    async listarVersiones(id) {
+      const filas = await (await motor()).consultar<FilaVersion>(
+        `select ${COLUMNAS_VERSION} from versiones v where v.presentacion = $1 order by v.creado desc, v.id desc limit 300`,
+        [id],
+      );
+      return filas.map(resumenVersion);
+    },
+
+    async obtenerVersion(id, version) {
+      const [fila] = await (await motor()).consultar<FilaVersion & { contenido: unknown }>(
+        `select ${COLUMNAS_VERSION}, v.contenido from versiones v where v.presentacion = $1 and v.id = $2`,
+        [id, version],
+      );
+      if (!fila) return null;
+      return { ...resumenVersion(fila), presentacion: { ...json<Presentacion>(fila.contenido), id, actualizado: fila.creado } };
+    },
+
+    async guardarVersion(id, nota) {
+      const [fila] = await (await motor()).consultar<FilaVersion>(
+        `with v as (
+           insert into versiones (presentacion, revision, contenido, motivo, nota)
+           select id, revision, contenido, 'manual', $2 from presentaciones where id = $1 and eliminado is null
+           returning *
+         )
+         select ${COLUMNAS_VERSION} from v`,
+        [id, nota],
+      );
+      return fila ? resumenVersion(fila) : null;
+    },
+
+    async restaurar(id, version, nota) {
+      const m = await motor();
+      const [copia] = await m.consultar<{ contenido: unknown }>(
+        `select contenido from versiones where presentacion = $1 and id = $2`,
+        [id, version],
+      );
+      if (!copia) return { ok: false, motivo: 'no-existe' };
+      const validacion = validarPresentacion({ ...json<Presentacion>(copia.contenido), id });
+      if (!validacion.ok) return { ok: false, motivo: 'invalido', detalle: validacion.errores.slice(0, 5).join(' ') };
+
+      // En una sola sentencia: deja el estado actual en el historial y pone
+      // la copia. Las dos partes ven la presentación como estaba antes.
+      const [fila] = await m.consultar<{ revision: number }>(
+        `with actual as (
+           select revision, contenido from presentaciones where id = $1 and eliminado is null
+         ),
+         guardada as (
+           insert into versiones (presentacion, revision, contenido, motivo, nota)
+           select $1, revision, contenido, 'restauracion', $3 from actual
+           returning id
+         ),
+         cambio as (
+           update presentaciones set contenido = $2::jsonb, revision = revision + 1, actualizado = now()
+           where id = $1 and eliminado is null
+           returning revision
+         )
+         select revision from cambio`,
+        [id, JSON.stringify(validacion.valor), nota],
+      );
+      if (!fila) return { ok: false, motivo: 'no-existe' };
+      return { ok: true, revision: Number(fila.revision) };
     },
 
     async crear(presentacion) {

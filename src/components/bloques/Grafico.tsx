@@ -9,7 +9,7 @@ import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import type { Columna, Fila } from '@/lib/tipos';
 import {
-  anchoTexto, BLANCO, dominioEje, ejeCategorias, lineasReferencia, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, reducirMovimiento, SUAVE, TINTA,
+  anchoTexto, BLANCO, dominioEje, ejeCategorias, lineasReferencia, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, usarAnimar, SUAVE, TINTA,
   type PropsGrafico, type SerieLista,
 } from './graficoComun';
 import { Cascada, Circular, Dispersion } from './GraficosEspeciales';
@@ -53,7 +53,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   const visibles = series.filter((s) => !ocultas.has(s.clave));
   const columnaValor = series[0]?.columna;
   const columnaX = columnaDe(conjunto, bloque.ejeX);
-  const animar = !reducirMovimiento();
+  const animar = usarAnimar();
   const horizontal = bloque.forma === 'barrasHorizontales';
   const deTiempo = bloque.forma === 'lineas' || bloque.forma === 'area';
   const comoLinea = (s: SerieLista) => deTiempo || bloque.forma === 'radar' || (bloque.forma === 'combinado' && s.tipo === 'lineas');

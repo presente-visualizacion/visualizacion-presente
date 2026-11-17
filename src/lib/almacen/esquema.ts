@@ -27,6 +27,8 @@ const SENTENCIAS = [
      creado       timestamptz not null default now()
    )`,
   `create index if not exists versiones_por_presentacion on versiones (presentacion, creado desc)`,
+  // Etapa 5: nombre de las copias guardadas a mano.
+  `alter table versiones add column if not exists nota text`,
 ];
 
 /**

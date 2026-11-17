@@ -80,9 +80,10 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
   libres, fondos y copiar diapositivas"): disposición libre, fondos de bloque,
   líneas de referencia, copiar y pegar diapositivas entre presentaciones,
   plantilla de Paraguay.
-- [ ] **Etapa 5. Cierre.** PDF, respaldo en Excel, historial de versiones,
-  comparar con el mes anterior. (Crear y duplicar presentaciones ya quedó
-  hecho en los ajustes del 2026-11-17.)
+- [x] **Etapa 5. Cierre.** PDF, respaldo en Excel, historial de versiones,
+  comparar con el mes anterior. Programada el 2026-11-17 (ver "Diseño de la
+  etapa 5"). (Crear y duplicar presentaciones ya quedó hecho en los ajustes
+  del 2026-11-17.)
 
 Al terminar cada etapa: compilar, revisar en navegador (escritorio y móvil),
 revisar que no se cuelen datos reales, subir a GitHub y marcarla aquí.
@@ -166,7 +167,10 @@ src/
     almacen/              de dónde se leen y dónde se guardan las presentaciones
   app/api/presentaciones/ rutas para leer y guardar
   components/
-    visor/                Visor, BarraMeses, ListaDiapositivas, Lienzo
+    visor/                Visor (con Comparar), BarraMeses, ListaDiapositivas,
+                          Lienzo, MenuMas (PDF, Excel, copia, historial),
+                          Impresion (página del PDF)
+    historial/            pantalla del historial de versiones
     diapositivas/         portada, contenido, cierre
     bloques/              gráfico, tabla, texto, cifras, tarjetas (Grafico.tsx:
                           series; GraficosEspeciales.tsx: circular, dispersión, cascada)
@@ -280,7 +284,7 @@ No entra (para no mezclar etapas):
 - 2B: agregar, quitar, duplicar y reordenar diapositivas y bloques; tipo de
   gráfico, series y colores; tema; "Nuevo mes"; agregar o quitar columnas.
 - Etapa 3: cargar archivos de Excel.
-- Etapa 5: pantalla del historial. (Crear, duplicar y eliminar presentaciones: hecho el 2026-11-17.)
+- Etapa 5: pantalla del historial (hecha, ver "Diseño de la etapa 5"). (Crear, duplicar y eliminar presentaciones: hecho el 2026-11-17.)
 
 ### Decisiones
 
@@ -323,7 +327,9 @@ create table if not exists versiones (
   contenido    jsonb not null,
   motivo       text not null,                -- 'auto' | 'manual' | 'restauracion' | 'importacion'
   autor        text,                         -- vacío hasta que haya usuarios
-  creado       timestamptz not null default now()
+  creado       timestamptz not null default now(),
+  nota         text                          -- etapa 5: nombre de la copia (manual) o
+                                             -- "Antes de volver a la copia del ..." (restauracion)
 );
 
 create index if not exists versiones_por_presentacion
@@ -1522,6 +1528,117 @@ entre presentaciones y tener la de Paraguay lista.
   uno con la serie anterior (lo dice la nota del gráfico).
 - Para llevarla al comité: abrirla, Copiar, ir a la presentación del comité
   y Pegar.
+
+## Diseño de la etapa 5: PDF, Excel, historial y comparar
+
+Programada el 2026-11-17. Todo se abre desde dos botones nuevos del visor:
+**Comparar** y **Más** (PDF, PDF de una diapositiva, respaldo en Excel, copia
+completa .json e historial).
+
+### PDF
+
+| Tema | Decisión | Por qué |
+|---|---|---|
+| Cómo se hace | Página `/p/[id]/pdf?mes=AAAA-MM[&d=N][&auto=1]` con todas las diapositivas (o solo la N) una debajo de otra, y la ventana de imprimir del navegador ("Guardar como PDF"). | Sale con texto nítido y seleccionable, pesa poco y no hace falta librería ni servidor con navegador. Una librería de PDF en el navegador dibujaría imágenes de cada diapositiva. |
+| Tamaño | `@page { size: 1280px 720px; margin: 0 }`: cada diapositiva es una hoja de 16:9 (13,33 x 7,5 pulgadas, el mismo tamaño de las diapositivas anchas de PowerPoint). | El lienzo ya mide 1280 x 720: sale igual que en pantalla. |
+| Gráficos | Contexto `SinAnimacion` (en `graficoComun.tsx`): en esa página los gráficos se dibujan sin animación. La página espera a que carguen las letras y a que no aparezcan más gráficos antes de habilitar "Guardar como PDF" (y, con `auto=1`, abre la ventana sola). | Si se imprime durante la animación, las barras salen a medio crecer. |
+| Fondos | `print-color-adjust: exact` en todo. | Si no, Chrome quita el degradado de la portada y los fondos de bloque. |
+| Nombre del archivo | El título de la pestaña: "Nombre - Mes Año". | Es lo que el navegador propone al guardar. |
+
+En pantalla la página muestra arriba el mes, cuáles diapositivas y una
+explicación corta (Destino: "Guardar como PDF"); al imprimir eso se esconde
+(`.vp-solo-pantalla`). Se probó con Playwright (`page.pdf` con
+`preferCSSPageSize`): una página por diapositiva de 960 x 540 pt.
+
+### Respaldo en Excel
+
+- `GET /api/presentaciones/[id]/excel` devuelve un .xlsx: hoja **Contenido**
+  (nombre, meses, cada diapositiva con sus bloques y de qué hoja salen sus
+  datos), una hoja por **conjunto de datos** con todos los meses (columna
+  "Mes" si el conjunto cambia por mes) y hoja **Textos** (textos, cifras y
+  tarjetas de cada mes).
+- `src/lib/excel/escribir.ts` escribe el .xlsx con `fflate` (sin librería
+  nueva): textos en línea, encabezado en negrita y fijo, anchos de columna,
+  formatos de número. Los porcentajes se guardan como Excel los entiende
+  (14,5 % = 0,145 con formato %), así que al volver a cargarlos con "Cargar
+  Excel" dan lo mismo (hay prueba de ida y vuelta).
+- `src/lib/respaldo.ts` arma las hojas. Los nombres de hoja se limpian
+  (sin `[]:*?/\`, hasta 31 caracteres, sin repetir).
+- Es un respaldo para leer y para recargar datos; la copia que se importa tal
+  cual sigue siendo la .json.
+- Lee lo guardado en la base: un cambio de hace un segundo que todavía se está
+  guardando puede no salir.
+
+### Historial de versiones
+
+- Pantalla `/p/[id]/historial`: copias agrupadas por día, la más reciente
+  arriba, con hora, nombre, cantidad de diapositivas y meses, y tres
+  acciones: **Ver**, **Volver a esta** (pide confirmar) y descargar la copia
+  como .json. Arriba, "Guardar una copia de cómo está ahora" con un nombre.
+  Abajo, cuánto ocupan las copias en la base.
+- **Ver** abre `/p/[id]/version/[version]`: el visor normal con la copia, sin
+  Editar ni Más, con una franja que dice qué copia es y los botones
+  "Historial" y "Volver a esta copia". `usarEdicion(..., { seguir: false })`
+  evita que el visor se "actualice" con la presentación actual.
+- **Volver a una copia** (`POST .../versiones/[version]/restaurar`): en una
+  sola sentencia guarda el estado actual como copia `restauracion` (con la
+  nota "Antes de volver a la copia del ...") y pone el contenido de la copia
+  (validado). Así restaurar también se deshace desde el historial. Quien
+  tenga la presentación abierta en otra pestaña recibe el cambio al volver a
+  ella (sube la revisión).
+- Copias con nombre: motivo `manual`. No se borran solas (el tope de 150 solo
+  borra `auto`). Una copia con nombre cuenta como copia reciente: la
+  automática siguiente llega a los 10 minutos.
+- Almacén: `listarVersiones`, `obtenerVersion`, `guardarVersion`,
+  `restaurar`. Columna nueva `nota` (`alter table ... add column if not
+  exists`, se agrega sola al publicar).
+- Fechas en hora de Colombia (`src/lib/fechas.ts`): el servidor corre en UTC.
+
+### Comparar con otro mes
+
+- Botón **Comparar** (o tecla `C`): la diapositiva actual en dos meses, lado a
+  lado en pantallas anchas y una encima de otra en el celular. Por defecto el
+  mes anterior al que se está viendo; con la lista de arriba se elige
+  cualquier otro. El mes más antiguo va a la izquierda.
+- Al cambiar de mes en la barra, el "mes anterior" se mueve con él; si se
+  eligió un mes a mano, se queda ese.
+- Funciona también al **Presentar** (las dos diapositivas sobre fondo oscuro)
+  y mientras se edita: se edita el mes elegido en la barra y se ve el otro al
+  lado.
+- El enlace lo guarda: `?comparar=anterior` o `?comparar=2026-08`.
+- Al comparar se esconde la lista de diapositivas de la izquierda para dar
+  espacio.
+
+### Archivos
+
+- `src/lib/excel/escribir.ts`, `src/lib/respaldo.ts`, `src/lib/fechas.ts`,
+  `src/lib/versiones.ts` (nombre de cada copia).
+- `src/app/api/presentaciones/[id]/excel/route.ts`,
+  `.../versiones/route.ts`, `.../versiones/[version]/route.ts`,
+  `.../versiones/[version]/restaurar/route.ts`.
+- `src/app/p/[id]/pdf/page.tsx`, `src/app/p/[id]/historial/page.tsx`,
+  `src/app/p/[id]/version/[version]/page.tsx`.
+- `src/components/visor/Impresion.tsx`, `MenuMas.tsx`;
+  `src/components/historial/Historial.tsx`; Visor (Comparar, franja de copia).
+- Pruebas: `pruebas/respaldo.prueba.ts`, `pruebas/historial.prueba.ts`.
+
+### Cómo se comprobó
+
+- 187 pruebas automáticas (9 nuevas: escritor de Excel, respaldo, historial
+  en la base local).
+- El respaldo se abrió con openpyxl y LibreOffice.
+- En navegador (escritorio y celular): PDF de 9 diapositivas con Playwright;
+  Comparar, Comparar al presentar y Comparar editando; menú Más y descarga
+  del Excel; guardar copia con nombre, verla, volver a ella y ver la copia
+  "Antes de volver..." arriba del historial.
+
+### Pendiente o posible más adelante
+
+- El uso real de espacio de las copias en Neon se ve ahora al final del
+  historial; revisarlo tras unos meses de uso.
+- Borrar copias con nombre a mano (hoy no se puede, a propósito).
+- Safari en iPhone puede no respetar el tamaño de hoja del PDF; en escritorio
+  (Chrome, Edge) sí.
 
 ## Cómo trabajar
 

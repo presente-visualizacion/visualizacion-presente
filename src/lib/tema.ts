@@ -14,3 +14,12 @@ export const TEMA_PRESENTE: Tema = {
 export function degradadoCss(tema: Tema, direccion = 'to bottom'): string {
   return `linear-gradient(${direccion}, ${tema.degradado.join(', ')})`;
 }
+
+/** Variables CSS que usan las diapositivas para el color y el degradado del tema. */
+export function variablesTema(tema: Tema): Record<string, string> {
+  return {
+    '--vp-primario': tema.primario,
+    '--vp-degradado': degradadoCss(tema),
+    '--vp-degradado-h': degradadoCss(tema, 'to right'),
+  };
+}

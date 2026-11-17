@@ -36,4 +36,16 @@ export const almacenMuestra: Almacen = {
   async listarEliminadas() {
     return [];
   },
+  async listarVersiones() {
+    return [];
+  },
+  async obtenerVersion() {
+    return null;
+  },
+  async guardarVersion() {
+    throw new Error('El almacén de muestra es de solo lectura.');
+  },
+  async restaurar() {
+    throw new Error('El almacén de muestra es de solo lectura.');
+  },
 };

@@ -62,7 +62,11 @@ function tomarLote(ops: Operacion[]): Operacion[] {
   return lote;
 }
 
-export function usarEdicion(inicial: Presentacion, revisionInicial: number): Edicion {
+/**
+ * `seguir: false` (copias del historial): no consulta si alguien más guardó,
+ * porque lo que se muestra no es la presentación actual.
+ */
+export function usarEdicion(inicial: Presentacion, revisionInicial: number, { seguir = true }: { seguir?: boolean } = {}): Edicion {
   const [presentacion, setPresentacion] = useState(inicial);
   const [estado, setEstado] = useState<EstadoGuardado>('guardado');
   const [error, setError] = useState<string | null>(null);
@@ -237,7 +241,7 @@ export function usarEdicion(inicial: Presentacion, revisionInicial: number): Edi
 
     /** Al volver a la pestaña: si alguien más guardó, traer lo nuevo. */
     const consultar = async () => {
-      if (hayPendientes() || Date.now() - r.ultimaConsulta < 5 * SEGUNDO) return;
+      if (!seguir || hayPendientes() || Date.now() - r.ultimaConsulta < 5 * SEGUNDO) return;
       r.ultimaConsulta = Date.now();
       try {
         const respuesta = await fetch(`${url}?solo=revision`, { cache: 'no-store' });
@@ -270,7 +274,7 @@ export function usarEdicion(inicial: Presentacion, revisionInicial: number): Edi
       // Al salir hacia otra página del sitio, lo pendiente se envía ya.
       void enviar(true);
     };
-  }, [r, url, enviar, recargar]);
+  }, [r, url, enviar, recargar, seguir]);
 
   // El aviso pasajero se quita solo.
   useEffect(() => {

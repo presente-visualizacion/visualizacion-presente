@@ -64,3 +64,19 @@ body {
 .vp-fondo-oscuro .bg-primario { background: #FF9EC1; }
 .vp-fondo-oscuro .border-linea { border-color: #4A3F4F; }
 .vp-fondo-oscuro strong { color: #FF9EC1; }
+
+/* PDF (etapa 5): cada diapositiva en una hoja de 16:9 a tamaño real. */
+@media print {
+  @page { size: 1280px 720px; margin: 0; }
+  html, body, .vp-impresion { background: #fff !important; min-height: 0 !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .vp-solo-pantalla { display: none !important; }
+  .vp-hojas { display: block !important; max-width: none !important; padding: 0 !important; margin: 0 !important; }
+  .vp-hoja {
+    width: 1280px !important; height: 720px !important; margin: 0 !important;
+    box-shadow: none !important; --tw-ring-shadow: 0 0 #0000 !important;
+    break-after: page; break-inside: avoid;
+  }
+  .vp-hoja:last-child { break-after: auto; }
+  .vp-hoja > div { transform: none !important; }
+}

@@ -10,7 +10,7 @@ import {
 import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import {
-  anchoTexto, BLANCO, CajaGlobo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, FilaGlobo, LINEA, marcaEje, Muestra, reducirMovimiento, SUAVE, TINTA,
+  anchoTexto, BLANCO, CajaGlobo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, FilaGlobo, LINEA, marcaEje, Muestra, usarAnimar, SUAVE, TINTA,
   type PropsGrafico,
 } from './graficoComun';
 
@@ -26,7 +26,7 @@ const MAX_PORCIONES = 6;
 export function Circular({ bloque, conjunto, filas, tema }: PropsGrafico) {
   const serie = bloque.series[0];
   const columna = columnaDe(conjunto, serie.clave);
-  const animar = !reducirMovimiento();
+  const animar = usarAnimar();
 
   let porciones = filas
     .map((f) => ({ nombre: formatear(f[bloque.ejeX], columnaDe(conjunto, bloque.ejeX)) || '—', valor: f[serie.clave] }))
@@ -90,7 +90,7 @@ export function Dispersion({ bloque, conjunto, filas, tema }: PropsGrafico) {
   const columnaY = columnaDe(conjunto, serie.clave);
   const columnaX = columnaDe(conjunto, bloque.ejeX);
   const columnaNombre = bloque.nombres ? columnaDe(conjunto, bloque.nombres) : undefined;
-  const animar = !reducirMovimiento();
+  const animar = usarAnimar();
   const color = serie.color ?? tema.series[0];
   const destacado = (f: Record<string, unknown>) => Boolean(bloque.resaltar && String(f[bloque.resaltar.columna]) === bloque.resaltar.valor);
 
@@ -167,7 +167,7 @@ interface Escalon {
 export function Cascada({ bloque, conjunto, filas, tema }: PropsGrafico) {
   const serie = bloque.series[0];
   const columna = columnaDe(conjunto, serie.clave);
-  const animar = !reducirMovimiento();
+  const animar = usarAnimar();
   const colores = { sube: tema.series[3 % tema.series.length], baja: tema.primario, total: SUAVE };
 
   const conSigno = (v: number) => (v < 0 ? '' : '+') + formatear(v, columna);

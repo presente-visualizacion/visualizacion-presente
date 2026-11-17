@@ -51,8 +51,13 @@ Abre http://localhost:3000.
   el sitio publicado muestra la presentación de ejemplo en solo lectura.
 - Una presentación de muestra del Comité de Precios con datos inventados.
 
-Todavía no se puede crear presentaciones nuevas desde cero, descargar en PDF
-o ver el historial (etapa 5).
+- Crear, duplicar, eliminar y recuperar presentaciones; disposición libre,
+  fondos de bloque, líneas de referencia y copiar y pegar diapositivas.
+- Etapa 5: PDF (todas las diapositivas del mes o una sola), respaldo en
+  Excel con todos los datos de todos los meses, historial de versiones (ver
+  una copia, guardar una con nombre, volver a una) y comparar una diapositiva
+  con el mes anterior u otro mes, también al presentar. Todo desde el botón
+  "Más" y el botón "Comparar" del visor.
 
 ## Pruebas
 
