@@ -5,15 +5,18 @@
 // presentación (meses y colores). Ver "Pantalla de edición" en PLAN.md (2A y 2B).
 
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ChartColumn, Copy, FileSpreadsheet, Hash, LayoutGrid, Plus, Table2, Trash2, Type, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChartColumn, ClipboardCopy, ClipboardPaste, Copy, FileSpreadsheet, Hash, LayoutGrid, Plus, Table2, Trash2, Type, X } from 'lucide-react';
+import { copiarDiapositiva, opsPegarDiapositiva } from '@/lib/edicion/portapapeles';
+import { usarPortapapeles } from './usarPortapapeles';
 import { conjuntoDe, filasDe } from '@/lib/datos';
 import type { Operacion } from '@/lib/edicion/operaciones';
-import { diapositivaNueva, idsEnUso, opsDuplicarBloque, opsDuplicarDiapositiva, opsQuitarBloque, opsQuitarDiapositiva } from '@/lib/edicion/plantillas';
+import { diapositivaNueva, idsEnUso, opsCambiarDisposicion, opsDuplicarBloque, opsDuplicarDiapositiva, opsQuitarBloque, opsQuitarDiapositiva } from '@/lib/edicion/plantillas';
 import { TOPES } from '@/lib/edicion/validar';
 import type { DestinoExcel } from '@/lib/excel/cargar';
 import { nombrePeriodo } from '@/lib/periodos';
 import type { Bloque, Diapositiva, Disposicion, IdPeriodo, Presentacion } from '@/lib/tipos';
 import { AgregarBloque } from './AgregarBloque';
+import { EditorAspecto } from './EditorAspecto';
 import { EditorCifras } from './EditorCifras';
 import { EditorGrafico, FORMAS_INFO } from './EditorGrafico';
 import { EditorTabla } from './EditorTabla';
@@ -84,7 +87,7 @@ function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEdi
 
   return (
     <div className="space-y-6">
-      <AccionesDiapositiva presentacion={presentacion} diapositiva={diapositiva} indice={indice} cambiar={cambiar} onIrA={onIrA} />
+      <AccionesDiapositiva presentacion={presentacion} diapositiva={diapositiva} indice={indice} periodo={periodo} cambiar={cambiar} onIrA={onIrA} />
 
       <section aria-label="Diapositiva" className="space-y-3">
         <Opcion
@@ -116,7 +119,7 @@ function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEdi
           <SelectorDisposicion
             valor={disposicion}
             bloques={diapositiva.bloques.length}
-            onCambiar={(valor) => cambiar({ op: 'diapositiva.disposicion', diapositiva: diapositiva.id, valor })}
+            onCambiar={(valor) => cambiar(opsCambiarDisposicion(diapositiva, valor))}
           />
         )}
       </section>
@@ -151,10 +154,11 @@ function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEdi
   );
 }
 
-function AccionesDiapositiva({ presentacion, diapositiva, indice, cambiar, onIrA }: {
+function AccionesDiapositiva({ presentacion, diapositiva, indice, periodo, cambiar, onIrA }: {
   presentacion: Presentacion;
   diapositiva: Diapositiva;
   indice: number;
+  periodo: IdPeriodo;
   cambiar: Props['cambiar'];
   onIrA: Props['onIrA'];
 }) {
@@ -184,6 +188,23 @@ function AccionesDiapositiva({ presentacion, diapositiva, indice, cambiar, onIrA
     // El visor sigue la diapositiva por su lugar: se le dice que la acompañe.
     onIrA(diapositiva.id);
   };
+  const { copia, guardar } = usarPortapapeles();
+  const [aviso, setAviso] = useState<{ texto: string; error?: boolean } | null>(null);
+  const copiar = () => {
+    const nueva = copiarDiapositiva(presentacion, diapositiva.id, periodo);
+    if (!nueva) return;
+    setAviso(guardar(nueva)
+      ? { texto: 'Diapositiva copiada. Ábrela en cualquier presentación (o aquí) y aprieta "Pegar".' }
+      : { texto: 'El navegador no dejó guardar la copia (¿ventana privada?).', error: true });
+  };
+  const pegar = () => {
+    if (!copia) return;
+    const r = opsPegarDiapositiva(presentacion, copia, diapositiva.id, periodo);
+    if ('error' in r) return setAviso({ texto: r.error, error: true });
+    cambiar(r.ops);
+    onIrA(r.id);
+    setAviso({ texto: ['Pegada después de esta diapositiva.', ...r.avisos].join(' ') });
+  };
   const quitar = () => {
     const vecina = diapositivas[indice + 1] ?? diapositivas[indice - 1];
     cambiar(opsQuitarDiapositiva(presentacion, diapositiva.id));
@@ -199,6 +220,14 @@ function AccionesDiapositiva({ presentacion, diapositiva, indice, cambiar, onIrA
         <BotonIcono etiqueta="Duplicar la diapositiva" onClick={duplicar} inactivo={llenas}><Copy size={17} /></BotonIcono>
         <BotonIcono etiqueta="Subir la diapositiva" onClick={() => moverA(indice - 1)} inactivo={indice === 0}><ArrowUp size={17} /></BotonIcono>
         <BotonIcono etiqueta="Bajar la diapositiva" onClick={() => moverA(indice + 1)} inactivo={indice === diapositivas.length - 1}><ArrowDown size={17} /></BotonIcono>
+        <BotonIcono etiqueta="Copiar la diapositiva (para pegarla aquí o en otra presentación)" onClick={copiar}><ClipboardCopy size={17} /></BotonIcono>
+        <BotonIcono
+          etiqueta={copia ? `Pegar "${copia.diapositiva.titulo}" después de esta` : 'Pegar (primero copia una diapositiva)'}
+          onClick={pegar}
+          inactivo={!copia || llenas}
+        >
+          <ClipboardPaste size={17} />
+        </BotonIcono>
         <span className="ml-auto" />
         <BotonConfirmar
           etiqueta="Quitar la diapositiva"
@@ -210,6 +239,15 @@ function AccionesDiapositiva({ presentacion, diapositiva, indice, cambiar, onIrA
           onConfirmar={quitar}
         />
       </div>
+      {aviso && (
+        <p role="status" className={`text-[13px] leading-snug ${aviso.error ? 'text-[#8E1015]' : 'text-tinta-suave'}`}>{aviso.texto}</p>
+      )}
+      {copia && !aviso && (
+        <p className="text-[13px] leading-snug text-tinta-suave">
+          Para pegar: <span className="font-semibold text-tinta">{copia.diapositiva.titulo || 'Sin título'}</span>
+          {copia.origen.presentacion !== presentacion.id && <> (de {copia.origen.nombre})</>}
+        </p>
+      )}
       {diapositivas.length > 2 && (
         <label className="flex items-center gap-2 text-[13px] text-tinta-suave">
           Mover a la posición
@@ -245,13 +283,14 @@ const DISPOSICIONES: { valor: Disposicion; nombre: string; dibujo: React.ReactNo
   { valor: 'filas', nombre: 'Filas', dibujo: <><rect x="3" y="3" width="30" height="6" rx="2" /><rect x="3" y="11" width="30" height="10" rx="2" /></> },
   { valor: 'principal-lateral', nombre: 'Principal y lateral', dibujo: <><rect x="3" y="3" width="19" height="18" rx="2" /><rect x="24" y="3" width="9" height="8" rx="2" /><rect x="24" y="13" width="9" height="8" rx="2" /></> },
   { valor: 'cuadricula', nombre: 'Cuadrícula', dibujo: <><rect x="3" y="3" width="14" height="8" rx="2" /><rect x="19" y="3" width="14" height="8" rx="2" /><rect x="3" y="13" width="14" height="8" rx="2" /><rect x="19" y="13" width="14" height="8" rx="2" /></> },
+  { valor: 'libre', nombre: 'Libre', dibujo: <><rect x="3" y="3" width="11" height="10" rx="2" /><rect x="16" y="3" width="17" height="10" rx="2" /><rect x="3" y="15" width="30" height="6" rx="2" /></> },
 ];
 
 function SelectorDisposicion({ valor, bloques, onCambiar }: { valor: Disposicion; bloques: number; onCambiar: (d: Disposicion) => void }) {
   return (
     <div>
       <p className="mb-1 text-sm font-semibold text-tinta">Disposición de los bloques</p>
-      <div role="radiogroup" aria-label="Disposición de los bloques" className="grid grid-cols-5 gap-1.5">
+      <div role="radiogroup" aria-label="Disposición de los bloques" className="grid grid-cols-3 gap-1.5">
         {DISPOSICIONES.map((d) => (
           <button
             key={d.valor}
@@ -267,6 +306,9 @@ function SelectorDisposicion({ valor, bloques, onCambiar }: { valor: Disposicion
           </button>
         ))}
       </div>
+      {valor === 'libre' && (
+        <p className="mt-1.5 text-[13px] leading-snug text-tinta-suave">En cada bloque, abajo, eliges dónde va y cuánto ocupa.</p>
+      )}
       {valor === 'una' && bloques > 1 && (
         <p className="mt-1.5 text-[13px] leading-snug text-[#8E1015]">Con "Un bloque" solo se ve el primero. Elige otra disposición para ver los {bloques}.</p>
       )}
@@ -294,7 +336,7 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
     <section aria-label={nombre} className={`space-y-3 border-t border-linea pt-5 ${oculto ? 'opacity-60' : ''}`}>
       <div className="flex flex-wrap items-center gap-1">
         <h2 className="mr-auto flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wide text-tinta-suave">
-          <Icono size={16} aria-hidden /> {nombre}
+          <Icono size={16} aria-hidden /> {indice + 1}. {nombre}
         </h2>
         <BotonIcono etiqueta="Subir el bloque" onClick={() => cambiar({ op: 'bloque.mover', bloque: bloque.id, despues: indice <= 1 ? null : bloques[indice - 2].id })} inactivo={indice === 0}><ArrowUp size={16} /></BotonIcono>
         <BotonIcono etiqueta="Bajar el bloque" onClick={() => cambiar({ op: 'bloque.mover', bloque: bloque.id, despues: bloques[indice + 1]?.id ?? null })} inactivo={indice === bloques.length - 1}><ArrowDown size={16} /></BotonIcono>
@@ -310,6 +352,7 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
       </div>
       {oculto && <p className="text-[13px] text-tinta-suave">No se ve en la diapositiva con la disposición "Un bloque".</p>}
       <MarcoBloque bloque={bloque} cambiar={cambiar} />
+      <EditorAspecto diapositiva={diapositiva} bloque={bloque} indice={indice} cambiar={cambiar} />
       {bloque.tipo === 'texto' && <EditorTexto key={`${bloque.id}|${periodo}`} presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {bloque.tipo === 'cifras' && <EditorCifras presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {bloque.tipo === 'tarjetas' && <EditorTarjetas presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}

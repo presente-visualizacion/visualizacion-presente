@@ -1,5 +1,6 @@
 // Piezas que comparten los dibujos de gráficos (Grafico.tsx y GraficosEspeciales.tsx).
 
+import { ReferenceLine } from 'recharts';
 import type { BloqueGrafico, Columna, ConjuntoDatos, Fila, RangoEje, Tema } from '@/lib/tipos';
 
 export const TINTA = '#241A20';
@@ -34,6 +35,31 @@ type Extremo = number | 'auto';
 export function dominioEje(rango: RangoEje | undefined, porDefecto: [Extremo, Extremo]): { domain: [Extremo, Extremo]; allowDataOverflow?: boolean } {
   if (!rango || (rango.desde === undefined && rango.hasta === undefined)) return { domain: porDefecto };
   return { domain: [rango.desde ?? porDefecto[0], rango.hasta ?? porDefecto[1]], allowDataOverflow: true };
+}
+
+/**
+ * Líneas de referencia del bloque ("Mínimo 12 %"), punteadas y oscuras. `eje`
+ * es el eje de los valores: 'y' en casi todos, 'x' en barras horizontales. El
+ * eje se estira si hace falta para que la línea se vea.
+ */
+export function lineasReferencia(bloque: BloqueGrafico, columna: Columna | undefined, eje: 'x' | 'y') {
+  return (bloque.referencias ?? []).map((r, i) => (
+    <ReferenceLine
+      key={`referencia-${i}`}
+      {...(eje === 'y' ? { y: r.valor } : { x: r.valor })}
+      ifOverflow="extendDomain"
+      stroke={TINTA}
+      strokeWidth={2}
+      strokeDasharray="8 6"
+      label={{
+        value: r.etiqueta?.trim() || marcaEje(r.valor, columna),
+        position: eje === 'y' ? 'insideTopRight' : 'insideTopLeft',
+        fill: TINTA,
+        fontSize: 15,
+        fontWeight: 700,
+      }}
+    />
+  ));
 }
 
 /** Trazo de una línea punteada. */

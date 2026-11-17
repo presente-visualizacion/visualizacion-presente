@@ -9,7 +9,7 @@ import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import type { Columna, Fila } from '@/lib/tipos';
 import {
-  anchoTexto, BLANCO, dominioEje, ejeCategorias, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, reducirMovimiento, SUAVE, TINTA,
+  anchoTexto, BLANCO, dominioEje, ejeCategorias, lineasReferencia, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, reducirMovimiento, SUAVE, TINTA,
   type PropsGrafico, type SerieLista,
 } from './graficoComun';
 import { Cascada, Circular, Dispersion } from './GraficosEspeciales';
@@ -163,6 +163,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
             )}
           </Bar>
         ))}
+        {lineasReferencia(bloque, columnaValor, 'x')}
       </BarChart>
     );
   } else if (bloque.forma === 'barras') {
@@ -194,6 +195,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
             )}
           </Bar>
         ))}
+        {lineasReferencia(bloque, columnaValor, 'y')}
       </BarChart>
     );
   } else if (bloque.forma === 'combinado') {
@@ -217,6 +219,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
             )}
           </Bar>
         )))}
+        {lineasReferencia(bloque, columnaValor, 'y')}
       </ComposedChart>
     );
   } else if (bloque.forma === 'radar') {
@@ -248,6 +251,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
             dot={false} activeDot={{ r: 5, stroke: BLANCO, strokeWidth: 2 }} isAnimationActive={animar} animationDuration={450}
           />
         ))}
+        {lineasReferencia(bloque, columnaValor, 'y')}
       </AreaChart>
     );
   } else {
@@ -264,6 +268,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
             dot={false} activeDot={{ r: 5, stroke: BLANCO, strokeWidth: 2 }} isAnimationActive={animar} animationDuration={450}
           />
         ))}
+        {lineasReferencia(bloque, columnaValor, 'y')}
       </LineChart>
     );
   }

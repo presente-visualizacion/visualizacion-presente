@@ -114,6 +114,23 @@ export type FormaGrafico =
   | 'lineas' | 'barras' | 'barrasHorizontales' | 'area'
   | 'combinado' | 'circular' | 'dispersion' | 'radar' | 'cascada';
 
+/**
+ * Fondo del bloque: rosado claro, recuadro con borde, u oscuro (franja de
+ * conclusión; solo para texto, cifras y tarjetas).
+ */
+export type FondoBloque = 'tinte' | 'recuadro' | 'oscuro';
+
+/**
+ * Lugar del bloque en la disposición "libre": una cuadrícula de 12 columnas
+ * y hasta 8 filas del mismo alto. Todo desde 1, como en Excel.
+ */
+export interface Ubicacion {
+  columna: number;
+  ancho: number;
+  fila: number;
+  alto: number;
+}
+
 /** Lo que comparten todos los bloques. */
 interface BaseBloque {
   id: string;
@@ -121,6 +138,15 @@ interface BaseBloque {
   titulo?: string;
   /** Texto chico debajo del bloque (fuentes, aclaraciones). Admite {mes}. */
   nota?: string;
+  fondo?: FondoBloque;
+  /** Solo se usa con la disposición "libre". */
+  ubicacion?: Ubicacion;
+}
+
+/** Línea horizontal (o vertical, en barras horizontales) en un valor fijo: "Mínimo 12 %". */
+export interface Referencia {
+  valor: number;
+  etiqueta?: string;
 }
 
 export interface BloqueGrafico extends BaseBloque {
@@ -146,6 +172,8 @@ export interface BloqueGrafico extends BaseBloque {
    * unidad que los datos: 3 es 3 % si la columna es porcentaje.
    */
   rangoEje?: RangoEje;
+  /** Líneas de referencia, punteadas, con su etiqueta. */
+  referencias?: Referencia[];
 }
 
 export interface RangoEje {
@@ -232,8 +260,9 @@ export type Bloque = BloqueGrafico | BloqueTabla | BloqueTexto | BloqueCifras | 
  * - filas: uno debajo del otro; el último ocupa el espacio restante.
  * - principal-lateral: el primero a dos tercios, los demás apilados a la derecha.
  * - cuadricula: dos columnas; los bloques se reparten en filas del mismo alto.
+ * - libre: cada bloque dice dónde va y cuánto ocupa (`ubicacion`).
  */
-export type Disposicion = 'una' | 'columnas' | 'filas' | 'principal-lateral' | 'cuadricula';
+export type Disposicion = 'una' | 'columnas' | 'filas' | 'principal-lateral' | 'cuadricula' | 'libre';
 
 export interface Diapositiva {
   id: string;

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Copy, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CLASE_BOTON, CLASE_BOTON_PRINCIPAL, CLASE_CAMPO } from '@/components/editor/piezas';
+import { PLANTILLAS } from '@/lib/edicion/nombresPlantillas';
 import type { ResumenPresentacion } from '@/lib/tipos';
 
 type Breve = Pick<ResumenPresentacion, 'id' | 'nombre'>;
@@ -63,6 +64,7 @@ export function NuevaPresentacion({ presentaciones, copiaDe, compacto = false }:
   const [creando, setCreando] = useState(false);
   const router = useRouter();
   const campoNombre = useRef<HTMLInputElement>(null);
+  const esCopia = Boolean(origen) && !origen.startsWith('plantilla:');
 
   const abrir = () => {
     setOrigen(copiaDe?.id ?? '');
@@ -79,7 +81,11 @@ export function NuevaPresentacion({ presentaciones, copiaDe, compacto = false }:
     setCreando(true);
     setError(null);
     try {
-      const { id } = await enviar('/api/presentaciones', origen ? { copiaDe: origen, nombre } : { nueva: { nombre, periodo } });
+      const plantilla = origen.startsWith('plantilla:') ? origen.slice('plantilla:'.length) : undefined;
+      const { id } = await enviar(
+        '/api/presentaciones',
+        origen && !plantilla ? { copiaDe: origen, nombre } : { nueva: { nombre, periodo, ...(plantilla ? { plantilla } : {}) } },
+      );
       if (!id) throw new Error('No se pudo crear.');
       router.push(`/p/${id}`);
     } catch (err) {
@@ -100,7 +106,7 @@ export function NuevaPresentacion({ presentaciones, copiaDe, compacto = false }:
         </button>
       )}
       {abierto && (
-        <Ventana titulo={origen ? 'Duplicar presentación' : 'Nueva presentación'} onCerrar={() => !creando && setAbierto(false)}>
+        <Ventana titulo={esCopia ? 'Duplicar presentación' : 'Nueva presentación'} onCerrar={() => !creando && setAbierto(false)}>
           <form onSubmit={crear} className="mt-4 space-y-4">
             <label className="block">
               <span className="mb-1 block text-sm font-semibold text-tinta">Nombre</span>
@@ -110,15 +116,18 @@ export function NuevaPresentacion({ presentaciones, copiaDe, compacto = false }:
               <span className="mb-1 block text-sm font-semibold text-tinta">Partir de</span>
               <select value={origen} onChange={(e) => setOrigen(e.target.value)} className={`${CLASE_CAMPO} h-10 py-0`}>
                 <option value="">En blanco</option>
+                {Object.entries(PLANTILLAS).map(([clave, titulo]) => <option key={clave} value={`plantilla:${clave}`}>{titulo}</option>)}
                 {presentaciones.map((p) => <option key={p.id} value={p.id}>Copia de: {p.nombre}</option>)}
               </select>
               <span className="mt-1 block text-[13px] leading-snug text-tinta-suave">
-                {origen
+                {esCopia
                   ? 'Se copian todas las diapositivas, datos y meses. La original no cambia.'
-                  : 'Empieza con portada, una diapositiva vacía y cierre. Los demás meses se agregan con "Nuevo mes".'}
+                  : origen
+                    ? 'Portada, la diapositiva de ejemplo y cierre. Puedes copiar la diapositiva y pegarla en otra presentación.'
+                    : 'Empieza con portada, una diapositiva vacía y cierre. Los demás meses se agregan con "Nuevo mes".'}
               </span>
             </label>
-            {!origen && (
+            {!esCopia && (
               <label className="block">
                 <span className="mb-1 block text-sm font-semibold text-tinta">Primer mes</span>
                 <input type="month" value={periodo} onChange={(e) => setPeriodo(e.target.value)} required className={`${CLASE_CAMPO} h-10 py-0`} />
@@ -127,7 +136,7 @@ export function NuevaPresentacion({ presentaciones, copiaDe, compacto = false }:
             {error && <p role="alert" className="rounded-lg bg-[#FDECEC] px-3 py-2 text-[14px] text-[#8E1015]">{error}</p>}
             <div className="flex justify-end gap-2 pt-1">
               <button type="button" className={CLASE_BOTON} onClick={() => setAbierto(false)} disabled={creando}>Cancelar</button>
-              <button type="submit" className={CLASE_BOTON_PRINCIPAL} disabled={creando}>{creando ? 'Creando…' : origen ? 'Duplicar' : 'Crear'}</button>
+              <button type="submit" className={CLASE_BOTON_PRINCIPAL} disabled={creando}>{creando ? 'Creando…' : esCopia ? 'Duplicar' : 'Crear'}</button>
             </div>
           </form>
         </Ventana>

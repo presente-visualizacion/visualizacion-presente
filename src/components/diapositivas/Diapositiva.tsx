@@ -2,6 +2,7 @@
 
 import { VistaBloque } from '@/components/bloques/Bloques';
 import { Logo } from '@/components/Logo';
+import { filasUsadas, ubicacionesEfectivas } from '@/lib/disposicion';
 import { conMes, nombrePeriodo } from '@/lib/periodos';
 import type { Diapositiva as TipoDiapositiva, IdPeriodo, Presentacion } from '@/lib/tipos';
 
@@ -86,6 +87,24 @@ function Contenido({ presentacion, diapositiva, periodo, numero }: Props) {
         <div className="flex min-h-0 min-w-0 flex-col gap-[24px]">
           {bloques.slice(1).map((b, i) => <div key={b.id} className="min-h-0 flex-1">{vista(i + 1)}</div>)}
         </div>
+      </div>
+    );
+  } else if (disposicion === 'libre') {
+    // Cada bloque en su rectángulo de una cuadrícula de 12 columnas.
+    const lugares = ubicacionesEfectivas(bloques);
+    cuerpo = (
+      <div
+        className="grid h-full gap-x-[28px] gap-y-[14px]"
+        style={{ gridTemplateColumns: 'repeat(12, minmax(0, 1fr))', gridTemplateRows: `repeat(${filasUsadas(lugares)}, minmax(0, 1fr))` }}
+      >
+        {bloques.map((b, i) => {
+          const u = lugares[i];
+          return (
+            <div key={b.id} className="min-h-0 min-w-0" style={{ gridColumn: `${u.columna} / span ${u.ancho}`, gridRow: `${u.fila} / span ${u.alto}` }}>
+              {vista(i)}
+            </div>
+          );
+        })}
       </div>
     );
   } else if (disposicion === 'cuadricula') {

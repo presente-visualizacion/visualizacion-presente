@@ -95,8 +95,7 @@ export function VistaBloque({ bloque, ...contexto }: Contexto & { bloque: Bloque
       case 'tarjetas': return <VistaTarjetas bloque={bloque} {...contexto} />;
     }
   })();
-  if (!bloque.titulo && !bloque.nota) return contenido;
-  return (
+  const conMarco = !bloque.titulo && !bloque.nota ? contenido : (
     <div className="flex h-full min-h-0 flex-col">
       {bloque.titulo && (
         <h3 className="mb-[12px] shrink-0 text-[16px] font-bold uppercase tracking-[0.06em] text-primario">{conMes(bloque.titulo, contexto.periodo)}</h3>
@@ -105,7 +104,16 @@ export function VistaBloque({ bloque, ...contexto }: Contexto & { bloque: Bloque
       {bloque.nota && <p className="mt-[8px] shrink-0 text-[13px] leading-[1.4] text-tinta-suave">{conMes(bloque.nota, contexto.periodo)}</p>}
     </div>
   );
+  if (!bloque.fondo) return conMarco;
+  return <div className={`h-full min-h-0 rounded-[14px] px-[22px] py-[12px] ${CLASE_FONDO[bloque.fondo]}`}>{conMarco}</div>;
 }
+
+/** Fondos del bloque. El oscuro cambia los colores del texto (ver globals.css). */
+const CLASE_FONDO: Record<NonNullable<Bloque['fondo']>, string> = {
+  tinte: 'bg-tinte',
+  recuadro: 'border border-linea-fuerte',
+  oscuro: 'vp-fondo-oscuro',
+};
 
 function VistaGrafico({ bloque, presentacion, periodo }: Contexto & { bloque: BloqueGrafico }) {
   const conjunto = conjuntoDe(presentacion, bloque.datos);
@@ -270,7 +278,7 @@ function VistaTexto({ bloque, periodo }: Contexto & { bloque: BloqueTexto }) {
   return (
     // Sin barra de desplazamiento mientras se ajusta (la barra cambia el ancho y
     // haría volver a empezar); solo si al mínimo aún no cabe.
-    <div ref={caja} className={`h-full max-w-[1040px] leading-[1.5] text-tinta ${alMinimo ? 'overflow-auto' : 'overflow-hidden'}`} style={{ fontSize: tamano }}>
+    <div ref={caja} className={`h-full max-w-[1040px] leading-[1.5] text-tinta [&>*:last-child]:mb-0 ${alMinimo ? 'overflow-auto' : 'overflow-hidden'}`} style={{ fontSize: tamano }}>
       {partes.map((parte, i) => {
         if (parte.tipo === 'grande') {
           return <p key={i} className="mb-[0.4em] font-bold leading-[1.15] tracking-[-0.02em]" style={{ fontSize: '2.2em' }}><ConNegritas texto={parte.lineas[0]} /></p>;
@@ -304,7 +312,8 @@ function VistaCifras({ bloque, presentacion, periodo }: Contexto & { bloque: Blo
   // Una al lado de la otra si caben (al menos 190 px cada una); si no, una
   // debajo de la otra, como en el costado de una diapositiva.
   const vertical = ancho > 0 && ancho / cifras.length < 190;
-  const valorGrande = vertical ? (alto > 0 && alto / cifras.length < 100 ? 30 : 36) : 46;
+  // En una franja baja (disposición libre) el número se achica para caber.
+  const valorGrande = vertical ? (alto > 0 && alto / cifras.length < 100 ? 30 : 36) : alto > 0 && alto < 95 ? 32 : 46;
 
   return (
     <div ref={caja} className="h-full">

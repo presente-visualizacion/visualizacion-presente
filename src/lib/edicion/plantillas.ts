@@ -3,8 +3,9 @@
 // de un gráfico cuando cambia de tipo. Sin React: se prueba aparte.
 
 import type {
-  Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, FormaGrafico, IdPeriodo, Presentacion, Serie,
+  Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, FormaGrafico, IdPeriodo, Presentacion, Serie,
 } from '../tipos';
+import { ubicacionesDesde, ubicacionNueva } from '../disposicion';
 import type { ConfigGrafico, Operacion } from './operaciones';
 import { SERIES_POR_FORMA } from './validar';
 
@@ -101,6 +102,9 @@ export function bloqueNuevo(tipo: TipoNuevo, enUso: Set<string>, conjunto?: Conj
 /** Formas con un eje de valores al que se le puede fijar el rango. */
 export const CON_RANGO_EJE: FormaGrafico[] = ['lineas', 'barras', 'barrasHorizontales', 'area', 'combinado', 'dispersion', 'radar', 'cascada'];
 
+/** Formas que dibujan líneas de referencia. */
+export const CON_REFERENCIAS: FormaGrafico[] = ['lineas', 'barras', 'barrasHorizontales', 'area', 'combinado', 'cascada'];
+
 /** Por qué el conjunto no sirve para esa forma; null si sirve. */
 export function motivoNoDisponible(forma: FormaGrafico, conjunto: ConjuntoDatos): string | null {
   const numericas = conjunto.columnas.filter(esNumerica).length;
@@ -148,6 +152,7 @@ export function configPara(forma: FormaGrafico, actual: ConfigGrafico, conjunto:
   if (actual.resaltar && ['barras', 'barrasHorizontales', 'dispersion'].includes(forma) && columna(actual.resaltar.columna)) config.resaltar = actual.resaltar;
   if (actual.detalleEje && (forma === 'barras' || forma === 'combinado') && columna(actual.detalleEje)) config.detalleEje = actual.detalleEje;
   if (actual.rangoEje && CON_RANGO_EJE.includes(forma)) config.rangoEje = actual.rangoEje;
+  if (actual.referencias && CON_REFERENCIAS.includes(forma)) config.referencias = actual.referencias;
   if (forma === 'cascada') config.total = actual.forma === 'cascada' ? Boolean(actual.total) : true;
   if (forma === 'dispersion') {
     const nombres = columna(actual.nombres)?.tipo === 'texto' ? actual.nombres : conjunto.columnas.find((c) => !esNumerica(c))?.clave;
@@ -265,6 +270,26 @@ export function opsDuplicarDiapositiva(p: Presentacion, diapositiva: string): { 
   };
 }
 
+/**
+ * Cambiar la disposición. Al pasar a "libre", cada bloque recibe el lugar que
+ * ya tenía en pantalla, para que nada salte; después se mueve a gusto.
+ */
+export function opsCambiarDisposicion(d: Diapositiva, valor: Disposicion): Operacion[] {
+  const ops: Operacion[] = [{ op: 'diapositiva.disposicion', diapositiva: d.id, valor }];
+  const actual = d.disposicion ?? 'una';
+  if (valor === 'libre' && actual !== 'libre') {
+    const lugares = ubicacionesDesde(actual === 'una' && d.bloques.length > 1 ? 'filas' : actual, d.bloques);
+    d.bloques.forEach((b, i) => ops.push({ op: 'bloque.aspecto', bloque: b.id, fondo: b.fondo ?? null, ubicacion: lugares[i] }));
+  }
+  return ops;
+}
+
+/** En una diapositiva libre, el bloque que se agrega va debajo de todo. */
+function conLugar(d: Diapositiva, bloque: Bloque): Bloque {
+  if (d.disposicion !== 'libre') return bloque;
+  return { ...bloque, ubicacion: ubicacionNueva(d.bloques) };
+}
+
 /** Con la disposición "una" solo se ve el primer bloque: al pasar de uno, se reparten en columnas. */
 export function opsDisposicionPara(d: Diapositiva, bloques: number): Operacion[] {
   return (d.disposicion ?? 'una') === 'una' && bloques > 1 ? [{ op: 'diapositiva.disposicion', diapositiva: d.id, valor: 'columnas' }] : [];
@@ -276,7 +301,7 @@ export function opsDuplicarBloque(p: Presentacion, bloque: string): Operacion[] 
   const copia = copiaDeBloque(p, d.bloques.find((b) => b.id === bloque)!, idsEnUso(p));
   return [
     ...copia.conjuntos.map((c): Operacion => ({ op: 'conjunto.poner', conjunto: c })),
-    { op: 'bloque.poner', diapositiva: d.id, bloque: copia.bloque, despues: bloque },
+    { op: 'bloque.poner', diapositiva: d.id, bloque: conLugar(d, copia.bloque), despues: bloque },
     ...opsDisposicionPara(d, d.bloques.length + 1),
   ];
 }
@@ -304,7 +329,7 @@ export function opsAgregarBloque(
       if (!conjunto) return null;
     }
   }
-  const bloque = bloqueNuevo(tipo, enUso, conjunto);
+  const bloque = conLugar(d, bloqueNuevo(tipo, enUso, conjunto));
   ops.push({ op: 'bloque.poner', diapositiva: d.id, bloque, despues: d.bloques.at(-1)?.id ?? null });
   ops.push(...opsDisposicionPara(d, d.bloques.length + 1));
   return { ops, bloque, conjuntoNuevo };

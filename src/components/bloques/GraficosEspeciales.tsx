@@ -10,7 +10,7 @@ import {
 import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import {
-  anchoTexto, BLANCO, CajaGlobo, dominioEje, ejeCategorias, ejeValores, FilaGlobo, LINEA, marcaEje, Muestra, reducirMovimiento, SUAVE, TINTA,
+  anchoTexto, BLANCO, CajaGlobo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, FilaGlobo, LINEA, marcaEje, Muestra, reducirMovimiento, SUAVE, TINTA,
   type PropsGrafico,
 } from './graficoComun';
 
@@ -226,6 +226,7 @@ export function Cascada({ bloque, conjunto, filas, tema }: PropsGrafico) {
                 <LabelList dataKey="etiqueta" position="top" offset={8} fontSize={15} fontWeight={600} fill={TINTA} />
               )}
             </Bar>
+            {lineasReferencia(bloque, columna, 'y')}
           </BarChart>
         </ResponsiveContainer>
       </div>

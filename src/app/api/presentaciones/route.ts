@@ -2,7 +2,8 @@
 // Crea una presentación y responde { id } con el id que quedó (si el pedido ya
 // existe, se le agrega "-2", "-3", ...). Recibe una de tres cosas:
 //   { presentacion }              completa (el importador de la etapa 4)
-//   { nueva: { nombre, periodo } } en blanco: portada, una diapositiva y cierre
+//   { nueva: { nombre, periodo, plantilla? } } en blanco (portada, una diapositiva
+//                                  y cierre) o una plantilla ('paraguay')
 //   { copiaDe: id, nombre }        copia completa de otra, con otro nombre
 // Ver "Crear y eliminar presentaciones" en PLAN.md.
 //
@@ -11,7 +12,7 @@
 
 import { puedeEditar } from '@/lib/acceso';
 import { obtenerAlmacen } from '@/lib/almacen';
-import { copiaDePresentacion, nombreLimpio, presentacionEnBlanco } from '@/lib/edicion/nueva';
+import { copiaDePresentacion, nombreLimpio, PLANTILLAS, presentacionEnBlanco, presentacionParaguay } from '@/lib/edicion/nueva';
 import { validarPresentacion } from '@/lib/edicion/validar';
 import { presentacionMuestra } from '@/lib/almacen/muestra';
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
   } catch {
     return error(400, 'El envío no es JSON válido.');
   }
-  const pedido = (datos ?? {}) as { presentacion?: unknown; nueva?: { nombre?: unknown; periodo?: unknown }; copiaDe?: unknown; nombre?: unknown };
+  const pedido = (datos ?? {}) as { presentacion?: unknown; nueva?: { nombre?: unknown; periodo?: unknown; plantilla?: unknown }; copiaDe?: unknown; nombre?: unknown };
   let propuesta: unknown = pedido.presentacion;
 
   if (pedido.nueva) {
@@ -51,7 +52,11 @@ export async function POST(request: Request) {
     const periodo = typeof pedido.nueva.periodo === 'string' ? pedido.nueva.periodo : '';
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(periodo)) return error(400, 'Elige el mes con el que empieza la presentación.');
     // El tema (colores y letra) es el de Presente, el mismo de la muestra.
-    propuesta = presentacionEnBlanco({ nombre, periodo, tema: presentacionMuestra.tema });
+    const plantilla = pedido.nueva.plantilla;
+    if (plantilla !== undefined && !(typeof plantilla === 'string' && Object.hasOwn(PLANTILLAS, plantilla))) return error(400, 'No existe esa plantilla.');
+    propuesta = plantilla === 'paraguay'
+      ? presentacionParaguay({ nombre, periodo, tema: presentacionMuestra.tema })
+      : presentacionEnBlanco({ nombre, periodo, tema: presentacionMuestra.tema });
   } else if (pedido.copiaDe !== undefined) {
     const nombre = nombreLimpio(pedido.nombre);
     if (!nombre) return error(400, 'Escribe un nombre para la copia (hasta 120 letras).');

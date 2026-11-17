@@ -17,11 +17,14 @@
 import { interpretarNumero, numeroEditable } from '../formato';
 import type {
   Bloque, BloqueGrafico, BloqueTabla, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, Fila, IdPeriodo,
-  OrigenExcel, PorPeriodo, Presentacion, SelectorFila, Tarjeta, Tema, TipoColumna,
+  FondoBloque, OrigenExcel, PorPeriodo, Presentacion, SelectorFila, Tarjeta, Tema, TipoColumna, Ubicacion,
 } from '../tipos';
 
-/** El título y la nota de un bloque van por `bloque.marco`, no por la configuración. */
-type Marco = 'id' | 'tipo' | 'titulo' | 'nota';
+/**
+ * El título y la nota van por `bloque.marco`, y el fondo y la ubicación por
+ * `bloque.aspecto`; no por la configuración del gráfico o la tabla.
+ */
+type Marco = 'id' | 'tipo' | 'titulo' | 'nota' | 'fondo' | 'ubicacion';
 export type ConfigGrafico = Omit<BloqueGrafico, Marco>;
 export type ConfigTabla = Omit<BloqueTabla, Marco>;
 
@@ -38,6 +41,8 @@ export type Operacion =
   | { op: 'tarjetas.valor'; bloque: string; periodo: IdPeriodo | null; valor: Tarjeta[] | null }
   /** Título (arriba) y nota (debajo) de cualquier bloque. '' los quita. */
   | { op: 'bloque.marco'; bloque: string; titulo: string; nota: string }
+  /** Fondo y lugar en la disposición libre; null quita cada uno. */
+  | { op: 'bloque.aspecto'; bloque: string; fondo: FondoBloque | null; ubicacion: Ubicacion | null }
   | { op: 'datos.filas'; conjunto: string; periodo: IdPeriodo | null; valor: Fila[] | null }
   /** Solo cambia los campos presentes. `decimales: null`, `unidad: ''`, `grupo: ''` y `signo: false` los quitan. */
   | { op: 'datos.columna'; conjunto: string; clave: string; nombre?: string; decimales?: number | null; unidad?: string; grupo?: string; signo?: boolean }
@@ -293,8 +298,13 @@ function datoDeBloque(bloque: Bloque): PorPeriodo<string> | PorPeriodo<Cifra[]> 
 }
 
 /** Título y nota del bloque, para conservarlos al cambiar su configuración. */
-function marcoDe(b: Bloque): { titulo?: string; nota?: string } {
-  return { ...(b.titulo ? { titulo: b.titulo } : {}), ...(b.nota ? { nota: b.nota } : {}) };
+function marcoDe(b: Bloque): Pick<Bloque, 'titulo' | 'nota' | 'fondo' | 'ubicacion'> {
+  return {
+    ...(b.titulo ? { titulo: b.titulo } : {}),
+    ...(b.nota ? { nota: b.nota } : {}),
+    ...(b.fondo ? { fondo: b.fondo } : {}),
+    ...(b.ubicacion ? { ubicacion: b.ubicacion } : {}),
+  };
 }
 
 /** Copia del bloque con su dato por mes cambiado (texto, cifras o tarjetas). */
@@ -354,6 +364,13 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
         ...b,
         ...(op.titulo ? { titulo: op.titulo } : {}),
         ...(op.nota ? { nota: op.nota } : {}),
+      }) as Bloque);
+
+    case 'bloque.aspecto':
+      return conBloque(p, op.bloque, ({ fondo: _fondo, ubicacion: _ubicacion, ...b }) => ({
+        ...b,
+        ...(op.fondo ? { fondo: op.fondo } : {}),
+        ...(op.ubicacion ? { ubicacion: { ...op.ubicacion } } : {}),
       }) as Bloque);
 
     case 'datos.filas':
@@ -589,6 +606,11 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
       return b ? [{ op: op.op, bloque: b.id, titulo: b.titulo ?? '', nota: b.nota ?? '' }] : [];
     }
 
+    case 'bloque.aspecto': {
+      const b = bloqueDe(p, op.bloque);
+      return b ? [{ op: op.op, bloque: b.id, fondo: b.fondo ?? null, ubicacion: b.ubicacion ?? null }] : [];
+    }
+
     case 'datos.filas': {
       const c = Object.hasOwn(p.datos, op.conjunto) ? p.datos[op.conjunto] : undefined;
       if (!c) return [];
@@ -775,6 +797,7 @@ export function claveDe(op: Operacion): string | null {
     case 'tarjetas.valor':
       return `${op.op}|${op.bloque}|${op.periodo ?? ''}`;
     case 'bloque.marco':
+    case 'bloque.aspecto':
       return `${op.op}|${op.bloque}`;
     case 'datos.filas':
       return `${op.op}|${op.conjunto}|${op.periodo ?? ''}`;

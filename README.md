@@ -24,6 +24,9 @@ Abre http://localhost:3000.
   cascada.
 - Modo presentación en pantalla completa, navegación con teclado y versión
   para celular.
+- **Disposición libre**: cada bloque elige su lugar en una cuadrícula de 12 x 8;
+  fondos de bloque, líneas de referencia en gráficos y copiar/pegar
+  diapositivas entre presentaciones (ver PLAN.md).
 - **Clave**: si la variable `CLAVE_EDICION` está en Vercel, el sitio pide la
   clave antes de mostrar o editar nada (ver "Acceso" en PLAN.md).
 - **Edición** (en computador): botón "Editar" con un panel para cambiar el

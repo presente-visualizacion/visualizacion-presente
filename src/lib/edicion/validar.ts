@@ -28,7 +28,7 @@ export const TOPES = {
   columnas: 40,
   periodos: 240,
   diapositivas: 200,
-  bloquesPorDiapositiva: 8,
+  bloquesPorDiapositiva: 12,
   tarjetasPorBloque: 8,
   tarjetaTexto: 600,
   calculadasPorTabla: 12,
@@ -151,6 +151,10 @@ const camposGrafico = {
   total: z.boolean().optional(),
   nombres: clave.optional(),
   detalleEje: clave.optional(),
+  referencias: z.array(z.strictObject({
+    valor: z.number().finite(),
+    etiqueta: z.string().max(60).optional(),
+  })).max(4).optional(),
   rangoEje: z.strictObject({
     desde: z.number().finite().optional(),
     hasta: z.number().finite().optional(),
@@ -169,7 +173,22 @@ const camposTabla = {
     orden: z.enum(['asc', 'desc']).optional(),
   })).max(TOPES.calculadasPorTabla).optional(),
 };
+export const COLUMNAS_LIBRE = 12;
+export const FILAS_LIBRE = 8;
+export const FONDOS = ['tinte', 'recuadro', 'oscuro'] as const;
+const fondo = z.enum(FONDOS);
+const ubicacion = z.strictObject({
+  columna: z.number().int().min(1).max(COLUMNAS_LIBRE),
+  ancho: z.number().int().min(1).max(COLUMNAS_LIBRE),
+  fila: z.number().int().min(1).max(FILAS_LIBRE),
+  alto: z.number().int().min(1).max(FILAS_LIBRE),
+}).refine((u) => u.columna + u.ancho - 1 <= COLUMNAS_LIBRE && u.fila + u.alto - 1 <= FILAS_LIBRE, {
+  message: `El bloque se sale de la cuadrícula (${COLUMNAS_LIBRE} columnas y ${FILAS_LIBRE} filas).`,
+});
+
 const marco = {
+  fondo: fondo.optional(),
+  ubicacion: ubicacion.optional(),
   titulo: z.string().max(TOPES.titulo).optional(),
   nota: z.string().max(TOPES.titulo).optional(),
 };
@@ -185,7 +204,7 @@ const bloque = z.discriminatedUnion('tipo', [
 ]) satisfies z.ZodType<Bloque>;
 
 const tipoDiapositiva = z.enum(['portada', 'contenido', 'cierre']);
-export const DISPOSICIONES = ['una', 'columnas', 'filas', 'principal-lateral', 'cuadricula'] as const;
+export const DISPOSICIONES = ['una', 'columnas', 'filas', 'principal-lateral', 'cuadricula', 'libre'] as const;
 const disposicion = z.enum(DISPOSICIONES);
 
 const diapositiva = z.strictObject({
@@ -221,6 +240,7 @@ const operacion = z.discriminatedUnion('op', [
   z.strictObject({
     op: z.literal('bloque.marco'), bloque: id, titulo: z.string().max(TOPES.titulo), nota: z.string().max(TOPES.titulo),
   }),
+  z.strictObject({ op: z.literal('bloque.aspecto'), bloque: id, fondo: fondo.nullable(), ubicacion: ubicacion.nullable() }),
   z.strictObject({
     op: z.literal('datos.columna'),
     conjunto: id,

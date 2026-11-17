@@ -76,6 +76,10 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
   2026-11-17"): crear, duplicar, eliminar y recuperar presentaciones desde el
   inicio; rango del eje de valores en los gráficos; mover una diapositiva a
   cualquier posición.
+- [x] **Bloques libres y copiar diapositivas** (2026-11-17, ver "Bloques
+  libres, fondos y copiar diapositivas"): disposición libre, fondos de bloque,
+  líneas de referencia, copiar y pegar diapositivas entre presentaciones,
+  plantilla de Paraguay.
 - [ ] **Etapa 5. Cierre.** PDF, respaldo en Excel, historial de versiones,
   comparar con el mes anterior. (Crear y duplicar presentaciones ya quedó
   hecho en los ajustes del 2026-11-17.)
@@ -1446,6 +1450,78 @@ futuro**:
    (`esquema.ts`).
 4. Antes de publicar, las pruebas deben pasar con la muestra y con una
    presentación importada (validan lo ya guardado contra el validador nuevo).
+
+## Bloques libres, fondos y copiar diapositivas (2026-11-17)
+
+Pedido: poder armar diapositivas como el prototipo de Paraguay (dos columnas
+con varios bloques y una franja de conclusión abajo), copiar diapositivas
+entre presentaciones y tener la de Paraguay lista.
+
+### Disposición libre
+
+- Nueva disposición `'libre'`. Cada bloque tiene `ubicacion?: { columna,
+  ancho, fila, alto }` en una cuadrícula de **12 columnas x hasta 8 filas**
+  (desde 1). La diapositiva usa tantas filas como la última ocupada; todas
+  del mismo alto (`src/lib/disposicion.ts`, dibujo en `Diapositiva.tsx`).
+- Al elegir "Libre", `opsCambiarDisposicion` le da a cada bloque el lugar
+  que ya tenía (columnas, filas, principal y lateral o cuadrícula), en un
+  solo paso de deshacer. Bloques sin ubicación van debajo de todo, a lo
+  ancho; uno nuevo o duplicado también.
+- Editor (cada bloque, "Lugar en la diapositiva"): minimapa con todos los
+  bloques numerados (un clic lleva la esquina del bloque a esa casilla) y
+  cuatro listas: columna, ancho, fila y alto. Los bloques del panel llevan el
+  mismo número que el minimapa.
+- Tope de bloques por diapositiva: de 8 a 12.
+
+### Fondos de bloque
+
+- `fondo?: 'tinte' | 'recuadro' | 'oscuro'` en todos los bloques. El oscuro
+  (franja de conclusión) solo se ofrece para texto, cifras y tarjetas; cambia
+  los colores con `.vp-fondo-oscuro` en `globals.css` (negritas en rosado).
+- Fondo y ubicación van por la operación nueva `bloque.aspecto` (con
+  inversa y compactación), y `grafico.config` / `tabla.config` los conservan
+  (son parte del "marco", como título y nota).
+
+### Líneas de referencia
+
+- `referencias?: { valor, etiqueta? }[]` (hasta 4) en gráficos de líneas,
+  barras, barras horizontales (línea vertical), área, combinado y cascada.
+  Punteadas, oscuras, con la etiqueta arriba a la derecha; el eje se estira
+  para que se vean (`ifOverflow="extendDomain"`). Se conservan al cambiar de
+  forma si la nueva las admite.
+
+### Copiar y pegar diapositivas
+
+- Panel → pestaña Diapositiva: íconos **Copiar** y **Pegar** (pega después
+  de la diapositiva elegida). La copia se guarda en el navegador
+  (`localStorage`, clave `vp-portapapeles-diapositiva`), con la diapositiva y
+  todos los conjuntos que usan sus gráficos, tablas y cifras. Sirve entre
+  presentaciones y entre pestañas del mismo navegador; no entre computadores.
+- Al pegar (`src/lib/edicion/portapapeles.ts`): ids nuevos para la
+  diapositiva, los bloques y los conjuntos (pegar dos veces no choca), las
+  cifras que salen de datos apuntan a los conjuntos nuevos. Lo que cambia por
+  mes se queda en los meses que comparten ambas presentaciones; si el mes que
+  se ve en el destino no estaba, recibe el que se veía al copiar (y se
+  avisa). Lo que es igual en todos los meses se ve en todos.
+- Es un solo paso de deshacer.
+
+### Plantilla de Paraguay
+
+- "Nueva presentación" → "Partir de: Ejemplo: Paraguay (Ueno Bank)". Crea
+  portada, la diapositiva de Ueno Bank y cierre (`presentacionParaguay` en
+  `src/lib/edicion/nueva.ts`). Todo es igual en todos los meses.
+- La diapositiva (disposición libre, 6 filas): a la izquierda, barras
+  horizontales de clientes (filas 1-2), cifras de depósitos (fila 3) y
+  condiciones con fondo rosado (filas 4-5); a la derecha, barras del CAR con
+  la línea "Mínimo 12 %" y el último corte resaltado (filas 1-5); abajo, la
+  conclusión con fondo oscuro y las fuentes (fila 6).
+- Las cifras son públicas (informes de calificación de la entidad de dic-24
+  a dic-25, y BCP vía La Nación, Infobae y La Opinión en nov-26): no son
+  datos de Presente, por eso pueden estar en el repositorio. El CAR de
+  nov-26 es del BCP después de ajustes contables: no es comparable uno a
+  uno con la serie anterior (lo dice la nota del gráfico).
+- Para llevarla al comité: abrirla, Copiar, ir a la presentación del comité
+  y Pegar.
 
 ## Cómo trabajar
 

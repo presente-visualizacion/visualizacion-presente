@@ -7,14 +7,14 @@
 import { useEffect, useId, useState } from 'react';
 import {
   ArrowDown, ArrowUp, ChartArea, ChartBar, ChartColumn, ChartColumnDecreasing, ChartLine, ChartNoAxesCombined, ChartPie,
-  ChartRadar, ChartScatter, type LucideIcon,
+  ChartRadar, ChartScatter, X, type LucideIcon,
 } from 'lucide-react';
 import { columnaDe, filasDe } from '@/lib/datos';
 import { interpretarNumero, numeroEditable } from '@/lib/formato';
 import type { ConfigGrafico, Operacion } from '@/lib/edicion/operaciones';
-import { CON_RANGO_EJE, configPara, esNumerica, motivoNoDisponible } from '@/lib/edicion/plantillas';
+import { CON_RANGO_EJE, CON_REFERENCIAS, configPara, esNumerica, motivoNoDisponible } from '@/lib/edicion/plantillas';
 import { FORMAS, SERIES_POR_FORMA } from '@/lib/edicion/validar';
-import type { BloqueGrafico, Columna, ConjuntoDatos, FormaGrafico, IdPeriodo, Presentacion, RangoEje, Resaltado, Serie } from '@/lib/tipos';
+import type { BloqueGrafico, Columna, ConjuntoDatos, FormaGrafico, IdPeriodo, Presentacion, RangoEje, Referencia, Resaltado, Serie } from '@/lib/tipos';
 import { BotonIcono, Casilla, CLASE_CAMPO, Opcion, Subtitulo } from './piezas';
 
 export const FORMAS_INFO: Record<FormaGrafico, { nombre: string; icono: LucideIcon; ayuda: string }> = {
@@ -251,10 +251,105 @@ export function EditorGrafico({ presentacion, bloque, periodo, cambiar }: Props)
         />
       )}
 
+      {CON_REFERENCIAS.includes(forma) && (
+        <SelectorReferencias
+          referencias={bloque.referencias ?? []}
+          columna={columnaDe(conjunto, bloque.series[0]?.clave ?? '')}
+          vertical={forma === 'barrasHorizontales'}
+          onCambiar={(referencias) => poner({ referencias: referencias.length ? referencias : undefined })}
+        />
+      )}
+
       {CON_RESALTAR.includes(forma) && (
         <SelectorResaltado conjunto={conjunto} periodo={periodo} resaltar={bloque.resaltar} onCambiar={(resaltar) => poner({ resaltar })} />
       )}
     </div>
+  );
+}
+
+/**
+ * Líneas punteadas en un valor fijo ("Mínimo 12 %"). El valor se guarda al
+ * salir del campo; la etiqueta, al escribir.
+ */
+function SelectorReferencias({ referencias, columna, vertical, onCambiar }: {
+  referencias: Referencia[];
+  columna?: Columna;
+  vertical: boolean;
+  onCambiar: (referencias: Referencia[]) => void;
+}) {
+  const unidad = columna?.tipo === 'porcentaje' ? ' (%)' : columna?.unidad ? ` (${columna.unidad})` : '';
+  const cambiarUna = (i: number, cambio: Partial<Referencia>) =>
+    onCambiar(referencias.map((r, j) => {
+      if (j !== i) return r;
+      const nueva: Referencia = { valor: cambio.valor ?? r.valor };
+      const etiqueta = cambio.etiqueta !== undefined ? cambio.etiqueta : r.etiqueta;
+      if (etiqueta) nueva.etiqueta = etiqueta;
+      return nueva;
+    }));
+  return (
+    <div>
+      <Subtitulo>Líneas de referencia</Subtitulo>
+      <p className="mb-2 text-[13px] leading-snug text-tinta-suave">
+        Una línea punteada {vertical ? 'vertical' : 'horizontal'} en un valor fijo, por ejemplo un mínimo exigido o una meta.
+      </p>
+      <ul className="space-y-2">
+        {referencias.map((r, i) => (
+          <li key={i} className="flex items-end gap-2">
+            <ValorReferencia valor={r.valor} etiqueta={`Valor${unidad}`} onCambiar={(valor) => cambiarUna(i, { valor })} />
+            <label className="min-w-0 flex-[2]">
+              <span className="text-[13px] text-tinta-suave">Etiqueta</span>
+              <input
+                type="text"
+                value={r.etiqueta ?? ''}
+                maxLength={60}
+                placeholder="Mínimo 12 %"
+                onChange={(e) => cambiarUna(i, { etiqueta: e.target.value })}
+                className={`${CLASE_CAMPO} h-10 py-0`}
+              />
+            </label>
+            <BotonIcono etiqueta="Quitar la línea de referencia" onClick={() => onCambiar(referencias.filter((_, j) => j !== i))}>
+              <X size={16} />
+            </BotonIcono>
+          </li>
+        ))}
+      </ul>
+      {referencias.length < 4 && (
+        <button
+          type="button"
+          onClick={() => onCambiar([...referencias, { valor: 0 }])}
+          className="mt-2 text-[13px] font-semibold text-primario underline-offset-2 hover:underline"
+        >
+          + Agregar línea de referencia
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ValorReferencia({ valor, etiqueta, onCambiar }: { valor: number; etiqueta: string; onCambiar: (v: number) => void }) {
+  const [texto, setTexto] = useState(numeroEditable(valor));
+  const [mal, setMal] = useState(false);
+  useEffect(() => setTexto(numeroEditable(valor)), [valor]);
+  const guardar = () => {
+    const n = interpretarNumero(texto);
+    if (n === null || Number.isNaN(n)) return setMal(true);
+    setMal(false);
+    if (n !== valor) onCambiar(n);
+  };
+  return (
+    <label className="min-w-0 flex-1">
+      <span className="text-[13px] text-tinta-suave">{etiqueta}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={texto}
+        aria-invalid={mal || undefined}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={guardar}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); guardar(); } }}
+        className={`${CLASE_CAMPO} h-10 py-0 ${mal ? 'border-[#B3261E]' : ''}`}
+      />
+    </label>
   );
 }
 

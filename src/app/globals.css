@@ -51,3 +51,16 @@ body {
 /* Recharts dibuja un contorno de foco sobre el SVG al hacer clic; el foco
    visible ya lo dan los controles propios. */
 .recharts-wrapper:focus, .recharts-surface:focus { outline: none; }
+
+/* Fondo oscuro de un bloque (franja de conclusión): texto claro y el color
+   principal más claro, para que se lea sobre el fondo. */
+.vp-fondo-oscuro {
+  background: #2A2330;
+  color: #F6EEF2;
+}
+.vp-fondo-oscuro .text-tinta { color: #F6EEF2; }
+.vp-fondo-oscuro .text-tinta-suave { color: #CFC3CB; }
+.vp-fondo-oscuro .text-primario { color: #FF9EC1; }
+.vp-fondo-oscuro .bg-primario { background: #FF9EC1; }
+.vp-fondo-oscuro .border-linea { border-color: #4A3F4F; }
+.vp-fondo-oscuro strong { color: #FF9EC1; }
