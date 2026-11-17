@@ -1,0 +1,2217 @@
+{
+ "formato": 1,
+ "id": "comite-precios",
+ "nombre": "Comité de Precios (ejemplo)",
+ "descripcion": "Muestra con datos inventados: entidades y cifras ficticias.",
+ "tema": {
+  "primario": "#D4145A",
+  "degradado": [
+   "#AC004A",
+   "#D50058",
+   "#FF0065",
+   "#FF4769",
+   "#FF8E6E"
+  ],
+  "series": [
+   "#D4145A",
+   "#2274C4",
+   "#E36A0B",
+   "#0B9B7A",
+   "#8250D6",
+   "#A1790F"
+  ],
+  "neutro": "#B9C3CF",
+  "logo": "/logo-presente-blanco.png"
+ },
+ "periodos": [
+  "2026-01",
+  "2026-02",
+  "2026-03",
+  "2026-04",
+  "2026-05",
+  "2026-06",
+  "2026-07",
+  "2026-08",
+  "2026-09",
+  "2026-10"
+ ],
+ "diapositivas": [
+  {
+   "id": "portada",
+   "tipo": "portada",
+   "titulo": "Comité de Precios",
+   "subtitulo": "{mes}",
+   "bloques": []
+  },
+  {
+   "id": "macro",
+   "tipo": "contenido",
+   "titulo": "Análisis macroeconómico",
+   "subtitulo": "Contexto económico e inflación, {mes}",
+   "disposicion": "filas",
+   "bloques": [
+    {
+     "id": "macro-cifras",
+     "tipo": "cifras",
+     "cifras": {
+      "porPeriodo": true,
+      "valores": {
+       "2026-01": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,36%",
+         "detalle": "4,37% en diciembre"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "8,25%",
+         "detalle": "Sin cambio"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$4.073",
+         "detalle": "Sube 0,4% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de diciembre",
+         "valor": "9,8%",
+         "detalle": "10,3% un año atrás"
+        }
+       ],
+       "2026-02": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,34%",
+         "detalle": "4,36% en enero"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "8,25%",
+         "detalle": "Sin cambio"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$3.973",
+         "detalle": "Baja 2,4% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de enero",
+         "valor": "9,8%",
+         "detalle": "10,3% un año atrás"
+        }
+       ],
+       "2026-03": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,29%",
+         "detalle": "4,34% en febrero"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "8,25%",
+         "detalle": "Sin cambio"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$3.941",
+         "detalle": "Baja 0,8% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de febrero",
+         "valor": "9,4%",
+         "detalle": "9,9% un año atrás"
+        }
+       ],
+       "2026-04": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,34%",
+         "detalle": "4,29% en marzo"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "8,25%",
+         "detalle": "Sin cambio"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$3.930",
+         "detalle": "Baja 0,3% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de marzo",
+         "valor": "9,1%",
+         "detalle": "9,6% un año atrás"
+        }
+       ],
+       "2026-05": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,25%",
+         "detalle": "4,34% en abril"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "8,50%",
+         "detalle": "Antes 8,25%"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$3.846",
+         "detalle": "Baja 2,1% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de abril",
+         "valor": "8,7%",
+         "detalle": "9,2% un año atrás"
+        }
+       ],
+       "2026-06": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,34%",
+         "detalle": "4,25% en mayo"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "8,50%",
+         "detalle": "Sin cambio"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$3.770",
+         "detalle": "Baja 2,0% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de mayo",
+         "valor": "8,3%",
+         "detalle": "8,8% un año atrás"
+        }
+       ],
+       "2026-07": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,36%",
+         "detalle": "4,34% en junio"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "8,75%",
+         "detalle": "Antes 8,50%"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$3.818",
+         "detalle": "Sube 1,3% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de junio",
+         "valor": "8,3%",
+         "detalle": "8,8% un año atrás"
+        }
+       ],
+       "2026-08": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,35%",
+         "detalle": "4,36% en julio"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "8,75%",
+         "detalle": "Sin cambio"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$3.794",
+         "detalle": "Baja 0,6% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de julio",
+         "valor": "8,1%",
+         "detalle": "8,6% un año atrás"
+        }
+       ],
+       "2026-09": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,31%",
+         "detalle": "4,35% en agosto"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "9,00%",
+         "detalle": "Antes 8,75%"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$3.849",
+         "detalle": "Sube 1,4% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de agosto",
+         "valor": "7,8%",
+         "detalle": "8,3% un año atrás"
+        }
+       ],
+       "2026-10": [
+        {
+         "etiqueta": "Inflación anual",
+         "valor": "4,29%",
+         "detalle": "4,31% en septiembre"
+        },
+        {
+         "etiqueta": "Tasa de política",
+         "valor": "9,00%",
+         "detalle": "Sin cambio"
+        },
+        {
+         "etiqueta": "Dólar al cierre",
+         "valor": "$3.845",
+         "detalle": "Baja 0,1% en el mes"
+        },
+        {
+         "etiqueta": "Desempleo de septiembre",
+         "valor": "7,8%",
+         "detalle": "8,3% un año atrás"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "id": "macro-texto",
+     "tipo": "texto",
+     "contenido": {
+      "porPeriodo": true,
+      "valores": {
+       "2026-01": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual bajó a 4,36% (4,37% el mes anterior), con alivio en alimentos y bienes.\n- El banco central mantuvo la tasa de política en 8,25%.\n- El dólar cerró en $4.073, por encima del cierre de diciembre.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,07%).",
+       "2026-02": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual bajó a 4,34% (4,36% el mes anterior), con alivio en alimentos y bienes.\n- El banco central mantuvo la tasa de política en 8,25%.\n- El dólar cerró en $3.973, por debajo del cierre de enero.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,09%).",
+       "2026-03": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual bajó a 4,29% (4,34% el mes anterior), con alivio en alimentos y bienes.\n- El banco central mantuvo la tasa de política en 8,25%.\n- El dólar cerró en $3.941, por debajo del cierre de febrero.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,08%).",
+       "2026-04": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual subió a 4,34% (4,29% el mes anterior), presionada por alimentos y servicios.\n- El banco central mantuvo la tasa de política en 8,25%.\n- El dólar cerró en $3.930, por debajo del cierre de marzo.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,07%).",
+       "2026-05": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual bajó a 4,25% (4,34% el mes anterior), con alivio en alimentos y bienes.\n- El banco central subió la tasa de política a 8,50%.\n- El dólar cerró en $3.846, por debajo del cierre de abril.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,39%).",
+       "2026-06": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual subió a 4,34% (4,25% el mes anterior), presionada por alimentos y servicios.\n- El banco central mantuvo la tasa de política en 8,50%.\n- El dólar cerró en $3.770, por debajo del cierre de mayo.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,42%).",
+       "2026-07": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual subió a 4,36% (4,34% el mes anterior), presionada por alimentos y servicios.\n- El banco central subió la tasa de política a 8,75%.\n- El dólar cerró en $3.818, por encima del cierre de junio.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,67%).",
+       "2026-08": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual bajó a 4,35% (4,36% el mes anterior), con alivio en alimentos y bienes.\n- El banco central mantuvo la tasa de política en 8,75%.\n- El dólar cerró en $3.794, por debajo del cierre de julio.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,55%).",
+       "2026-09": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual bajó a 4,31% (4,35% el mes anterior), con alivio en alimentos y bienes.\n- El banco central subió la tasa de política a 9,00%.\n- El dólar cerró en $3.849, por encima del cierre de agosto.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,87%).",
+       "2026-10": "- Datos inventados para mostrar la herramienta: no corresponden a cifras reales.\n- La inflación anual bajó a 4,29% (4,31% el mes anterior), con alivio en alimentos y bienes.\n- El banco central mantuvo la tasa de política en 9,00%.\n- El dólar cerró en $3.845, por debajo del cierre de septiembre.\n- Para el comité: revisar si las tasas de captación siguen alineadas con la IBR (8,93%)."
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "tasas-referencia",
+   "tipo": "contenido",
+   "titulo": "Tasas de referencia",
+   "subtitulo": "Evolución de IBR, DTF, tasa de política e IPC",
+   "disposicion": "una",
+   "bloques": [
+    {
+     "id": "g-tasas",
+     "tipo": "grafico",
+     "datos": "tasas-referencia",
+     "forma": "lineas",
+     "ejeX": "mes",
+     "series": [
+      {
+       "clave": "repo"
+      },
+      {
+       "clave": "ibr"
+      },
+      {
+       "clave": "dtf"
+      },
+      {
+       "clave": "ipc"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "saldo-cartera",
+   "tipo": "contenido",
+   "titulo": "Saldo de cartera por línea",
+   "subtitulo": "Distribución del saldo de crédito, en millones de pesos",
+   "disposicion": "una",
+   "bloques": [
+    {
+     "id": "g-cartera",
+     "tipo": "grafico",
+     "datos": "saldo-cartera",
+     "forma": "barras",
+     "apilado": true,
+     "ejeX": "mes",
+     "series": [
+      {
+       "clave": "consumo"
+      },
+      {
+       "clave": "rotativos"
+      },
+      {
+       "clave": "vivienda"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "benchmarking-vis",
+   "tipo": "contenido",
+   "titulo": "Benchmarking Vivienda VIS",
+   "subtitulo": "Tasa promedio ponderada de desembolsos hasta 20 años, {mes}",
+   "disposicion": "una",
+   "bloques": [
+    {
+     "id": "g-vis",
+     "tipo": "grafico",
+     "datos": "benchmarking-vis",
+     "forma": "barrasHorizontales",
+     "ejeX": "entidad",
+     "series": [
+      {
+       "clave": "tpp"
+      }
+     ],
+     "etiquetas": true,
+     "resaltar": {
+      "columna": "entidad",
+      "valor": "Fondo Ejemplo"
+     }
+    }
+   ]
+  },
+  {
+   "id": "benchmarking-creditos",
+   "tipo": "contenido",
+   "titulo": "Benchmarking de créditos",
+   "subtitulo": "Tasas de otras entidades frente a la nuestra, {mes}",
+   "disposicion": "una",
+   "bloques": [
+    {
+     "id": "t-creditos",
+     "tipo": "tabla",
+     "datos": "benchmarking-creditos",
+     "resaltar": {
+      "columna": "entidad",
+      "valor": "Fondo Ejemplo"
+     }
+    }
+   ]
+  },
+  {
+   "id": "saldo-pasivos",
+   "tipo": "contenido",
+   "titulo": "Saldo total de pasivos",
+   "subtitulo": "Evolución por tipo de ahorro, en millones de pesos",
+   "disposicion": "una",
+   "bloques": [
+    {
+     "id": "g-pasivos",
+     "tipo": "grafico",
+     "datos": "saldo-pasivos",
+     "forma": "area",
+     "ejeX": "mes",
+     "series": [
+      {
+       "clave": "cdats"
+      },
+      {
+       "clave": "fut"
+      },
+      {
+       "clave": "disp"
+      },
+      {
+       "clave": "prog"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cierre",
+   "tipo": "cierre",
+   "titulo": "Gracias",
+   "subtitulo": "Comité de Precios, {mes}",
+   "bloques": []
+  }
+ ],
+ "datos": {
+  "tasas-referencia": {
+   "id": "tasas-referencia",
+   "nombre": "Tasas de referencia",
+   "columnas": [
+    {
+     "clave": "mes",
+     "nombre": "Mes",
+     "tipo": "texto"
+    },
+    {
+     "clave": "repo",
+     "nombre": "Tasa de política",
+     "tipo": "porcentaje",
+     "decimales": 2
+    },
+    {
+     "clave": "ibr",
+     "nombre": "IBR",
+     "tipo": "porcentaje",
+     "decimales": 2
+    },
+    {
+     "clave": "dtf",
+     "nombre": "DTF",
+     "tipo": "porcentaje",
+     "decimales": 2
+    },
+    {
+     "clave": "ipc",
+     "nombre": "IPC anual",
+     "tipo": "porcentaje",
+     "decimales": 2
+    }
+   ],
+   "porPeriodo": false,
+   "filas": [
+    {
+     "mes": "Nov 24",
+     "repo": 9.5,
+     "ibr": 9.29,
+     "dtf": 9.05,
+     "ipc": 5.3
+    },
+    {
+     "mes": "Dic 24",
+     "repo": 9.5,
+     "ibr": 9.35,
+     "dtf": 9.14,
+     "ipc": 5.23
+    },
+    {
+     "mes": "Ene 25",
+     "repo": 9.25,
+     "ibr": 9.11,
+     "dtf": 8.89,
+     "ipc": 5.09
+    },
+    {
+     "mes": "Feb 25",
+     "repo": 9.25,
+     "ibr": 9.11,
+     "dtf": 8.76,
+     "ipc": 5.17
+    },
+    {
+     "mes": "Mar 25",
+     "repo": 9,
+     "ibr": 8.87,
+     "dtf": 8.45,
+     "ipc": 5.06
+    },
+    {
+     "mes": "Abr 25",
+     "repo": 9,
+     "ibr": 8.91,
+     "dtf": 8.59,
+     "ipc": 4.92
+    },
+    {
+     "mes": "May 25",
+     "repo": 8.75,
+     "ibr": 8.62,
+     "dtf": 8.2,
+     "ipc": 4.79
+    },
+    {
+     "mes": "Jun 25",
+     "repo": 8.75,
+     "ibr": 8.59,
+     "dtf": 8.27,
+     "ipc": 4.84
+    },
+    {
+     "mes": "Jul 25",
+     "repo": 8.5,
+     "ibr": 8.34,
+     "dtf": 8,
+     "ipc": 4.84
+    },
+    {
+     "mes": "Ago 25",
+     "repo": 8.5,
+     "ibr": 8.34,
+     "dtf": 8.17,
+     "ipc": 4.75
+    },
+    {
+     "mes": "Sep 25",
+     "repo": 8.25,
+     "ibr": 8.05,
+     "dtf": 7.84,
+     "ipc": 4.63
+    },
+    {
+     "mes": "Oct 25",
+     "repo": 8.25,
+     "ibr": 8.12,
+     "dtf": 7.84,
+     "ipc": 4.52
+    },
+    {
+     "mes": "Nov 25",
+     "repo": 8.25,
+     "ibr": 8.03,
+     "dtf": 7.74,
+     "ipc": 4.43
+    },
+    {
+     "mes": "Dic 25",
+     "repo": 8.25,
+     "ibr": 8.17,
+     "dtf": 7.72,
+     "ipc": 4.37
+    },
+    {
+     "mes": "Ene 26",
+     "repo": 8.25,
+     "ibr": 8.07,
+     "dtf": 7.68,
+     "ipc": 4.36
+    },
+    {
+     "mes": "Feb 26",
+     "repo": 8.25,
+     "ibr": 8.09,
+     "dtf": 7.84,
+     "ipc": 4.34
+    },
+    {
+     "mes": "Mar 26",
+     "repo": 8.25,
+     "ibr": 8.08,
+     "dtf": 7.8,
+     "ipc": 4.29
+    },
+    {
+     "mes": "Abr 26",
+     "repo": 8.25,
+     "ibr": 8.07,
+     "dtf": 7.91,
+     "ipc": 4.34
+    },
+    {
+     "mes": "May 26",
+     "repo": 8.5,
+     "ibr": 8.39,
+     "dtf": 8.05,
+     "ipc": 4.25
+    },
+    {
+     "mes": "Jun 26",
+     "repo": 8.5,
+     "ibr": 8.42,
+     "dtf": 8.09,
+     "ipc": 4.34
+    },
+    {
+     "mes": "Jul 26",
+     "repo": 8.75,
+     "ibr": 8.67,
+     "dtf": 8.34,
+     "ipc": 4.36
+    },
+    {
+     "mes": "Ago 26",
+     "repo": 8.75,
+     "ibr": 8.55,
+     "dtf": 8.33,
+     "ipc": 4.35
+    },
+    {
+     "mes": "Sep 26",
+     "repo": 9,
+     "ibr": 8.87,
+     "dtf": 8.65,
+     "ipc": 4.31
+    },
+    {
+     "mes": "Oct 26",
+     "repo": 9,
+     "ibr": 8.93,
+     "dtf": 8.52,
+     "ipc": 4.29
+    }
+   ]
+  },
+  "saldo-cartera": {
+   "id": "saldo-cartera",
+   "nombre": "Saldo de cartera por línea",
+   "columnas": [
+    {
+     "clave": "mes",
+     "nombre": "Mes",
+     "tipo": "texto"
+    },
+    {
+     "clave": "consumo",
+     "nombre": "Consumo",
+     "tipo": "moneda",
+     "decimales": 0,
+     "unidad": "millones"
+    },
+    {
+     "clave": "rotativos",
+     "nombre": "Rotativos",
+     "tipo": "moneda",
+     "decimales": 0,
+     "unidad": "millones"
+    },
+    {
+     "clave": "vivienda",
+     "nombre": "Vivienda",
+     "tipo": "moneda",
+     "decimales": 0,
+     "unidad": "millones"
+    }
+   ],
+   "porPeriodo": false,
+   "filas": [
+    {
+     "mes": "Nov 24",
+     "consumo": 153516,
+     "rotativos": 70566,
+     "vivienda": 78930
+    },
+    {
+     "mes": "Dic 24",
+     "consumo": 154363,
+     "rotativos": 70663,
+     "vivienda": 79682
+    },
+    {
+     "mes": "Ene 25",
+     "consumo": 155457,
+     "rotativos": 70914,
+     "vivienda": 80216
+    },
+    {
+     "mes": "Feb 25",
+     "consumo": 156401,
+     "rotativos": 71766,
+     "vivienda": 81010
+    },
+    {
+     "mes": "Mar 25",
+     "consumo": 157223,
+     "rotativos": 72606,
+     "vivienda": 81526
+    },
+    {
+     "mes": "Abr 25",
+     "consumo": 157679,
+     "rotativos": 72266,
+     "vivienda": 82125
+    },
+    {
+     "mes": "May 25",
+     "consumo": 158888,
+     "rotativos": 71807,
+     "vivienda": 82957
+    },
+    {
+     "mes": "Jun 25",
+     "consumo": 159690,
+     "rotativos": 72605,
+     "vivienda": 83693
+    },
+    {
+     "mes": "Jul 25",
+     "consumo": 161094,
+     "rotativos": 73293,
+     "vivienda": 84657
+    },
+    {
+     "mes": "Ago 25",
+     "consumo": 162663,
+     "rotativos": 73932,
+     "vivienda": 85224
+    },
+    {
+     "mes": "Sep 25",
+     "consumo": 163869,
+     "rotativos": 74243,
+     "vivienda": 86047
+    },
+    {
+     "mes": "Oct 25",
+     "consumo": 164989,
+     "rotativos": 74452,
+     "vivienda": 86827
+    },
+    {
+     "mes": "Nov 25",
+     "consumo": 165753,
+     "rotativos": 74968,
+     "vivienda": 87784
+    },
+    {
+     "mes": "Dic 25",
+     "consumo": 167326,
+     "rotativos": 75090,
+     "vivienda": 88442
+    },
+    {
+     "mes": "Ene 26",
+     "consumo": 168250,
+     "rotativos": 75378,
+     "vivienda": 89124
+    },
+    {
+     "mes": "Feb 26",
+     "consumo": 169393,
+     "rotativos": 75344,
+     "vivienda": 89797
+    },
+    {
+     "mes": "Mar 26",
+     "consumo": 169980,
+     "rotativos": 76303,
+     "vivienda": 90857
+    },
+    {
+     "mes": "Abr 26",
+     "consumo": 171014,
+     "rotativos": 77153,
+     "vivienda": 91701
+    },
+    {
+     "mes": "May 26",
+     "consumo": 171767,
+     "rotativos": 76683,
+     "vivienda": 92715
+    },
+    {
+     "mes": "Jun 26",
+     "consumo": 173251,
+     "rotativos": 76360,
+     "vivienda": 93732
+    },
+    {
+     "mes": "Jul 26",
+     "consumo": 174215,
+     "rotativos": 76618,
+     "vivienda": 94440
+    },
+    {
+     "mes": "Ago 26",
+     "consumo": 174829,
+     "rotativos": 76777,
+     "vivienda": 95551
+    },
+    {
+     "mes": "Sep 26",
+     "consumo": 176180,
+     "rotativos": 77207,
+     "vivienda": 96389
+    },
+    {
+     "mes": "Oct 26",
+     "consumo": 177531,
+     "rotativos": 78289,
+     "vivienda": 97018
+    }
+   ]
+  },
+  "saldo-pasivos": {
+   "id": "saldo-pasivos",
+   "nombre": "Saldo total de pasivos",
+   "columnas": [
+    {
+     "clave": "mes",
+     "nombre": "Mes",
+     "tipo": "texto"
+    },
+    {
+     "clave": "cdats",
+     "nombre": "CDATs",
+     "tipo": "moneda",
+     "decimales": 0,
+     "unidad": "millones"
+    },
+    {
+     "clave": "fut",
+     "nombre": "Ahorro futuro",
+     "tipo": "moneda",
+     "decimales": 0,
+     "unidad": "millones"
+    },
+    {
+     "clave": "disp",
+     "nombre": "Ahorros disponibles",
+     "tipo": "moneda",
+     "decimales": 0,
+     "unidad": "millones"
+    },
+    {
+     "clave": "prog",
+     "nombre": "Ahorros programados",
+     "tipo": "moneda",
+     "decimales": 0,
+     "unidad": "millones"
+    }
+   ],
+   "porPeriodo": false,
+   "filas": [
+    {
+     "mes": "Nov 24",
+     "cdats": 71412,
+     "fut": 44175,
+     "disp": 40993,
+     "prog": 7724
+    },
+    {
+     "mes": "Dic 24",
+     "cdats": 72177,
+     "fut": 44252,
+     "disp": 28991,
+     "prog": 7837
+    },
+    {
+     "mes": "Ene 25",
+     "cdats": 72606,
+     "fut": 44401,
+     "disp": 41456,
+     "prog": 7914
+    },
+    {
+     "mes": "Feb 25",
+     "cdats": 72807,
+     "fut": 44589,
+     "disp": 42446,
+     "prog": 7984
+    },
+    {
+     "mes": "Mar 25",
+     "cdats": 73602,
+     "fut": 44805,
+     "disp": 43154,
+     "prog": 8048
+    },
+    {
+     "mes": "Abr 25",
+     "cdats": 73762,
+     "fut": 44841,
+     "disp": 43680,
+     "prog": 8173
+    },
+    {
+     "mes": "May 25",
+     "cdats": 74566,
+     "fut": 45013,
+     "disp": 44665,
+     "prog": 8271
+    },
+    {
+     "mes": "Jun 25",
+     "cdats": 75146,
+     "fut": 45142,
+     "disp": 45240,
+     "prog": 8303
+    },
+    {
+     "mes": "Jul 25",
+     "cdats": 75434,
+     "fut": 45345,
+     "disp": 45006,
+     "prog": 8416
+    },
+    {
+     "mes": "Ago 25",
+     "cdats": 76157,
+     "fut": 45372,
+     "disp": 45619,
+     "prog": 8558
+    },
+    {
+     "mes": "Sep 25",
+     "cdats": 76580,
+     "fut": 45366,
+     "disp": 45024,
+     "prog": 8641
+    },
+    {
+     "mes": "Oct 25",
+     "cdats": 77376,
+     "fut": 45486,
+     "disp": 45903,
+     "prog": 8774
+    },
+    {
+     "mes": "Nov 25",
+     "cdats": 77850,
+     "fut": 45678,
+     "disp": 45340,
+     "prog": 8828
+    },
+    {
+     "mes": "Dic 25",
+     "cdats": 78083,
+     "fut": 45671,
+     "disp": 32139,
+     "prog": 8976
+    },
+    {
+     "mes": "Ene 26",
+     "cdats": 78589,
+     "fut": 45841,
+     "disp": 46582,
+     "prog": 9038
+    },
+    {
+     "mes": "Feb 26",
+     "cdats": 79309,
+     "fut": 45820,
+     "disp": 46708,
+     "prog": 9074
+    },
+    {
+     "mes": "Mar 26",
+     "cdats": 80123,
+     "fut": 45781,
+     "disp": 46754,
+     "prog": 9212
+    },
+    {
+     "mes": "Abr 26",
+     "cdats": 80722,
+     "fut": 45797,
+     "disp": 46123,
+     "prog": 9281
+    },
+    {
+     "mes": "May 26",
+     "cdats": 81513,
+     "fut": 45861,
+     "disp": 46513,
+     "prog": 9400
+    },
+    {
+     "mes": "Jun 26",
+     "cdats": 82178,
+     "fut": 45885,
+     "disp": 47304,
+     "prog": 9457
+    },
+    {
+     "mes": "Jul 26",
+     "cdats": 83031,
+     "fut": 46113,
+     "disp": 46582,
+     "prog": 9495
+    },
+    {
+     "mes": "Ago 26",
+     "cdats": 84008,
+     "fut": 46308,
+     "disp": 46076,
+     "prog": 9624
+    },
+    {
+     "mes": "Sep 26",
+     "cdats": 84848,
+     "fut": 46319,
+     "disp": 47063,
+     "prog": 9723
+    },
+    {
+     "mes": "Oct 26",
+     "cdats": 85256,
+     "fut": 46298,
+     "disp": 47548,
+     "prog": 9818
+    }
+   ]
+  },
+  "benchmarking-vis": {
+   "id": "benchmarking-vis",
+   "nombre": "Benchmarking Vivienda VIS hasta 20 años",
+   "columnas": [
+    {
+     "clave": "entidad",
+     "nombre": "Entidad",
+     "tipo": "texto"
+    },
+    {
+     "clave": "tpp",
+     "nombre": "Tasa promedio ponderada",
+     "tipo": "porcentaje",
+     "decimales": 2
+    },
+    {
+     "clave": "desembolsos",
+     "nombre": "Desembolsos",
+     "tipo": "numero"
+    },
+    {
+     "clave": "monto",
+     "nombre": "Monto desembolsado",
+     "tipo": "moneda",
+     "decimales": 0,
+     "unidad": "millones"
+    }
+   ],
+   "porPeriodo": true,
+   "filasPorPeriodo": {
+    "2026-01": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.79,
+      "desembolsos": 3176,
+      "monto": 340612
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.7,
+      "desembolsos": 1062,
+      "monto": 111413
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 15.25,
+      "desembolsos": 941,
+      "monto": 107178
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 14.15,
+      "desembolsos": 578,
+      "monto": 58167
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.63,
+      "desembolsos": 308,
+      "monto": 35000
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.66,
+      "desembolsos": 216,
+      "monto": 21969
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.71,
+      "desembolsos": 71,
+      "monto": 6885
+     }
+    ],
+    "2026-02": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.63,
+      "desembolsos": 3158,
+      "monto": 344658
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.47,
+      "desembolsos": 1015,
+      "monto": 116647
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 14.8,
+      "desembolsos": 891,
+      "monto": 96917
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 14.4,
+      "desembolsos": 522,
+      "monto": 53156
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.59,
+      "desembolsos": 439,
+      "monto": 46357
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.67,
+      "desembolsos": 224,
+      "monto": 24334
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.49,
+      "desembolsos": 67,
+      "monto": 7247
+     }
+    ],
+    "2026-03": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.54,
+      "desembolsos": 3517,
+      "monto": 381327
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.35,
+      "desembolsos": 1231,
+      "monto": 125579
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 14.78,
+      "desembolsos": 976,
+      "monto": 110585
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 14.26,
+      "desembolsos": 644,
+      "monto": 73536
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.43,
+      "desembolsos": 387,
+      "monto": 44238
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.9,
+      "desembolsos": 218,
+      "monto": 20852
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.26,
+      "desembolsos": 61,
+      "monto": 6537
+     }
+    ],
+    "2026-04": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.51,
+      "desembolsos": 3351,
+      "monto": 341021
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.25,
+      "desembolsos": 1147,
+      "monto": 115623
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 14.71,
+      "desembolsos": 923,
+      "monto": 92435
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 14.27,
+      "desembolsos": 620,
+      "monto": 62244
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.64,
+      "desembolsos": 427,
+      "monto": 45338
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.61,
+      "desembolsos": 171,
+      "monto": 19153
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.51,
+      "desembolsos": 63,
+      "monto": 6228
+     }
+    ],
+    "2026-05": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.57,
+      "desembolsos": 3135,
+      "monto": 334686
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.61,
+      "desembolsos": 963,
+      "monto": 106109
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 14.74,
+      "desembolsos": 776,
+      "monto": 86071
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 14.19,
+      "desembolsos": 708,
+      "monto": 71548
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.31,
+      "desembolsos": 432,
+      "monto": 45767
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.57,
+      "desembolsos": 207,
+      "monto": 20490
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.64,
+      "desembolsos": 49,
+      "monto": 4701
+     }
+    ],
+    "2026-06": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.4,
+      "desembolsos": 3238,
+      "monto": 338247
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.19,
+      "desembolsos": 1010,
+      "monto": 106529
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 14.14,
+      "desembolsos": 715,
+      "monto": 81574
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 14.73,
+      "desembolsos": 814,
+      "monto": 80773
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.6,
+      "desembolsos": 397,
+      "monto": 38312
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.52,
+      "desembolsos": 231,
+      "monto": 23642
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.44,
+      "desembolsos": 71,
+      "monto": 7417
+     }
+    ],
+    "2026-07": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.43,
+      "desembolsos": 3255,
+      "monto": 336554
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.54,
+      "desembolsos": 1062,
+      "monto": 102104
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 14.67,
+      "desembolsos": 908,
+      "monto": 97736
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 13.84,
+      "desembolsos": 658,
+      "monto": 72710
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.23,
+      "desembolsos": 386,
+      "monto": 39219
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.53,
+      "desembolsos": 189,
+      "monto": 19207
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.21,
+      "desembolsos": 52,
+      "monto": 5578
+     }
+    ],
+    "2026-08": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.51,
+      "desembolsos": 3585,
+      "monto": 384166
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.4,
+      "desembolsos": 1230,
+      "monto": 124822
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 14.74,
+      "desembolsos": 1077,
+      "monto": 120291
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 14.16,
+      "desembolsos": 650,
+      "monto": 73964
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.32,
+      "desembolsos": 404,
+      "monto": 42371
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.41,
+      "desembolsos": 169,
+      "monto": 16629
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.53,
+      "desembolsos": 55,
+      "monto": 6089
+     }
+    ],
+    "2026-09": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.51,
+      "desembolsos": 3499,
+      "monto": 349435
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.47,
+      "desembolsos": 1226,
+      "monto": 121466
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 14.65,
+      "desembolsos": 985,
+      "monto": 98405
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 14.1,
+      "desembolsos": 664,
+      "monto": 64602
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.58,
+      "desembolsos": 347,
+      "monto": 38057
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.74,
+      "desembolsos": 217,
+      "monto": 20804
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.29,
+      "desembolsos": 60,
+      "monto": 6101
+     }
+    ],
+    "2026-10": [
+     {
+      "entidad": "Sector (6 entidades)",
+      "tpp": 14.5,
+      "desembolsos": 3274,
+      "monto": 348893
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "tpp": 14.5,
+      "desembolsos": 1127,
+      "monto": 128201
+     },
+     {
+      "entidad": "Banco del Río",
+      "tpp": 14.79,
+      "desembolsos": 1011,
+      "monto": 101382
+     },
+     {
+      "entidad": "Banco Sabana",
+      "tpp": 13.92,
+      "desembolsos": 571,
+      "monto": 56195
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "tpp": 15.3,
+      "desembolsos": 317,
+      "monto": 35221
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "tpp": 13.69,
+      "desembolsos": 200,
+      "monto": 22387
+     },
+     {
+      "entidad": "Fondo Ejemplo",
+      "tpp": 13.32,
+      "desembolsos": 48,
+      "monto": 5507
+     }
+    ]
+   }
+  },
+  "benchmarking-creditos": {
+   "id": "benchmarking-creditos",
+   "nombre": "Benchmarking de créditos",
+   "columnas": [
+    {
+     "clave": "entidad",
+     "nombre": "Entidad",
+     "tipo": "texto"
+    },
+    {
+     "clave": "vis",
+     "nombre": "Vivienda VIS",
+     "tipo": "porcentaje",
+     "decimales": 2
+    },
+    {
+     "clave": "novis",
+     "nombre": "Vivienda No VIS",
+     "tipo": "porcentaje",
+     "decimales": 2
+    },
+    {
+     "clave": "vehiculo",
+     "nombre": "Vehículo",
+     "tipo": "porcentaje",
+     "decimales": 2
+    },
+    {
+     "clave": "ccDesde",
+     "nombre": "Compra de cartera desde",
+     "tipo": "porcentaje",
+     "decimales": 2
+    },
+    {
+     "clave": "ccHasta",
+     "nombre": "Compra de cartera hasta",
+     "tipo": "porcentaje",
+     "decimales": 2
+    }
+   ],
+   "porPeriodo": true,
+   "filasPorPeriodo": {
+    "2026-01": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.73,
+      "novis": 14.08,
+      "vehiculo": 16.57,
+      "ccDesde": 16.75,
+      "ccHasta": 20.44
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.51,
+      "novis": 14.69,
+      "vehiculo": 17.08,
+      "ccDesde": 17.25,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 15.05,
+      "novis": null,
+      "vehiculo": 18.83,
+      "ccDesde": 16.93,
+      "ccHasta": 27.64
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 14.09,
+      "novis": 15.01,
+      "vehiculo": 17.94,
+      "ccDesde": 18.06,
+      "ccHasta": 26.03
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 15.4,
+      "vehiculo": 16.82,
+      "ccDesde": 17.74,
+      "ccHasta": 24.94
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.79,
+      "novis": 15.28,
+      "vehiculo": 18.01,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.73,
+      "novis": 15.89,
+      "vehiculo": 19.37,
+      "ccDesde": 19.12,
+      "ccHasta": 28.84
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 14,
+      "novis": 14.31,
+      "vehiculo": null,
+      "ccDesde": 17.31,
+      "ccHasta": 22.06
+     }
+    ],
+    "2026-02": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.6,
+      "novis": 13.95,
+      "vehiculo": 16.51,
+      "ccDesde": 16.94,
+      "ccHasta": 20.56
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.34,
+      "novis": 14.51,
+      "vehiculo": 17.13,
+      "ccDesde": 17.18,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 14.91,
+      "novis": null,
+      "vehiculo": 18.83,
+      "ccDesde": 16.89,
+      "ccHasta": 27.39
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 13.9,
+      "novis": 14.78,
+      "vehiculo": 17.61,
+      "ccDesde": 18.22,
+      "ccHasta": 26.01
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 15.24,
+      "vehiculo": 16.97,
+      "ccDesde": 17.49,
+      "ccHasta": 24.96
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.6,
+      "novis": 15.13,
+      "vehiculo": 17.93,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.66,
+      "novis": 15.98,
+      "vehiculo": 19.45,
+      "ccDesde": 18.97,
+      "ccHasta": 28.62
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 13.76,
+      "novis": 14.35,
+      "vehiculo": null,
+      "ccDesde": 17.28,
+      "ccHasta": 21.97
+     }
+    ],
+    "2026-03": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.53,
+      "novis": 13.96,
+      "vehiculo": 16.49,
+      "ccDesde": 16.79,
+      "ccHasta": 20.28
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.45,
+      "novis": 14.48,
+      "vehiculo": 17.07,
+      "ccDesde": 16.97,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 14.93,
+      "novis": null,
+      "vehiculo": 18.65,
+      "ccDesde": 16.76,
+      "ccHasta": 27.49
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 13.91,
+      "novis": 14.85,
+      "vehiculo": 17.65,
+      "ccDesde": 17.96,
+      "ccHasta": 25.79
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 15.24,
+      "vehiculo": 16.68,
+      "ccDesde": 17.61,
+      "ccHasta": 24.77
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.71,
+      "novis": 15.19,
+      "vehiculo": 18.1,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.47,
+      "novis": 15.77,
+      "vehiculo": 19.19,
+      "ccDesde": 18.99,
+      "ccHasta": 28.65
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 13.77,
+      "novis": 14.4,
+      "vehiculo": null,
+      "ccDesde": 17.26,
+      "ccHasta": 21.97
+     }
+    ],
+    "2026-04": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.63,
+      "novis": 13.9,
+      "vehiculo": 16.27,
+      "ccDesde": 16.72,
+      "ccHasta": 20.36
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.29,
+      "novis": 14.56,
+      "vehiculo": 17.12,
+      "ccDesde": 16.79,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 14.89,
+      "novis": null,
+      "vehiculo": 18.63,
+      "ccDesde": 16.75,
+      "ccHasta": 27.42
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 13.86,
+      "novis": 14.72,
+      "vehiculo": 17.73,
+      "ccDesde": 18.15,
+      "ccHasta": 25.91
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 15.37,
+      "vehiculo": 16.86,
+      "ccDesde": 17.39,
+      "ccHasta": 24.6
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.65,
+      "novis": 14.99,
+      "vehiculo": 17.95,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.48,
+      "novis": 15.73,
+      "vehiculo": 19.31,
+      "ccDesde": 18.91,
+      "ccHasta": 28.55
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 13.85,
+      "novis": 14.1,
+      "vehiculo": null,
+      "ccDesde": 17.05,
+      "ccHasta": 21.8
+     }
+    ],
+    "2026-05": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.54,
+      "novis": 13.87,
+      "vehiculo": 16.34,
+      "ccDesde": 16.54,
+      "ccHasta": 20.32
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.13,
+      "novis": 14.35,
+      "vehiculo": 17.03,
+      "ccDesde": 16.83,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 14.76,
+      "novis": null,
+      "vehiculo": 18.63,
+      "ccDesde": 16.56,
+      "ccHasta": 27.3
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 13.84,
+      "novis": 14.57,
+      "vehiculo": 17.59,
+      "ccDesde": 17.91,
+      "ccHasta": 25.72
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 15.12,
+      "vehiculo": 16.58,
+      "ccDesde": 17.23,
+      "ccHasta": 24.78
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.42,
+      "novis": 15.06,
+      "vehiculo": 18.01,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.45,
+      "novis": 15.62,
+      "vehiculo": 19.26,
+      "ccDesde": 18.85,
+      "ccHasta": 28.55
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 13.61,
+      "novis": 14.21,
+      "vehiculo": null,
+      "ccDesde": 17.13,
+      "ccHasta": 21.72
+     }
+    ],
+    "2026-06": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.26,
+      "novis": 13.9,
+      "vehiculo": 16.2,
+      "ccDesde": 16.46,
+      "ccHasta": 20.26
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.2,
+      "novis": 14.2,
+      "vehiculo": 16.79,
+      "ccDesde": 16.82,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 14.6,
+      "novis": null,
+      "vehiculo": 18.63,
+      "ccDesde": 16.59,
+      "ccHasta": 27.19
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 13.84,
+      "novis": 14.49,
+      "vehiculo": 17.39,
+      "ccDesde": 17.88,
+      "ccHasta": 25.82
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 15.06,
+      "vehiculo": 16.49,
+      "ccDesde": 17.42,
+      "ccHasta": 24.63
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.46,
+      "novis": 14.8,
+      "vehiculo": 17.71,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.29,
+      "novis": 15.77,
+      "vehiculo": 19.2,
+      "ccDesde": 18.57,
+      "ccHasta": 28.55
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 13.75,
+      "novis": 14.21,
+      "vehiculo": null,
+      "ccDesde": 17.01,
+      "ccHasta": 21.83
+     }
+    ],
+    "2026-07": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.27,
+      "novis": 13.79,
+      "vehiculo": 16.19,
+      "ccDesde": 16.62,
+      "ccHasta": 20.06
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.27,
+      "novis": 14.25,
+      "vehiculo": 16.78,
+      "ccDesde": 16.66,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 14.56,
+      "novis": null,
+      "vehiculo": 18.56,
+      "ccDesde": 16.46,
+      "ccHasta": 27.01
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 13.7,
+      "novis": 14.65,
+      "vehiculo": 17.36,
+      "ccDesde": 17.98,
+      "ccHasta": 25.72
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 14.99,
+      "vehiculo": 16.69,
+      "ccDesde": 17.13,
+      "ccHasta": 24.43
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.5,
+      "novis": 14.83,
+      "vehiculo": 17.77,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.29,
+      "novis": 15.51,
+      "vehiculo": 19.05,
+      "ccDesde": 18.77,
+      "ccHasta": 28.4
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 13.64,
+      "novis": 14.04,
+      "vehiculo": null,
+      "ccDesde": 16.97,
+      "ccHasta": 21.62
+     }
+    ],
+    "2026-08": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.49,
+      "novis": 13.85,
+      "vehiculo": 16.3,
+      "ccDesde": 16.55,
+      "ccHasta": 20.28
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.05,
+      "novis": 14.23,
+      "vehiculo": 17.04,
+      "ccDesde": 16.83,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 14.84,
+      "novis": null,
+      "vehiculo": 18.57,
+      "ccDesde": 16.52,
+      "ccHasta": 27.21
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 13.75,
+      "novis": 14.53,
+      "vehiculo": 17.38,
+      "ccDesde": 18.03,
+      "ccHasta": 25.79
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 15.22,
+      "vehiculo": 16.59,
+      "ccDesde": 17.36,
+      "ccHasta": 24.56
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.56,
+      "novis": 14.8,
+      "vehiculo": 17.88,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.52,
+      "novis": 15.6,
+      "vehiculo": 19.22,
+      "ccDesde": 18.59,
+      "ccHasta": 28.35
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 13.56,
+      "novis": 14.19,
+      "vehiculo": null,
+      "ccDesde": 17.02,
+      "ccHasta": 21.65
+     }
+    ],
+    "2026-09": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.47,
+      "novis": 13.94,
+      "vehiculo": 16.42,
+      "ccDesde": 16.54,
+      "ccHasta": 20.26
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.12,
+      "novis": 14.4,
+      "vehiculo": 17.04,
+      "ccDesde": 16.98,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 14.8,
+      "novis": null,
+      "vehiculo": 18.57,
+      "ccDesde": 16.48,
+      "ccHasta": 27.1
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 13.85,
+      "novis": 14.62,
+      "vehiculo": 17.62,
+      "ccDesde": 17.84,
+      "ccHasta": 25.74
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 15.13,
+      "vehiculo": 16.56,
+      "ccDesde": 17.31,
+      "ccHasta": 24.7
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.58,
+      "novis": 15.01,
+      "vehiculo": 17.95,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.42,
+      "novis": 15.64,
+      "vehiculo": 19.2,
+      "ccDesde": 18.7,
+      "ccHasta": 28.6
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 13.5,
+      "novis": 14.04,
+      "vehiculo": null,
+      "ccDesde": 17.15,
+      "ccHasta": 21.73
+     }
+    ],
+    "2026-10": [
+     {
+      "entidad": "Fondo Ejemplo",
+      "vis": 13.47,
+      "novis": 13.9,
+      "vehiculo": 16.45,
+      "ccDesde": 16.65,
+      "ccHasta": 20.33
+     },
+     {
+      "entidad": "Banco Cordillera",
+      "vis": 14.33,
+      "novis": 14.37,
+      "vehiculo": 16.96,
+      "ccDesde": 16.91,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Banco del Río",
+      "vis": 14.91,
+      "novis": null,
+      "vehiculo": 18.57,
+      "ccDesde": 16.47,
+      "ccHasta": 27.38
+     },
+     {
+      "entidad": "Banco Sabana",
+      "vis": 13.83,
+      "novis": 14.56,
+      "vehiculo": 17.5,
+      "ccDesde": 18.01,
+      "ccHasta": 25.65
+     },
+     {
+      "entidad": "Banco Pacífico",
+      "vis": null,
+      "novis": 15.28,
+      "vehiculo": 16.82,
+      "ccDesde": 17.39,
+      "ccHasta": 24.63
+     },
+     {
+      "entidad": "Banco Altiplano",
+      "vis": 14.5,
+      "novis": 15.09,
+      "vehiculo": 17.9,
+      "ccDesde": null,
+      "ccHasta": null
+     },
+     {
+      "entidad": "Financiera Altamar",
+      "vis": 15.46,
+      "novis": 15.89,
+      "vehiculo": 19.2,
+      "ccDesde": 18.7,
+      "ccHasta": 28.57
+     },
+     {
+      "entidad": "Cooperativa Horizonte",
+      "vis": 13.64,
+      "novis": 14.19,
+      "vehiculo": null,
+      "ccDesde": 17.1,
+      "ccHasta": 22.02
+     }
+    ]
+   }
+  }
+ },
+ "actualizado": "2026-11-16"
+}

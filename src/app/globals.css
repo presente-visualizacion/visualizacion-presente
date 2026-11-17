@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* La presentación original es solo de consulta: sus clases no entran al CSS. */
+@source not "../../referencia";
+
+/* Los colores de marca llegan como variables (--vp-*) para que cada
+   presentación pueda traer su propio tema. Los valores de :root son los de
+   Presente y sirven para las pantallas que no pertenecen a una presentación. */
+:root {
+  --vp-primario: #D4145A;
+  --vp-degradado: linear-gradient(to bottom, #AC004A, #D50058, #FF0065, #FF4769, #FF8E6E);
+  --vp-degradado-h: linear-gradient(to right, #AC004A, #D50058, #FF0065, #FF4769, #FF8E6E);
+}
+
+@theme inline {
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-primario: var(--vp-primario);
+  --color-tinta: #241A20;
+  --color-tinta-suave: #675C63;
+  --color-linea: #ECE7EA;
+  --color-linea-fuerte: #D9D1D5;
+  --color-fondo-app: #F8F5F6;
+  --color-tinte: #FCEEF4;
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--color-fondo-app);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--vp-primario);
+  outline-offset: 2px;
+}
+
+.sin-barra { scrollbar-width: none; }
+.sin-barra::-webkit-scrollbar { display: none; }
+
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+.aparecer { animation: aparecer 180ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .aparecer { animation: none; }
+}
+
+/* Recharts dibuja un contorno de foco sobre el SVG al hacer clic; el foco
+   visible ya lo dan los controles propios. */
+.recharts-wrapper:focus, .recharts-surface:focus { outline: none; }
