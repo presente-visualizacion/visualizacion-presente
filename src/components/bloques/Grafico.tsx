@@ -2,57 +2,31 @@
 
 import { useMemo, useState } from 'react';
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, LabelList, Line, LineChart,
+  PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
-import type { BloqueGrafico, Columna, ConjuntoDatos, Fila, Tema } from '@/lib/tipos';
+import type { Columna, Fila } from '@/lib/tipos';
+import {
+  anchoTexto, BLANCO, ejeCategorias, ejeValores, LINEA, marcaEje, reducirMovimiento, SUAVE, TINTA,
+  type PropsGrafico, type SerieLista,
+} from './graficoComun';
+import { Cascada, Circular, Dispersion } from './GraficosEspeciales';
 
-const TINTA = '#241A20';
-const SUAVE = '#675C63';
-const LINEA = '#ECE7EA';
-const BLANCO = '#FFFFFF';
+type Props = PropsGrafico;
 
-interface Props {
-  bloque: BloqueGrafico;
-  conjunto: ConjuntoDatos;
-  filas: Fila[];
-  tema: Tema;
+export default function Grafico(props: Props) {
+  switch (props.bloque.forma) {
+    case 'circular': return <Circular {...props} />;
+    case 'dispersion': return <Dispersion {...props} />;
+    case 'cascada': return <Cascada {...props} />;
+    default: return <GraficoSeries {...props} />;
+  }
 }
 
-interface SerieLista {
-  clave: string;
-  nombre: string;
-  color: string;
-  columna?: Columna;
-}
-
-function reducirMovimiento(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-// Recharts mide el texto ya escalado por el lienzo y se queda corto, así que
-// el ancho de los ejes se calcula aquí, en px del lienzo.
-let pincel: CanvasRenderingContext2D | null = null;
-function anchoTexto(texto: string, tamano: number, peso = 400): number {
-  const estimado = texto.length * tamano * 0.58;
-  if (typeof document === 'undefined') return estimado;
-  pincel ??= document.createElement('canvas').getContext('2d');
-  if (!pincel) return estimado;
-  pincel.font = `${peso} ${tamano}px "Figtree Variable", sans-serif`;
-  return pincel.measureText(texto).width * 1.06;
-}
-
-/** Marcas del eje: sin decimales de relleno ("9,5%" y no "9,50%"). */
-function marcaEje(valor: number, columna?: Columna): string {
-  const numero = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 }).format(valor);
-  if (columna?.tipo === 'porcentaje') return `${numero}%`;
-  if (columna?.tipo === 'moneda') return `$${numero}`;
-  return numero;
-}
-
-export default function Grafico({ bloque, conjunto, filas, tema }: Props) {
+/** Gráficos de una o más series sobre un eje de categorías. */
+function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   const [ocultas, setOcultas] = useState<Set<string>>(new Set());
 
   // El color sigue a la serie, no a su posición visible: ocultar una serie no
@@ -60,7 +34,7 @@ export default function Grafico({ bloque, conjunto, filas, tema }: Props) {
   const series: SerieLista[] = useMemo(
     () => bloque.series.map((s, i) => {
       const columna = columnaDe(conjunto, s.clave);
-      return { clave: s.clave, nombre: columna?.nombre ?? s.clave, color: s.color ?? tema.series[i % tema.series.length], columna };
+      return { clave: s.clave, nombre: columna?.nombre ?? s.clave, color: s.color ?? tema.series[i % tema.series.length], columna, tipo: s.tipo };
     }),
     [bloque.series, conjunto, tema.series],
   );
@@ -70,6 +44,8 @@ export default function Grafico({ bloque, conjunto, filas, tema }: Props) {
   const animar = !reducirMovimiento();
   const horizontal = bloque.forma === 'barrasHorizontales';
   const deTiempo = bloque.forma === 'lineas' || bloque.forma === 'area';
+  const comoLinea = (s: SerieLista) => deTiempo || bloque.forma === 'radar' || (bloque.forma === 'combinado' && s.tipo === 'lineas');
+  const apilado = Boolean(bloque.apilado) && (bloque.forma === 'barras' || bloque.forma === 'area');
   const ultima = filas[filas.length - 1];
 
   const alternar = (clave: string) =>
@@ -93,11 +69,11 @@ export default function Grafico({ bloque, conjunto, filas, tema }: Props) {
     for (const fila of filas) {
       const valores = visibles.map((v) => fila[v.clave]).filter((v): v is number => typeof v === 'number');
       if (!valores.length) continue;
-      maximo = Math.max(maximo, bloque.apilado ? valores.reduce((a, b) => a + b, 0) : Math.max(...valores));
+      maximo = Math.max(maximo, apilado ? valores.reduce((a, b) => a + b, 0) : Math.max(...valores));
       minimo = Math.min(minimo, ...valores);
     }
     return { maximo, minimo };
-  }, [filas, visibles, bloque.apilado]);
+  }, [filas, visibles, apilado]);
   const anchoValores = Math.ceil(
     Math.max(
       anchoTexto(marcaEje(Math.ceil(extremos.maximo * 1.2), columnaValor), 15),
@@ -110,15 +86,13 @@ export default function Grafico({ bloque, conjunto, filas, tema }: Props) {
     ? Math.ceil(Math.max(...filas.map((f) => anchoTexto(formatear(f[series[0].clave], series[0].columna), 16, 600))) + 22)
     : 24;
 
-  const ejeValores = { tick: { fontSize: 15, fill: SUAVE }, axisLine: false, tickLine: false } as const;
-  const ejeCategorias = { tick: { fontSize: 15, fill: SUAVE }, axisLine: { stroke: LINEA }, tickLine: false } as const;
 
   const globo = (
     <Tooltip
       cursor={deTiempo ? { stroke: '#CFC6CB', strokeWidth: 1 } : { fill: '#F5EFF2' }}
       isAnimationActive={false}
       content={(p: any) => (
-        <Globo activo={p.active} entradas={p.payload} etiqueta={p.label} series={series} total={Boolean(bloque.apilado)} detalle={columnasDetalle} columnaX={columnaX} />
+        <Globo activo={p.active} entradas={p.payload} etiqueta={p.label} series={series} total={apilado} detalle={columnasDetalle} columnaX={columnaX} />
       )}
     />
   );
@@ -155,14 +129,58 @@ export default function Grafico({ bloque, conjunto, filas, tema }: Props) {
         {visibles.map((s) => (
           <Bar
             key={s.clave} dataKey={s.clave} name={s.nombre} fill={s.color}
-            stackId={bloque.apilado ? 'pila' : undefined}
+            stackId={apilado ? 'pila' : undefined}
             // El borde del color del fondo separa los tramos de la pila.
-            stroke={BLANCO} strokeWidth={bloque.apilado ? 2 : 0}
-            radius={!bloque.apilado || s.clave === cima ? [4, 4, 0, 0] : 0}
+            stroke={BLANCO} strokeWidth={apilado ? 2 : 0}
+            radius={!apilado || s.clave === cima ? [4, 4, 0, 0] : 0}
             maxBarSize={28} isAnimationActive={animar} animationDuration={450}
-          />
+          >
+            {bloque.resaltar && series.length === 1 && filas.map((f, i) => (
+              <Cell key={i} fill={String(f[bloque.resaltar!.columna]) === bloque.resaltar!.valor ? tema.primario : tema.neutro} />
+            ))}
+            {bloque.etiquetas && !apilado && (
+              <LabelList dataKey={s.clave} position="top" offset={8} fontSize={15} fontWeight={600} fill={TINTA} formatter={(v: any) => formatear(v, s.columna)} />
+            )}
+          </Bar>
         ))}
       </BarChart>
+    );
+  } else if (bloque.forma === 'combinado') {
+    const minimo = Math.min(0, extremos.minimo);
+    grafico = (
+      <ComposedChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
+        <CartesianGrid vertical={false} stroke={LINEA} />
+        <XAxis dataKey={bloque.ejeX} minTickGap={24} {...ejeCategorias} />
+        <YAxis width={anchoValores} domain={[minimo < 0 ? 'auto' : 0, 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        {globo}
+        {visibles.map((s) => (s.tipo === 'lineas' ? (
+          <Line
+            key={s.clave} dataKey={s.clave} name={s.nombre} type="monotone" stroke={s.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+            dot={false} activeDot={{ r: 5, stroke: BLANCO, strokeWidth: 2 }} isAnimationActive={animar} animationDuration={450}
+          />
+        ) : (
+          <Bar key={s.clave} dataKey={s.clave} name={s.nombre} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={animar} animationDuration={450}>
+            {bloque.etiquetas && (
+              <LabelList dataKey={s.clave} position="top" offset={8} fontSize={15} fontWeight={600} fill={TINTA} formatter={(v: any) => formatear(v, s.columna)} />
+            )}
+          </Bar>
+        )))}
+      </ComposedChart>
+    );
+  } else if (bloque.forma === 'radar') {
+    grafico = (
+      <RadarChart data={filas} outerRadius="78%" margin={{ top: 8, right: 24, bottom: 8, left: 24 }}>
+        <PolarGrid stroke={LINEA} />
+        <PolarAngleAxis dataKey={bloque.ejeX} tick={{ fontSize: 15, fill: TINTA }} />
+        <PolarRadiusAxis angle={90} axisLine={false} tick={{ fontSize: 13, fill: SUAVE }} tickFormatter={(v: number) => marcaEje(v, columnaValor)} />
+        {globo}
+        {visibles.map((s) => (
+          <Radar
+            key={s.clave} dataKey={s.clave} name={s.nombre} stroke={s.color} strokeWidth={2.5} fill={s.color} fillOpacity={0.12}
+            dot={{ r: 3, fill: s.color, strokeWidth: 0 }} isAnimationActive={animar} animationDuration={450}
+          />
+        ))}
+      </RadarChart>
     );
   } else if (bloque.forma === 'area') {
     grafico = (
@@ -213,7 +231,7 @@ export default function Grafico({ bloque, conjunto, filas, tema }: Props) {
                 >
                   <span
                     aria-hidden
-                    className={deTiempo ? 'h-[4px] w-[18px] rounded-full' : 'h-[12px] w-[12px] rounded-[3px]'}
+                    className={comoLinea(s) ? 'h-[4px] w-[18px] rounded-full' : 'h-[12px] w-[12px] rounded-[3px]'}
                     style={oculta ? { boxShadow: `inset 0 0 0 1.5px ${s.color}` } : { background: s.color }}
                   />
                   <span>{s.nombre}</span>

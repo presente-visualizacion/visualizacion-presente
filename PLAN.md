@@ -53,7 +53,7 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
 - [x] **Etapa 1. Base.** Estructura, modelo de datos, diseño, diapositivas y
   bloques genéricos, visor con barra de meses, navegación, pantalla completa y
   versión móvil. Presentación de muestra (hoy con datos inventados).
-- [ ] **Etapa 2. Editor (2A y 2B, ver "Qué modelo usar").** Base de datos y guardado. Modo edición: agregar,
+- [x] **Etapa 2. Editor (2A y 2B, ver "Qué modelo usar").** Base de datos y guardado. Modo edición: agregar,
   quitar, duplicar y reordenar diapositivas; editar títulos y textos; cambiar
   tipo de gráfico, series y colores; editar datos en una tabla; tema de la
   presentación; "Nuevo mes".
@@ -61,10 +61,10 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
     Programada el 2026-11-16 (ver "Diseño de la etapa 2A"). **Falta un paso de
     la usuaria:** conectar la base en Vercel ("Lo que hace la usuaria en
     Vercel"). Hasta entonces el sitio publicado sigue en solo lectura.
-  - [ ] 2B. Agregar, quitar, duplicar y reordenar diapositivas y bloques;
+  - [x] 2B. Agregar, quitar, duplicar y reordenar diapositivas y bloques;
     tipo de gráfico, series y colores; cinco tipos de gráfico nuevos
     (combinado, circular, dispersión, radar, cascada); columnas; tema;
-    "Nuevo mes" (ver "Diseño de la etapa 2B").
+    "Nuevo mes". Programada el 2026-11-16 (ver "Diseño de la etapa 2B").
 - [ ] **Etapa 3. Excel.** Cargar cualquier archivo, elegir hoja y columnas,
   vista previa, asignar mes, recordar la configuración por conjunto de datos.
 - [ ] **Etapa 4. Migración.** Las 25 diapositivas originales con todos sus
@@ -121,9 +121,8 @@ cada mensaje.
 
 - **Etapa 2A** (base de datos, guardado, editar datos, textos y títulos): la
   que más cuesta corregir si queda mal. Ya está hecha.
-- **Etapa 2B** (agregar, quitar y reordenar diapositivas, tipo de gráfico,
-  colores, "Nuevo mes"), **3, 4 y 5**: siguen el diseño ya hecho. Opus es
-  suficiente.
+- **Etapa 2B**: hecha.
+- **Etapas 3, 4 y 5**: siguen el diseño ya hecho. Opus es suficiente.
 - Al terminar cada etapa se sube a GitHub, así que si el uso se acaba a mitad,
   lo terminado no se pierde.
 
@@ -143,14 +142,19 @@ src/
     formato.ts            números en formato colombiano
     datos.ts              filas y valores del mes seleccionado
     acceso.ts             quién puede editar (hoy, cualquiera)
-    edicion/              operaciones de edición, validación, pegado de Excel
+    edicion/              operaciones de edición, validación, pegado de Excel,
+                          plantillas (ids, bloques nuevos, duplicar)
+    color.ts              contraste de colores (aviso en el tema)
     almacen/              de dónde se leen y dónde se guardan las presentaciones
   app/api/presentaciones/ rutas para leer y guardar
   components/
     visor/                Visor, BarraMeses, ListaDiapositivas, Lienzo
     diapositivas/         portada, contenido, cierre
-    bloques/              gráfico, tabla, texto, cifras
-    editor/               guardado en el navegador, panel y editor de datos
+    bloques/              gráfico, tabla, texto, cifras (Grafico.tsx: series;
+                          GraficosEspeciales.tsx: circular, dispersión, cascada)
+    editor/               guardado en el navegador, panel (pestañas Diapositiva
+                          y Presentación), editores de gráfico, tabla, datos y
+                          columnas
   datos/semilla/          presentación de muestra (generada, no editar a mano)
 pruebas/                  pruebas automáticas (npm run prueba)
 scripts/crear-semilla.mjs genera la muestra con datos inventados
@@ -723,7 +727,7 @@ Una sola vez, cuando el paso 2A.2 esté subido:
 
 ## Diseño de la etapa 2B: estructura, gráficos y tema
 
-Diseñada el 2026-11-16. Sigue las reglas de "Operaciones de edición" de la 2A:
+Diseñada y programada el 2026-11-16. Sigue las reglas de "Operaciones de edición" de la 2A:
 todo cambio es una operación del tipo "dejar este valor", nombrada por `id`,
 que se aplica igual en el navegador y en el servidor y se valida antes de
 guardar. Si se cambia algo en el código, se corrige aquí.
@@ -909,12 +913,15 @@ pruebas/                                     operaciones y validación nuevas
 
 - [x] **2B.1 Modelo y operaciones**: tipos, operaciones, inversas, validación,
   plantillas y pruebas.
-- [ ] **2B.2 Gráficos nuevos** en `Grafico.tsx`.
-- [ ] **2B.3 Pantallas**: panel con pestañas, estructura, configuración de
+- [x] **2B.2 Gráficos nuevos** en `Grafico.tsx`.
+- [x] **2B.3 Pantallas**: panel con pestañas, estructura, configuración de
   gráfico y tabla, agregar bloque, columnas, tema y meses.
-- [ ] **2B.4 Cierre**: revisión en navegador, README y este plan.
+- [x] **2B.4 Cierre**: revisión en navegador, README y este plan.
 
 ### Cómo se comprueba
+
+Todo lo de esta lista se comprobó el 2026-11-16 en navegador (Chrome) contra
+la base local, además de las pruebas automáticas (`pruebas/estructura.prueba.ts`).
 
 - Agregar, duplicar, mover y quitar diapositivas y bloques; recargar la
   página: queda igual. Ctrl+Z deshace cada paso, también quitar.

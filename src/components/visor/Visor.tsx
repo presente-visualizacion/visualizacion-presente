@@ -44,6 +44,14 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
   const [periodoElegido, setPeriodo] = useState(periodoInicial);
   const periodo = periodos.includes(periodoElegido) ? periodoElegido : periodos[periodos.length - 1];
   const [editando, setEditando] = useState(false);
+  /** Diapositiva a la que ir en cuanto aparezca (al agregar, duplicar o quitar). */
+  const [irA, setIrA] = useState<string | null>(null);
+  useEffect(() => {
+    if (!irA) return;
+    const destino = diapositivas.findIndex((d) => d.id === irA);
+    if (destino >= 0) setIndice(destino);
+    setIrA(null);
+  }, [irA, diapositivas]);
   /** Conjunto de datos abierto en el editor de datos. */
   const [datosAbiertos, setDatosAbiertos] = useState<string | null>(null);
   const [presentando, setPresentando] = useState(false);
@@ -213,7 +221,7 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
                 type="button"
                 onClick={() => setEditando((valor) => !valor)}
                 aria-pressed={editando}
-                title={editando ? 'Terminar de editar' : 'Editar títulos, textos y datos'}
+                title={editando ? 'Terminar de editar' : 'Editar la presentación'}
                 className="hidden h-10 shrink-0 items-center gap-2 rounded-full border border-linea-fuerte bg-white px-4 font-semibold text-tinta transition-colors hover:bg-tinte lg:flex"
               >
                 {editando ? <Check size={18} aria-hidden /> : <Pencil size={17} aria-hidden />}
@@ -263,6 +271,8 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
             periodo={periodo}
             cambiar={cambiar}
             onEditarDatos={setDatosAbiertos}
+            onIrA={setIrA}
+            onPeriodo={setPeriodo}
             onCerrar={() => setEditando(false)}
           />
         )}

@@ -156,3 +156,75 @@ export function MesVacio({ periodo, que, origen, onCopiar, onVacio }: {
     </div>
   );
 }
+
+/** Lista desplegable con etiqueta. */
+export function Opcion<T extends string>({ etiqueta, valor, opciones, onCambiar, nota }: {
+  etiqueta: string;
+  valor: T;
+  opciones: { valor: T; nombre: string; inactiva?: boolean }[];
+  onCambiar: (valor: T) => void;
+  nota?: React.ReactNode;
+}) {
+  const id = useId();
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-sm font-semibold text-tinta">{etiqueta}</label>
+      <select id={id} value={valor} onChange={(e) => onCambiar(e.target.value as T)} className={`${CLASE_CAMPO} h-10 py-0`}>
+        {opciones.map((o) => <option key={o.valor} value={o.valor} disabled={o.inactiva}>{o.nombre}</option>)}
+      </select>
+      {nota && <p className="mt-1 text-[13px] leading-snug text-tinta-suave">{nota}</p>}
+    </div>
+  );
+}
+
+/** Casilla de sí o no. */
+export function Casilla({ etiqueta, marcada, onCambiar, nota }: { etiqueta: string; marcada: boolean; onCambiar: (marcada: boolean) => void; nota?: string }) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2.5 text-[15px] text-tinta">
+      <input type="checkbox" checked={marcada} onChange={(e) => onCambiar(e.target.checked)} className="mt-[3px] h-4 w-4 shrink-0 accent-primario" />
+      <span>
+        {etiqueta}
+        {nota && <span className="block text-[13px] leading-snug text-tinta-suave">{nota}</span>}
+      </span>
+    </label>
+  );
+}
+
+/** Título pequeño de una parte del panel. */
+export function Subtitulo({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-sm font-semibold text-tinta">{children}</h3>;
+}
+
+/**
+ * Botón que pide confirmar antes de actuar (para quitar cosas). La
+ * confirmación aparece en su lugar, sin ventanas del navegador.
+ */
+export function BotonConfirmar({ etiqueta, pregunta, confirmar, onConfirmar, inactivo = false, icono, compacto = false }: {
+  etiqueta: string;
+  pregunta: string;
+  confirmar: string;
+  onConfirmar: () => void;
+  inactivo?: boolean;
+  icono: React.ReactNode;
+  /** Solo el icono, sin texto. */
+  compacto?: boolean;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  if (abierto) {
+    return (
+      <div role="alert" className="basis-full rounded-lg border border-linea-fuerte bg-tinte p-3 text-[13px] leading-snug text-tinta">
+        <p>{pregunta} Se puede deshacer.</p>
+        <div className="mt-2 flex gap-2">
+          <button type="button" className={CLASE_BOTON} onClick={() => setAbierto(false)}>Cancelar</button>
+          <button type="button" className={CLASE_BOTON_PRINCIPAL} onClick={() => { setAbierto(false); onConfirmar(); }}>{confirmar}</button>
+        </div>
+      </div>
+    );
+  }
+  if (compacto) return <BotonIcono etiqueta={etiqueta} onClick={() => setAbierto(true)} inactivo={inactivo}>{icono}</BotonIcono>;
+  return (
+    <button type="button" className={CLASE_BOTON} onClick={() => setAbierto(true)} disabled={inactivo} title={etiqueta}>
+      {icono} {etiqueta}
+    </button>
+  );
+}

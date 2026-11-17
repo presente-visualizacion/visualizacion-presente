@@ -5,7 +5,7 @@
 import type {
   Bloque, BloqueGrafico, Columna, ConjuntoDatos, Diapositiva, FormaGrafico, IdPeriodo, Presentacion, Serie,
 } from '../tipos';
-import type { ConfigGrafico } from './operaciones';
+import type { ConfigGrafico, Operacion } from './operaciones';
 import { SERIES_POR_FORMA } from './validar';
 
 const LETRAS = 'abcdefghijkmnpqrstuvwxyz23456789';
@@ -89,7 +89,8 @@ export function bloqueNuevo(tipo: TipoNuevo, enUso: Set<string>, conjunto?: Conj
   if (!conjunto) throw new Error('Un gráfico o una tabla necesita un conjunto de datos.');
   if (tipo === 'tabla') return { id, tipo, datos: conjunto.id };
   const eje = conjunto.columnas.find((c) => !esNumerica(c)) ?? conjunto.columnas[0];
-  const base: BloqueGrafico = { id, tipo, datos: conjunto.id, forma: 'barras', ejeX: eje.clave, series: [] };
+  const series = conjunto.columnas.filter((c) => esNumerica(c) && c.clave !== eje.clave).map((c) => ({ clave: c.clave }));
+  const base: BloqueGrafico = { id, tipo, datos: conjunto.id, forma: 'barras', ejeX: eje.clave, series };
   return { ...base, ...configPara('barras', base, conjunto) };
 }
 
@@ -116,8 +117,9 @@ export function configPara(forma: FormaGrafico, actual: ConfigGrafico, conjunto:
   let ejeX = actual.ejeX;
   if (forma === 'dispersion') {
     if (!columna(ejeX) || !esNumerica(columna(ejeX)!)) ejeX = numericas[0].clave;
-  } else if (!columna(ejeX)) {
-    ejeX = (conjunto.columnas.find((c) => !esNumerica(c)) ?? conjunto.columnas[0]).clave;
+  } else if (!columna(ejeX) || (actual.forma === 'dispersion' && esNumerica(columna(ejeX)!))) {
+    // Al salir de la dispersión el eje vuelve a una columna de texto, si hay.
+    ejeX = (conjunto.columnas.find((c) => !esNumerica(c)) ?? columna(ejeX) ?? conjunto.columnas[0]).clave;
   }
 
   // Series: numéricas, sin repetir y distintas del eje.
@@ -140,7 +142,7 @@ export function configPara(forma: FormaGrafico, actual: ConfigGrafico, conjunto:
   if (actual.apilado && (forma === 'barras' || forma === 'area')) config.apilado = true;
   if (actual.etiquetas && ['barras', 'barrasHorizontales', 'combinado', 'cascada', 'circular', 'dispersion'].includes(forma)) config.etiquetas = true;
   if (actual.resaltar && ['barras', 'barrasHorizontales', 'dispersion'].includes(forma) && columna(actual.resaltar.columna)) config.resaltar = actual.resaltar;
-  if (forma === 'cascada') config.total = actual.total ?? true;
+  if (forma === 'cascada') config.total = actual.forma === 'cascada' ? Boolean(actual.total) : true;
   if (forma === 'dispersion') {
     const nombres = columna(actual.nombres)?.tipo === 'texto' ? actual.nombres : conjunto.columnas.find((c) => !esNumerica(c))?.clave;
     if (nombres) config.nombres = nombres;
@@ -193,4 +195,96 @@ export function copiaDeDiapositiva(p: Presentacion, d: Diapositiva, enUso: Set<s
 export function mesSiguiente(periodo: IdPeriodo): IdPeriodo {
   const [anio, mes] = periodo.split('-').map(Number);
   return mes === 12 ? `${anio + 1}-01` : `${anio}-${String(mes + 1).padStart(2, '0')}`;
+}
+
+// ---------------------------------------------------------------------------
+// Acciones del panel: cada una devuelve las operaciones de un solo paso de
+// deshacer.
+
+/** Conjuntos que quedarían sin uso si se quitan esos bloques. */
+function conjuntosHuerfanos(p: Presentacion, quitados: Set<string>): string[] {
+  const usados = new Set<string>();
+  const candidatos = new Set<string>();
+  for (const d of p.diapositivas) {
+    for (const b of d.bloques) {
+      if (b.tipo !== 'grafico' && b.tipo !== 'tabla') continue;
+      (quitados.has(b.id) ? candidatos : usados).add(b.datos);
+    }
+  }
+  return [...candidatos].filter((c) => !usados.has(c) && Object.hasOwn(p.datos, c));
+}
+
+export function opsQuitarBloque(p: Presentacion, bloque: string): Operacion[] {
+  return [
+    { op: 'bloque.quitar', bloque },
+    ...conjuntosHuerfanos(p, new Set([bloque])).map((c): Operacion => ({ op: 'conjunto.quitar', conjunto: c })),
+  ];
+}
+
+export function opsQuitarDiapositiva(p: Presentacion, diapositiva: string): Operacion[] {
+  const d = p.diapositivas.find((x) => x.id === diapositiva);
+  if (!d) return [];
+  return [
+    { op: 'diapositiva.quitar', diapositiva },
+    ...conjuntosHuerfanos(p, new Set(d.bloques.map((b) => b.id))).map((c): Operacion => ({ op: 'conjunto.quitar', conjunto: c })),
+  ];
+}
+
+export function opsDuplicarDiapositiva(p: Presentacion, diapositiva: string): { ops: Operacion[]; id: string } | null {
+  const d = p.diapositivas.find((x) => x.id === diapositiva);
+  if (!d) return null;
+  const copia = copiaDeDiapositiva(p, d, idsEnUso(p));
+  copia.diapositiva.titulo = `${d.titulo} (copia)`.slice(0, 200);
+  return {
+    id: copia.diapositiva.id,
+    ops: [
+      ...copia.conjuntos.map((c): Operacion => ({ op: 'conjunto.poner', conjunto: c })),
+      { op: 'diapositiva.poner', diapositiva: copia.diapositiva, despues: d.id },
+    ],
+  };
+}
+
+/** Con la disposición "una" solo se ve el primer bloque: al pasar de uno, se reparten en columnas. */
+function opsDisposicionPara(d: Diapositiva, bloques: number): Operacion[] {
+  return (d.disposicion ?? 'una') === 'una' && bloques > 1 ? [{ op: 'diapositiva.disposicion', diapositiva: d.id, valor: 'columnas' }] : [];
+}
+
+export function opsDuplicarBloque(p: Presentacion, bloque: string): Operacion[] {
+  const d = p.diapositivas.find((x) => x.bloques.some((b) => b.id === bloque));
+  if (!d) return [];
+  const copia = copiaDeBloque(p, d.bloques.find((b) => b.id === bloque)!, idsEnUso(p));
+  return [
+    ...copia.conjuntos.map((c): Operacion => ({ op: 'conjunto.poner', conjunto: c })),
+    { op: 'bloque.poner', diapositiva: d.id, bloque: copia.bloque, despues: bloque },
+    ...opsDisposicionPara(d, d.bloques.length + 1),
+  ];
+}
+
+/**
+ * Bloque nuevo al final de la diapositiva. `datos`: 'nuevo' crea un conjunto
+ * de ejemplo; si no, el id de un conjunto que ya existe.
+ */
+export function opsAgregarBloque(
+  p: Presentacion, diapositiva: string, tipo: TipoNuevo, datos: 'nuevo' | string = 'nuevo',
+): { ops: Operacion[]; bloque: Bloque; conjuntoNuevo: string | null } | null {
+  const d = p.diapositivas.find((x) => x.id === diapositiva);
+  if (!d) return null;
+  const enUso = idsEnUso(p);
+  const ops: Operacion[] = [];
+  let conjunto: ConjuntoDatos | undefined;
+  let conjuntoNuevo: string | null = null;
+  if (tipo === 'grafico' || tipo === 'tabla') {
+    if (datos === 'nuevo') {
+      conjunto = conjuntoEjemplo(nuevoId('c', enUso), tipo === 'tabla' ? 'tabla' : 'barras');
+      conjuntoNuevo = conjunto.id;
+      ops.push({ op: 'conjunto.poner', conjunto });
+    } else {
+      conjunto = p.datos[datos];
+      if (!conjunto) return null;
+    }
+  }
+  const bloque = bloqueNuevo(tipo, enUso, conjunto);
+  ops.push({ op: 'bloque.poner', diapositiva: d.id, bloque, despues: d.bloques.at(-1)?.id ?? null });
+  ops.push(...opsDisposicionPara(d, d.bloques.length + 1));
+  return { ops, bloque, conjuntoNuevo };
 }

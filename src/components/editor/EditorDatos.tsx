@@ -9,7 +9,7 @@
 // hasta corregirla; el resto sí.
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Columns3, Plus, Trash2, X } from 'lucide-react';
 import { filasDe } from '@/lib/datos';
 import type { Operacion } from '@/lib/edicion/operaciones';
 import { esRangoPegado, leerTablaPegada } from '@/lib/edicion/pegado';
@@ -17,6 +17,7 @@ import { TOPES } from '@/lib/edicion/validar';
 import { formatear, interpretarNumero, numeroEditable } from '@/lib/formato';
 import { mesParaCopiar, nombrePeriodo } from '@/lib/periodos';
 import type { Columna, Fila, IdPeriodo, Presentacion } from '@/lib/tipos';
+import { EditorColumnas } from './EditorColumnas';
 import { BotonIcono, CLASE_BOTON, CLASE_BOTON_PRINCIPAL, MesVacio, SelectorModo } from './piezas';
 
 interface Props {
@@ -40,6 +41,7 @@ export function EditorDatos({ presentacion, conjuntoId, periodo, cambiar, onCerr
   // que quedó sin guardar porque no se entiende.
   const [borradores, setBorradores] = useState<Record<string, string>>({});
   const [foco, setFoco] = useState<string | null>(null);
+  const [viendoColumnas, setViendoColumnas] = useState(false);
   const dialogo = useRef<HTMLDivElement>(null);
   const tabla = useRef<HTMLTableElement>(null);
   const enfocarAlDibujar = useRef<string | null>(null);
@@ -193,7 +195,14 @@ export function EditorDatos({ presentacion, conjuntoId, periodo, cambiar, onCerr
       >
         <header className="flex shrink-0 items-start gap-4 border-b border-linea px-6 py-4">
           <div className="min-w-0 flex-1">
-            <h2 id="editor-datos-titulo" className="truncate text-xl font-bold tracking-tight">{conjunto.nombre}</h2>
+            <h2 id="editor-datos-titulo" className="sr-only">{conjunto.nombre}</h2>
+            <input
+              aria-label="Nombre de los datos"
+              value={conjunto.nombre}
+              maxLength={TOPES.titulo}
+              onChange={(e) => cambiar({ op: 'datos.nombre', conjunto: conjuntoId, valor: e.target.value })}
+              className="-ml-2 w-full truncate rounded-md border border-transparent px-2 py-0.5 text-xl font-bold tracking-tight text-tinta hover:border-linea-fuerte focus:border-primario focus:outline-none"
+            />
             <p className="mt-0.5 text-sm text-tinta-suave">
               {conjunto.porPeriodo ? <>Datos de <strong className="text-tinta">{nombrePeriodo(periodo)}</strong></> : 'Estos datos son los mismos en todos los meses'}
             </p>
@@ -213,7 +222,9 @@ export function EditorDatos({ presentacion, conjuntoId, periodo, cambiar, onCerr
         </header>
 
         <div className="min-h-0 flex-1 overflow-auto px-6 py-4">
-          {!filas ? (
+          {viendoColumnas ? (
+            <EditorColumnas presentacion={presentacion} conjunto={conjunto} cambiar={cambiar} />
+          ) : !filas ? (
             <div className="mx-auto max-w-md py-8">
               <MesVacio
                 periodo={periodo}
@@ -301,13 +312,16 @@ export function EditorDatos({ presentacion, conjuntoId, periodo, cambiar, onCerr
         </div>
 
         <footer className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-t border-linea px-6 py-3">
-          {filas && (
+          {filas && !viendoColumnas && (
             <button type="button" className={CLASE_BOTON} onClick={agregarFila} disabled={llenas}>
               <Plus size={16} aria-hidden /> Agregar fila
             </button>
           )}
+          <button type="button" className={CLASE_BOTON} aria-pressed={viendoColumnas} onClick={() => { setBorradores({}); setViendoColumnas((v) => !v); }}>
+            <Columns3 size={16} aria-hidden /> {viendoColumnas ? 'Volver a los datos' : 'Columnas'}
+          </button>
           <p className="min-w-0 flex-1 text-[13px] leading-snug text-tinta-suave" role={pendientes ? 'alert' : undefined}>
-            {pendientes ? (
+            {viendoColumnas ? null : pendientes ? (
               <strong className="text-[#8E1015]">
                 {pendientes === 1 ? 'Hay 1 celda en rojo que no se guardó' : `Hay ${pendientes} celdas en rojo que no se guardaron`}: corrígelas o bórralas.
               </strong>

@@ -290,3 +290,45 @@ describe('compactar y validar operaciones nuevas', () => {
     expect(validarOperaciones([{ op: 'tema', valor: { ...p.tema, logo: 'javascript:alert(1)' } }]).ok).toBe(false);
   });
 });
+
+describe('acciones del panel', () => {
+  it('quitar el único bloque que usa un conjunto quita también el conjunto, y se deshace junto', async () => {
+    const { opsQuitarBloque, opsQuitarDiapositiva, opsDuplicarBloque, opsAgregarBloque } = await import('@/lib/edicion/plantillas');
+    const p = muestra();
+    const ops = opsQuitarBloque(p, 'g-cartera');
+    expect(ops.map((o) => o.op)).toEqual(['bloque.quitar', 'conjunto.quitar']);
+    let r = p;
+    const vuelta: Operacion[] = [];
+    for (const op of ops) {
+      vuelta.unshift(...inversa(r, op));
+      r = aplicar(r, op);
+    }
+    valida(r);
+    expect(vuelta.reduce(aplicar, r)).toEqual(p);
+
+    expect(opsQuitarDiapositiva(p, 'benchmarking-vis').map((o) => o.op)).toEqual(['diapositiva.quitar', 'conjunto.quitar']);
+
+    const dup = aplicarVarias(p, opsDuplicarBloque(p, 'g-cartera')).presentacion;
+    valida(dup);
+    const d = dup.diapositivas.find((x) => x.id === 'saldo-cartera')!;
+    expect(d.bloques).toHaveLength(2);
+    expect(d.disposicion).toBe('columnas');
+
+    const nuevo = opsAgregarBloque(p, 'macro', 'tabla', 'saldo-cartera')!;
+    const conTabla = aplicarVarias(p, nuevo.ops).presentacion;
+    valida(conTabla);
+    expect(nuevo.conjuntoNuevo).toBeNull();
+    expect(conTabla.diapositivas[1].bloques).toHaveLength(3);
+  });
+});
+
+describe('volver de la dispersión', () => {
+  it('el eje vuelve a una columna de texto', () => {
+    const p = muestra();
+    const g = bloqueDe(p, 'g-vis') as BloqueGrafico;
+    const { id: _id, tipo: _tipo, ...actual } = g;
+    const conjunto = p.datos[g.datos];
+    const disp = configPara('dispersion', actual, conjunto);
+    expect(configPara('barrasHorizontales', disp, conjunto).ejeX).toBe('entidad');
+  });
+});
