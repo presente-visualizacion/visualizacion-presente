@@ -10,6 +10,7 @@
 // (.json).
 
 import { nombreDeHoja, type CeldaNueva, type HojaNueva } from './excel/escribir';
+import { sinFormato } from './formatoTexto';
 import { nombrePeriodo } from './periodos';
 import type { Bloque, Columna, ConjuntoDatos, PorPeriodo, Presentacion } from './tipos';
 
@@ -78,7 +79,7 @@ export function hojasDeRespaldo(p: Presentacion, ahora = new Date()): HojaNueva[
     ['N.°', 'Tipo', 'Título', 'Subtítulo', 'Bloque', 'Título del bloque', 'Hoja de datos'],
   ];
   p.diapositivas.forEach((d, i) => {
-    const base: CeldaNueva[] = [i + 1, NOMBRES_DIAPOSITIVA[d.tipo], d.titulo, d.subtitulo ?? ''];
+    const base: CeldaNueva[] = [i + 1, NOMBRES_DIAPOSITIVA[d.tipo], sinFormato(d.titulo), sinFormato(d.subtitulo ?? '')];
     if (!d.bloques.length) {
       contenido.push(base);
       return;
@@ -103,7 +104,7 @@ export function hojasDeRespaldo(p: Presentacion, ahora = new Date()): HojaNueva[
       } else if (b.tipo === 'tarjetas') {
         pares = porMes(b.tarjetas, p.periodos).map(([mes, tarjetas]) => [mes, tarjetas.map((t) => `${t.titulo}: ${t.texto}`).join('\n')]);
       }
-      for (const [mes, valor] of pares) textos.push([i + 1, d.titulo, nombre, mes, valor]);
+      for (const [mes, valor] of pares) textos.push([i + 1, sinFormato(d.titulo), nombre, mes, valor]);
     }
   });
 

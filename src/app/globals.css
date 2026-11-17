@@ -65,18 +65,29 @@ body {
 .vp-fondo-oscuro .border-linea { border-color: #4A3F4F; }
 .vp-fondo-oscuro strong { color: #FF9EC1; }
 
-/* PDF (etapa 5): cada diapositiva en una hoja de 16:9 a tamaño real. */
+/* Color de letra elegido para un bloque o una diapositiva (--vp-texto). Los
+   gráficos dibujan su texto aparte y no cambian. */
+.vp-color-texto { color: var(--vp-texto); }
+.vp-color-texto .text-tinta,
+.vp-color-texto .text-tinta-suave { color: var(--vp-texto); }
+.vp-color-texto .text-tinta-suave { opacity: 0.8; }
+.vp-color-texto .recharts-wrapper .text-tinta,
+.vp-color-texto .recharts-wrapper .text-tinta-suave { color: #241A20; opacity: 1; }
+
+/* PDF (etapa 5): cada diapositiva en su hoja, a tamaño real. El tamaño de
+   cada página lo pone la página del PDF (@page vp-hoja-N). */
 @media print {
-  @page { size: 1280px 720px; margin: 0; }
+  @page { margin: 0; }
   html, body, .vp-impresion { background: #fff !important; min-height: 0 !important; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .vp-solo-pantalla { display: none !important; }
   .vp-hojas { display: block !important; max-width: none !important; padding: 0 !important; margin: 0 !important; }
+  .vp-hojas figure { display: block !important; }
   .vp-hoja {
-    width: 1280px !important; height: 720px !important; margin: 0 !important;
+    width: var(--hoja-ancho) !important; height: var(--hoja-alto) !important; margin: 0 !important;
     box-shadow: none !important; --tw-ring-shadow: 0 0 #0000 !important;
     break-after: page; break-inside: avoid;
   }
-  .vp-hoja:last-child { break-after: auto; }
-  .vp-hoja > div { transform: none !important; }
+  .vp-hojas figure:last-child .vp-hoja { break-after: auto; }
+  .vp-hoja-contenido { transform: var(--hoja-escala) !important; left: var(--hoja-x) !important; top: var(--hoja-y) !important; }
 }

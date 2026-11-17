@@ -85,6 +85,12 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
   etapa 5"). (Crear y duplicar presentaciones ya quedó hecho en los ajustes
   del 2026-11-17.)
 
+- [x] **Mejoras después de la etapa 5** (2026-11-17, ver "Mejoras del
+  2026-11-17 (después de la etapa 5)"): diapositivas quitadas que quedan
+  guardadas, colores de texto, bloque y fondo, pasar diapositivas con la rueda
+  o arrastrando al presentar, PDF descargado directo con hojas que crecen y
+  detalle fijo en los gráficos.
+
 Al terminar cada etapa: compilar, revisar en navegador (escritorio y móvil),
 revisar que no se cuelen datos reales, subir a GitHub y marcarla aquí.
 
@@ -1539,7 +1545,7 @@ completa .json e historial).
 
 | Tema | Decisión | Por qué |
 |---|---|---|
-| Cómo se hace | Página `/p/[id]/pdf?mes=AAAA-MM[&d=N][&auto=1]` con todas las diapositivas (o solo la N) una debajo de otra, y la ventana de imprimir del navegador ("Guardar como PDF"). | Sale con texto nítido y seleccionable, pesa poco y no hace falta librería ni servidor con navegador. Una librería de PDF en el navegador dibujaría imágenes de cada diapositiva. |
+| Cómo se hace (cambió, ver "Mejoras del 2026-11-17") | Página `/p/[id]/pdf?mes=AAAA-MM[&d=N][&auto=1]` con todas las diapositivas (o solo la N) una debajo de otra, y la ventana de imprimir del navegador ("Guardar como PDF"). | Sale con texto nítido y seleccionable, pesa poco y no hace falta librería ni servidor con navegador. Una librería de PDF en el navegador dibujaría imágenes de cada diapositiva. |
 | Tamaño | `@page { size: 1280px 720px; margin: 0 }`: cada diapositiva es una hoja de 16:9 (13,33 x 7,5 pulgadas, el mismo tamaño de las diapositivas anchas de PowerPoint). | El lienzo ya mide 1280 x 720: sale igual que en pantalla. |
 | Gráficos | Contexto `SinAnimacion` (en `graficoComun.tsx`): en esa página los gráficos se dibujan sin animación. La página espera a que carguen las letras y a que no aparezcan más gráficos antes de habilitar "Guardar como PDF" (y, con `auto=1`, abre la ventana sola). | Si se imprime durante la animación, las barras salen a medio crecer. |
 | Fondos | `print-color-adjust: exact` en todo. | Si no, Chrome quita el degradado de la portada y los fondos de bloque. |
@@ -1639,6 +1645,67 @@ explicación corta (Destino: "Guardar como PDF"); al imprimir eso se esconde
 - Borrar copias con nombre a mano (hoy no se puede, a propósito).
 - Safari en iPhone puede no respetar el tamaño de hoja del PDF; en escritorio
   (Chrome, Edge) sí.
+
+## Mejoras del 2026-11-17 (después de la etapa 5)
+
+Pedidas por la usuaria el mismo día, después de probar la etapa 5.
+
+### Diapositivas quitadas
+
+- Al quitar una diapositiva, queda guardada en la presentación
+  (`Presentacion.guardadas`, la más reciente primero, tope 60) con copia de
+  los conjuntos que usaba, cuándo se quitó y la diapositiva que tenía antes.
+- En el panel, pestaña Diapositiva: "Diapositivas quitadas (N)", con
+  miniatura, "Poner aquí" (después de la que se está viendo) y "Borrar para
+  siempre".
+- Volver a ponerla (`opsVolverAPoner`, en `portapapeles.ts`): si sus ids
+  siguen libres vuelve tal cual, conectada a los conjuntos que todavía existen
+  (así sigue recibiendo los datos de cada mes); los que se borraron vuelven
+  desde la copia. Si algún id está ocupado entra como copia, con ids nuevos
+  (el mismo camino que Pegar). `idsEnUso` cuenta también los ids de las
+  guardadas, para que no se reusen.
+- Operaciones nuevas: `guardada.poner` y `guardada.quitar`. Deshacer el quitar
+  devuelve la diapositiva y la saca de la lista.
+
+### Colores
+
+- Bloque: `colorFondo` y `colorTexto` (#RRGGBB), operación `bloque.colores`.
+  El color de fondo manda sobre el estilo de fondo (tinte, recuadro, oscuro).
+  Sobre un fondo oscuro, si no se eligió letra, va blanca (`esOscuro`, con el
+  contraste de `color.ts`). La letra se aplica con la clase `vp-color-texto`
+  y la variable `--vp-texto`; los gráficos conservan su tinta.
+- Diapositiva: `fondo` (#RRGGBB), operación `diapositiva.fondo`. Si es
+  oscuro, los textos pasan a blanco (el panel avisa si hay gráficos).
+- Palabras de color: en textos, tarjetas y títulos de diapositiva se escribe
+  `{azul:así}` o `{#1A3D7C:así}` (`src/lib/formatoTexto.ts`; colores con
+  nombre: magenta, azul, naranja, verde, morado, dorado, rojo, gris). En el
+  panel hay botones de negrita y colores arriba del cuadro: se selecciona y
+  se toca. No pisan la marca de viñeta "- " ni la de "# ". Las listas y el
+  respaldo muestran el texto sin marcas (`sinFormato`).
+- Selectores: `src/components/editor/Colores.tsx` (muestras sugeridas y "otro
+  color").
+
+### Presentar: rueda y arrastre
+
+- En modo presentar, la rueda del mouse o el panel táctil (arriba, abajo o a
+  los lados) pasan de diapositiva: un gesto, una diapositiva (se bloquea hasta
+  260 ms sin movimiento, porque el panel táctil sigue mandando eventos). Si
+  la rueda cae sobre una tabla que todavía se puede desplazar, se desplaza la
+  tabla (`dentroDeDesplazable`).
+- Arrastrar con el mouse (más de 80 px): a la izquierda o hacia arriba, la
+  siguiente. En el celular también se desliza hacia arriba o abajo.
+
+### PDF: descarga directa, hojas que crecen y detalle fijo
+
+| Tema | Decisión | Por qué |
+|---|---|---|
+| Cómo se arma | "Descargar PDF" dibuja cada diapositiva en el navegador (`modern-screenshot`, a 2x, JPEG 92 %) y arma el archivo con `pdf-lib`. Se descarga directo con el nombre "Presentación - Mes Año.pdf". Las dos librerías se cargan solo al pedir el PDF. | La ventana de imprimir ponía el enlace, la fecha y márgenes en los bordes, según cada navegador. Así sale igual en todos, sin nada en los bordes. El texto queda como imagen (no se selecciona); para eso sigue el botón "Imprimir". |
+| Diapositivas que no caben | La página mide las cajas con desplazamiento (tablas largas, textos al mínimo) y agranda la diapositiva hasta que no se desborde (pasadas de medir y crecer, tope 3x de ancho y 6x de alto). Opción "Si una no cabe": hoja más larga (por defecto) o achicarla dentro de la hoja normal. | Una tabla como Benchmarking CDATs se veía cortada. |
+| Imprimir | Sigue, con un tamaño de página por hoja (`@page vp-hoja-N`). | Para quien necesite el texto seleccionable. |
+| Detalle fijo | En el PDF (contexto `DetalleFijo`), los gráficos de Grafico.tsx escriben debajo lo que sale al pasar el mouse: de la entidad resaltada (Presente) o, si no hay, del último dato; con las series, las columnas de detalle y la de debajo de cada barra. Solo si hay cifras que el dibujo no muestra. Opción por gráfico `detalleFijo` ("Mostrar siempre debajo las cifras de...") para verlo también en pantalla. | Sin mouse, en el PDF no se veían los desembolsos ni el número de desembolsos de Presente, solo la tasa. |
+
+Se comprobó con la presentación real en la copia local: 25 hojas, las
+diapositivas 11 y 20 (CDATs) en hoja más larga, unos 6 MB, unos 20 segundos.
 
 ## Cómo trabajar
 

@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 import type {
-  Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, Fila, OrigenExcel, Presentacion, SelectorFila, Tarjeta, Tema,
+  Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, DiapositivaGuardada, Fila, OrigenExcel, Presentacion, SelectorFila, Tarjeta, Tema,
 } from '../tipos';
 import { cifrasDe, columnasDeFuente, type ConfigGrafico, type ConfigTabla, type Operacion } from './operaciones';
 
@@ -33,6 +33,8 @@ export const TOPES = {
   tarjetaTexto: 600,
   calculadasPorTabla: 12,
   conjuntos: 300,
+  /** Diapositivas quitadas que se guardan para volver a ponerlas. */
+  guardadas: 60,
   /** Tamaño de la presentación completa, en bytes de su JSON. */
   presentacion: 3_000_000,
   /** Tamaño de un envío de guardado, en bytes. */
@@ -151,6 +153,7 @@ const camposGrafico = {
   total: z.boolean().optional(),
   nombres: clave.optional(),
   detalleEje: clave.optional(),
+  detalleFijo: z.boolean().optional(),
   referencias: z.array(z.strictObject({
     valor: z.number().finite(),
     etiqueta: z.string().max(60).optional(),
@@ -188,6 +191,8 @@ const ubicacion = z.strictObject({
 
 const marco = {
   fondo: fondo.optional(),
+  colorFondo: color.optional(),
+  colorTexto: color.optional(),
   ubicacion: ubicacion.optional(),
   titulo: z.string().max(TOPES.titulo).optional(),
   nota: z.string().max(TOPES.titulo).optional(),
@@ -213,8 +218,16 @@ const diapositiva = z.strictObject({
   titulo: z.string().max(TOPES.titulo),
   subtitulo: z.string().max(TOPES.titulo).optional(),
   disposicion: disposicion.optional(),
+  fondo: color.optional(),
   bloques: z.array(bloque).max(TOPES.bloquesPorDiapositiva),
 }) satisfies z.ZodType<Diapositiva>;
+
+const guardada = z.strictObject({
+  diapositiva,
+  conjuntos: z.array(conjunto).max(TOPES.conjuntos),
+  quitada: z.string().max(40),
+  despues: id.nullable(),
+}) satisfies z.ZodType<DiapositivaGuardada>;
 
 const presentacion = z.strictObject({
   formato: z.literal(1),
@@ -225,6 +238,7 @@ const presentacion = z.strictObject({
   periodos: z.array(idPeriodo).min(1).max(TOPES.periodos),
   diapositivas: z.array(diapositiva).min(1).max(TOPES.diapositivas),
   datos: z.record(id, conjunto),
+  guardadas: z.array(guardada).max(TOPES.guardadas).optional(),
   actualizado: z.string().max(40),
 }) satisfies z.ZodType<Presentacion>;
 
@@ -241,6 +255,10 @@ const operacion = z.discriminatedUnion('op', [
     op: z.literal('bloque.marco'), bloque: id, titulo: z.string().max(TOPES.titulo), nota: z.string().max(TOPES.titulo),
   }),
   z.strictObject({ op: z.literal('bloque.aspecto'), bloque: id, fondo: fondo.nullable(), ubicacion: ubicacion.nullable() }),
+  z.strictObject({ op: z.literal('bloque.colores'), bloque: id, fondo: color.nullable(), texto: color.nullable() }),
+  z.strictObject({ op: z.literal('diapositiva.fondo'), diapositiva: id, valor: color.nullable() }),
+  z.strictObject({ op: z.literal('guardada.poner'), guardada }),
+  z.strictObject({ op: z.literal('guardada.quitar'), diapositiva: id }),
   z.strictObject({
     op: z.literal('datos.columna'),
     conjunto: id,

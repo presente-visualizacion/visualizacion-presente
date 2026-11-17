@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { sinFormato } from '@/lib/formatoTexto';
 import { conMes } from '@/lib/periodos';
 import type { Diapositiva, IdPeriodo } from '@/lib/tipos';
 
@@ -36,7 +37,7 @@ export function ListaDiapositivas({ diapositivas, indice, periodo, onIr, horizon
               } ${horizontal ? 'max-w-56 border border-linea bg-white' : ''}`}
             >
               <span className={`w-5 shrink-0 text-right text-sm ${elegida ? 'text-primario' : ''}`}>{i + 1}</span>
-              <span className={horizontal ? 'truncate' : ''}>{conMes(d.titulo, periodo)}</span>
+              <span className={horizontal ? 'truncate' : ''}>{sinFormato(conMes(d.titulo, periodo))}</span>
             </button>
           </li>
         );

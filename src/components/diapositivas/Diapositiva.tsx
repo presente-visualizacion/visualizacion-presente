@@ -1,6 +1,6 @@
 'use client';
 
-import { VistaBloque } from '@/components/bloques/Bloques';
+import { ConNegritas, esOscuro, VistaBloque } from '@/components/bloques/Bloques';
 import { Logo } from '@/components/Logo';
 import { filasUsadas, ubicacionesEfectivas } from '@/lib/disposicion';
 import { conMes, nombrePeriodo } from '@/lib/periodos';
@@ -35,24 +35,36 @@ function PanelMarca({ logo }: { logo: string }) {
   );
 }
 
+/** Fondo elegido para la diapositiva y, si es oscuro, letra clara. */
+function fondoDe(d: TipoDiapositiva): { className: string; style?: React.CSSProperties } {
+  if (!d.fondo) return { className: 'bg-white' };
+  const oscuro = esOscuro(d.fondo);
+  return {
+    className: oscuro ? 'vp-color-texto' : '',
+    style: { background: d.fondo, ...(oscuro ? { '--vp-texto': '#FFFFFF' } : {}) } as React.CSSProperties,
+  };
+}
+
 function Portada({ presentacion, diapositiva, periodo }: Props) {
+  const fondo = fondoDe(diapositiva);
   return (
-    <div className="flex h-full w-full bg-white">
+    <div className={`flex h-full w-full ${fondo.className}`} style={fondo.style}>
       <PanelMarca logo={presentacion.tema.logo} />
       <div className="flex min-w-0 flex-1 flex-col justify-center px-[76px]">
-        <h1 className="text-[78px] font-bold leading-[1.02] tracking-[-0.03em] text-tinta">{conMes(diapositiva.titulo, periodo)}</h1>
-        {diapositiva.subtitulo && <p className="mt-[22px] text-[34px] font-medium text-primario">{conMes(diapositiva.subtitulo, periodo)}</p>}
+        <h1 className="text-[78px] font-bold leading-[1.02] tracking-[-0.03em] text-tinta"><ConNegritas texto={conMes(diapositiva.titulo, periodo)} /></h1>
+        {diapositiva.subtitulo && <p className="mt-[22px] text-[34px] font-medium text-primario"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
       </div>
     </div>
   );
 }
 
 function Cierre({ presentacion, diapositiva, periodo }: Props) {
+  const fondo = fondoDe(diapositiva);
   return (
-    <div className="flex h-full w-full bg-white">
+    <div className={`flex h-full w-full ${fondo.className}`} style={fondo.style}>
       <div className="flex min-w-0 flex-1 flex-col justify-center px-[76px]">
-        <h1 className="text-[78px] font-bold leading-[1.02] tracking-[-0.03em] text-tinta">{conMes(diapositiva.titulo, periodo)}</h1>
-        {diapositiva.subtitulo && <p className="mt-[22px] text-[30px] font-medium text-tinta-suave">{conMes(diapositiva.subtitulo, periodo)}</p>}
+        <h1 className="text-[78px] font-bold leading-[1.02] tracking-[-0.03em] text-tinta"><ConNegritas texto={conMes(diapositiva.titulo, periodo)} /></h1>
+        {diapositiva.subtitulo && <p className="mt-[22px] text-[30px] font-medium text-tinta-suave"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
       </div>
       <PanelMarca logo={presentacion.tema.logo} />
     </div>
@@ -120,13 +132,14 @@ function Contenido({ presentacion, diapositiva, periodo, numero }: Props) {
     cuerpo = <div className="h-full min-h-0">{bloques[0] && vista(0)}</div>;
   }
 
+  const fondo = fondoDe(diapositiva);
   return (
-    <div className="flex h-full w-full flex-col bg-white px-[64px] pb-[26px] pt-[46px]">
+    <div className={`flex h-full w-full flex-col px-[64px] pb-[26px] pt-[46px] ${fondo.className}`} style={fondo.style}>
       <header className="flex shrink-0 gap-[20px]">
         <span aria-hidden className="w-[6px] shrink-0 rounded-full" style={{ background: 'var(--vp-degradado)' }} />
         <div className="min-w-0">
-          <h2 className="text-[38px] font-bold leading-[1.12] tracking-[-0.02em] text-tinta">{conMes(diapositiva.titulo, periodo)}</h2>
-          {diapositiva.subtitulo && <p className="mt-[5px] text-[19px] text-tinta-suave">{conMes(diapositiva.subtitulo, periodo)}</p>}
+          <h2 className="text-[38px] font-bold leading-[1.12] tracking-[-0.02em] text-tinta"><ConNegritas texto={conMes(diapositiva.titulo, periodo)} /></h2>
+          {diapositiva.subtitulo && <p className="mt-[5px] text-[19px] text-tinta-suave"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
         </div>
       </header>
       <div className="mt-[28px] min-h-0 flex-1">{cuerpo}</div>

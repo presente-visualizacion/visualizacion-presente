@@ -16,7 +16,7 @@
 
 import { interpretarNumero, numeroEditable } from '../formato';
 import type {
-  Bloque, BloqueGrafico, BloqueTabla, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, Fila, IdPeriodo,
+  Bloque, BloqueGrafico, BloqueTabla, Cifra, Columna, ConjuntoDatos, Diapositiva, DiapositivaGuardada, Disposicion, Fila, IdPeriodo,
   FondoBloque, OrigenExcel, PorPeriodo, Presentacion, SelectorFila, Tarjeta, Tema, TipoColumna, Ubicacion,
 } from '../tipos';
 
@@ -24,7 +24,7 @@ import type {
  * El título y la nota van por `bloque.marco`, y el fondo y la ubicación por
  * `bloque.aspecto`; no por la configuración del gráfico o la tabla.
  */
-type Marco = 'id' | 'tipo' | 'titulo' | 'nota' | 'fondo' | 'ubicacion';
+type Marco = 'id' | 'tipo' | 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto';
 export type ConfigGrafico = Omit<BloqueGrafico, Marco>;
 export type ConfigTabla = Omit<BloqueTabla, Marco>;
 
@@ -43,6 +43,14 @@ export type Operacion =
   | { op: 'bloque.marco'; bloque: string; titulo: string; nota: string }
   /** Fondo y lugar en la disposición libre; null quita cada uno. */
   | { op: 'bloque.aspecto'; bloque: string; fondo: FondoBloque | null; ubicacion: Ubicacion | null }
+  /** Color de fondo y de letra propios del bloque; null quita cada uno. */
+  | { op: 'bloque.colores'; bloque: string; fondo: string | null; texto: string | null }
+  /** Color de fondo de la diapositiva; null la deja en blanco. */
+  | { op: 'diapositiva.fondo'; diapositiva: string; valor: string | null }
+  /** Guarda (o reemplaza) una diapositiva quitada, arriba de la lista. */
+  | { op: 'guardada.poner'; guardada: DiapositivaGuardada }
+  /** La saca de la lista de guardadas (al volver a ponerla o al borrarla para siempre). */
+  | { op: 'guardada.quitar'; diapositiva: string }
   | { op: 'datos.filas'; conjunto: string; periodo: IdPeriodo | null; valor: Fila[] | null }
   /** Solo cambia los campos presentes. `decimales: null`, `unidad: ''`, `grupo: ''` y `signo: false` los quitan. */
   | { op: 'datos.columna'; conjunto: string; clave: string; nombre?: string; decimales?: number | null; unidad?: string; grupo?: string; signo?: boolean }
@@ -298,8 +306,10 @@ function datoDeBloque(bloque: Bloque): PorPeriodo<string> | PorPeriodo<Cifra[]> 
 }
 
 /** Título y nota del bloque, para conservarlos al cambiar su configuración. */
-function marcoDe(b: Bloque): Pick<Bloque, 'titulo' | 'nota' | 'fondo' | 'ubicacion'> {
+function marcoDe(b: Bloque): Pick<Bloque, 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto'> {
   return {
+    ...(b.colorFondo ? { colorFondo: b.colorFondo } : {}),
+    ...(b.colorTexto ? { colorTexto: b.colorTexto } : {}),
     ...(b.titulo ? { titulo: b.titulo } : {}),
     ...(b.nota ? { nota: b.nota } : {}),
     ...(b.fondo ? { fondo: b.fondo } : {}),
@@ -372,6 +382,28 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
         ...(op.fondo ? { fondo: op.fondo } : {}),
         ...(op.ubicacion ? { ubicacion: { ...op.ubicacion } } : {}),
       }) as Bloque);
+
+    case 'bloque.colores':
+      return conBloque(p, op.bloque, ({ colorFondo: _f, colorTexto: _t, ...b }) => ({
+        ...b,
+        ...(op.fondo ? { colorFondo: op.fondo } : {}),
+        ...(op.texto ? { colorTexto: op.texto } : {}),
+      }) as Bloque);
+
+    case 'diapositiva.fondo':
+      return conDiapositiva(p, op.diapositiva, ({ fondo: _fondo, ...d }) => (op.valor ? { ...d, fondo: op.valor } : d));
+
+    case 'guardada.poner': {
+      const resto = (p.guardadas ?? []).filter((g) => g.diapositiva.id !== op.guardada.diapositiva.id);
+      return { ...p, guardadas: [structuredClone(op.guardada), ...resto] };
+    }
+
+    case 'guardada.quitar': {
+      if (!p.guardadas?.some((g) => g.diapositiva.id === op.diapositiva)) throw new OperacionNoAplicable(`No hay una diapositiva guardada "${op.diapositiva}".`);
+      const { guardadas: _g, ...resto } = p;
+      const quedan = p.guardadas.filter((g) => g.diapositiva.id !== op.diapositiva);
+      return quedan.length ? { ...resto, guardadas: quedan } : resto;
+    }
 
     case 'datos.filas':
       return conConjunto(p, op.conjunto, (c) => ponerFilas(p, c, op.periodo, op.valor));
@@ -611,6 +643,26 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
       return b ? [{ op: op.op, bloque: b.id, fondo: b.fondo ?? null, ubicacion: b.ubicacion ?? null }] : [];
     }
 
+    case 'bloque.colores': {
+      const b = bloqueDe(p, op.bloque);
+      return b ? [{ op: op.op, bloque: b.id, fondo: b.colorFondo ?? null, texto: b.colorTexto ?? null }] : [];
+    }
+
+    case 'diapositiva.fondo': {
+      const d = p.diapositivas.find((x) => x.id === op.diapositiva);
+      return d ? [{ op: op.op, diapositiva: d.id, valor: d.fondo ?? null }] : [];
+    }
+
+    case 'guardada.poner': {
+      const antes = p.guardadas?.find((g) => g.diapositiva.id === op.guardada.diapositiva.id);
+      return antes ? [{ op: op.op, guardada: antes }] : [{ op: 'guardada.quitar', diapositiva: op.guardada.diapositiva.id }];
+    }
+
+    case 'guardada.quitar': {
+      const antes = p.guardadas?.find((g) => g.diapositiva.id === op.diapositiva);
+      return antes ? [{ op: 'guardada.poner', guardada: antes }] : [];
+    }
+
     case 'datos.filas': {
       const c = Object.hasOwn(p.datos, op.conjunto) ? p.datos[op.conjunto] : undefined;
       if (!c) return [];
@@ -798,7 +850,13 @@ export function claveDe(op: Operacion): string | null {
       return `${op.op}|${op.bloque}|${op.periodo ?? ''}`;
     case 'bloque.marco':
     case 'bloque.aspecto':
+    case 'bloque.colores':
       return `${op.op}|${op.bloque}`;
+    case 'diapositiva.fondo':
+      return `${op.op}|${op.diapositiva}`;
+    case 'guardada.poner':
+    case 'guardada.quitar':
+      return `guardada|${op.op === 'guardada.poner' ? op.guardada.diapositiva.id : op.diapositiva}`;
     case 'datos.filas':
       return `${op.op}|${op.conjunto}|${op.periodo ?? ''}`;
     case 'datos.columna': {

@@ -139,6 +139,10 @@ interface BaseBloque {
   /** Texto chico debajo del bloque (fuentes, aclaraciones). Admite {mes}. */
   nota?: string;
   fondo?: FondoBloque;
+  /** Color de fondo propio (#RRGGBB). Manda sobre `fondo`. */
+  colorFondo?: string;
+  /** Color de las letras del bloque (#RRGGBB). Los gráficos conservan el suyo. */
+  colorTexto?: string;
   /** Solo se usa con la disposición "libre". */
   ubicacion?: Ubicacion;
 }
@@ -174,6 +178,12 @@ export interface BloqueGrafico extends BaseBloque {
   rangoEje?: RangoEje;
   /** Líneas de referencia, punteadas, con su etiqueta. */
   referencias?: Referencia[];
+  /**
+   * Muestra siempre, debajo del gráfico, lo que sale al pasar el mouse: de la
+   * entidad resaltada o, si no hay, del último dato. En el PDF sale solo
+   * cuando hay cifras que no se ven en el dibujo.
+   */
+  detalleFijo?: boolean;
 }
 
 export interface RangoEje {
@@ -271,7 +281,22 @@ export interface Diapositiva {
   titulo: string;
   subtitulo?: string;
   disposicion?: Disposicion;
+  /** Color de fondo de la diapositiva (#RRGGBB). Si falta, blanco. */
+  fondo?: string;
   bloques: Bloque[];
+}
+
+/**
+ * Diapositiva quitada de la presentación que queda guardada para volver a
+ * ponerla. Lleva copia de los datos que usaba, por si después se borran.
+ */
+export interface DiapositivaGuardada {
+  diapositiva: Diapositiva;
+  conjuntos: ConjuntoDatos[];
+  /** Cuándo se quitó (ISO). */
+  quitada: string;
+  /** Id de la diapositiva que tenía antes; null si era la primera. */
+  despues: string | null;
 }
 
 export interface Presentacion {
@@ -285,6 +310,8 @@ export interface Presentacion {
   periodos: IdPeriodo[];
   diapositivas: Diapositiva[];
   datos: Record<string, ConjuntoDatos>;
+  /** Diapositivas quitadas, la más reciente primero. */
+  guardadas?: DiapositivaGuardada[];
   actualizado: string;
 }
 

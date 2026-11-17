@@ -12,7 +12,7 @@ import {
 import { columnaDe, filasDe } from '@/lib/datos';
 import { interpretarNumero, numeroEditable } from '@/lib/formato';
 import type { ConfigGrafico, Operacion } from '@/lib/edicion/operaciones';
-import { CON_RANGO_EJE, CON_REFERENCIAS, configPara, esNumerica, motivoNoDisponible } from '@/lib/edicion/plantillas';
+import { CON_DETALLE_FIJO, CON_RANGO_EJE, CON_REFERENCIAS, configPara, esNumerica, motivoNoDisponible } from '@/lib/edicion/plantillas';
 import { FORMAS, SERIES_POR_FORMA } from '@/lib/edicion/validar';
 import type { BloqueGrafico, Columna, ConjuntoDatos, FormaGrafico, IdPeriodo, Presentacion, RangoEje, Referencia, Resaltado, Serie } from '@/lib/tipos';
 import { BotonIcono, Casilla, CLASE_CAMPO, Opcion, Subtitulo } from './piezas';
@@ -239,6 +239,14 @@ export function EditorGrafico({ presentacion, bloque, periodo, cambiar }: Props)
         )}
         {forma === 'cascada' && (
           <Casilla etiqueta="Agregar una barra de total al final" marcada={Boolean(bloque.total)} onCambiar={(total) => poner({ total })} />
+        )}
+        {CON_DETALLE_FIJO.includes(forma) && (
+          <Casilla
+            etiqueta={bloque.resaltar ? `Mostrar siempre debajo las cifras de ${bloque.resaltar.valor}` : 'Mostrar siempre debajo las cifras del último dato'}
+            marcada={Boolean(bloque.detalleFijo)}
+            onCambiar={(detalleFijo) => poner({ detalleFijo: detalleFijo || undefined })}
+            nota="Lo mismo que sale al pasar el mouse. En el PDF sale solo cuando hay cifras que el dibujo no muestra."
+          />
         )}
       </div>
 

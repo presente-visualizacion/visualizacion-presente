@@ -10,6 +10,7 @@ import { TOPES } from '@/lib/edicion/validar';
 import { mesParaCopiar } from '@/lib/periodos';
 import type { BloqueTarjetas, IdPeriodo, Presentacion, Tarjeta } from '@/lib/tipos';
 import { BotonIcono, CLASE_BOTON, CLASE_CAMPO, MesVacio, SelectorModo } from './piezas';
+import { FormatoSeleccion } from './Colores';
 
 interface Props {
   presentacion: Presentacion;
@@ -62,14 +63,18 @@ export function EditorTarjetas({ presentacion, bloque, periodo, cambiar }: Props
                   <BotonIcono etiqueta={`Quitar la tarjeta ${i + 1}`} onClick={() => cambiar(poner(todas.filter((_, j) => j !== i)))}><Trash2 size={16} /></BotonIcono>
                 </div>
                 <input aria-label={`Título de la tarjeta ${i + 1}`} placeholder="Título" maxLength={80} value={t.titulo} onChange={(e) => cambiarCampo(i, 'titulo', e.target.value)} className={`${CLASE_CAMPO} mt-1 font-semibold`} />
+                <div className="mt-2">
+                  <FormatoSeleccion idCampo={`${bloque.id}-tarjeta-${i}`} valor={t.texto} onCambiar={(texto) => cambiarCampo(i, 'texto', texto)} />
+                </div>
                 <textarea
+                  id={`${bloque.id}-tarjeta-${i}`}
                   aria-label={`Texto de la tarjeta ${i + 1}`}
                   placeholder="Texto"
                   rows={3}
                   maxLength={TOPES.tarjetaTexto}
                   value={t.texto}
                   onChange={(e) => cambiarCampo(i, 'texto', e.target.value)}
-                  className={`${CLASE_CAMPO} mt-2 resize-y leading-snug`}
+                  className={`${CLASE_CAMPO} resize-y leading-snug`}
                 />
               </li>
             ))}

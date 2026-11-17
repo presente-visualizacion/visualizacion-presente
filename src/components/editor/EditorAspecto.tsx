@@ -7,6 +7,7 @@
 
 import { COLUMNAS_LIBRE, FILAS_LIBRE, ajustarUbicacion, ubicacionesEfectivas } from '@/lib/disposicion';
 import type { Operacion } from '@/lib/edicion/operaciones';
+import { ElegirColor, FONDOS_SUGERIDOS, LETRAS_SUGERIDAS } from './Colores';
 import type { Bloque, Diapositiva, FondoBloque, Ubicacion } from '@/lib/tipos';
 
 const FONDOS: { valor: FondoBloque | ''; nombre: string; soloTexto?: boolean }[] = [
@@ -40,7 +41,7 @@ export function EditorAspecto({ diapositiva, bloque, indice, cambiar }: {
   return (
     <div className="space-y-3">
       <label className="block">
-        <span className="mb-1 block text-sm font-semibold text-tinta">Fondo del bloque</span>
+        <span className="mb-1 block text-sm font-semibold text-tinta">Estilo del fondo</span>
         <select
           value={bloque.fondo ?? ''}
           onChange={(e) => poner((e.target.value || null) as FondoBloque | null, bloque.ubicacion ?? null)}
@@ -49,6 +50,23 @@ export function EditorAspecto({ diapositiva, bloque, indice, cambiar }: {
           {fondos.map((f) => <option key={f.valor} value={f.valor}>{f.nombre}</option>)}
         </select>
       </label>
+
+      <ElegirColor
+        etiqueta="Color de fondo"
+        valor={bloque.colorFondo ?? null}
+        opciones={FONDOS_SUGERIDOS}
+        ninguno={bloque.fondo ? 'El del estilo' : 'Ninguno'}
+        onCambiar={(fondo) => cambiar({ op: 'bloque.colores', bloque: bloque.id, fondo, texto: bloque.colorTexto ?? null })}
+        nota={bloque.colorFondo && bloque.fondo ? 'El color manda sobre el estilo del fondo.' : undefined}
+      />
+      <ElegirColor
+        etiqueta="Color de la letra"
+        valor={bloque.colorTexto ?? null}
+        opciones={LETRAS_SUGERIDAS}
+        ninguno="Automático"
+        onCambiar={(texto) => cambiar({ op: 'bloque.colores', bloque: bloque.id, fondo: bloque.colorFondo ?? null, texto })}
+        nota={bloque.tipo === 'grafico' ? 'En los gráficos cambia el título y la nota; los ejes siguen en tinta.' : 'Para pintar solo algunas palabras, usa los colores de arriba del cuadro de texto.'}
+      />
 
       {libre && u && (
         <div>

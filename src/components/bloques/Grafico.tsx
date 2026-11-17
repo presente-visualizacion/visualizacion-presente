@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, LabelList, Line, LineChart,
   PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -9,7 +9,7 @@ import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import type { Columna, Fila } from '@/lib/tipos';
 import {
-  anchoTexto, BLANCO, dominioEje, ejeCategorias, lineasReferencia, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, usarAnimar, SUAVE, TINTA,
+  anchoTexto, BLANCO, DetalleFijo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, usarAnimar, SUAVE, TINTA,
   type PropsGrafico, type SerieLista,
 } from './graficoComun';
 import { Cascada, Circular, Dispersion } from './GraficosEspeciales';
@@ -59,6 +59,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   const comoLinea = (s: SerieLista) => deTiempo || bloque.forma === 'radar' || (bloque.forma === 'combinado' && s.tipo === 'lineas');
   const apilado = Boolean(bloque.apilado) && (bloque.forma === 'barras' || bloque.forma === 'area');
   const ultima = filas[filas.length - 1];
+  const enPdf = useContext(DetalleFijo);
 
   const alternar = (clave: string) =>
     setOcultas((previas) => {
@@ -318,6 +319,38 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
           {grafico}
         </ResponsiveContainer>
       </div>
+      {(() => {
+        // Lo que sale al pasar el mouse, escrito debajo: de la entidad
+        // resaltada o del último dato. En el PDF va solo si hay cifras que el
+        // dibujo no muestra (sin mouse no habría cómo verlas).
+        const fila = bloque.resaltar
+          ? filas.find((f) => String(f[bloque.resaltar!.columna]) === bloque.resaltar!.valor)
+          : ultima;
+        if (!fila) return null;
+        const escondidas = columnasDetalle.length > 0 || (!deTiempo && bloque.forma !== 'radar' && !bloque.etiquetas);
+        if (!bloque.detalleFijo && !(enPdf && escondidas)) return null;
+        const nombre = formatear(fila[bloque.ejeX], columnaX);
+        // También lo que va debajo de cada barra (la tasa, por ejemplo).
+        const extras = columnaDetalleEje && !columnasDetalle.some((c) => c.clave === columnaDetalleEje.clave)
+          ? [...columnasDetalle, columnaDetalleEje]
+          : columnasDetalle;
+        return (
+          <p className="mt-[8px] flex shrink-0 flex-wrap items-baseline gap-x-[18px] gap-y-[2px] rounded-[8px] bg-fondo-app px-[12px] py-[6px] text-[16px] leading-[1.35] text-tinta">
+            <span className="font-bold" style={bloque.resaltar ? { color: tema.primario } : undefined}>
+              {nombre}{bloque.resaltar ? '' : ' (último dato)'}
+            </span>
+            {visibles.map((s) => (
+              <span key={s.clave}><span className="text-tinta-suave">{s.nombre}</span> <span className="font-semibold">{formatear(fila[s.clave], s.columna)}</span></span>
+            ))}
+            {apilado && visibles.length > 1 && (
+              <span><span className="text-tinta-suave">Total</span> <span className="font-semibold">{formatear(visibles.reduce((t, s) => t + (typeof fila[s.clave] === 'number' ? (fila[s.clave] as number) : 0), 0), visibles[0].columna)}</span></span>
+            )}
+            {extras.map((c) => (
+              <span key={c.clave}><span className="text-tinta-suave">{c.nombre}</span> <span className="font-semibold">{formatear(fila[c.clave], c)}{c.unidad && fila[c.clave] != null ? ` ${c.unidad}` : ''}</span></span>
+            ))}
+          </p>
+        );
+      })()}
     </div>
   );
 }

@@ -4,6 +4,8 @@ import dynamic from 'next/dynamic';
 import { Fragment, useLayoutEffect, useState } from 'react';
 import { conjuntoDe, filasDe, resolverCifra, valorDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
+import { trozos } from '@/lib/formatoTexto';
+import { contraste } from '@/lib/color';
 import { conMes } from '@/lib/periodos';
 import { armarTabla, type ColumnaVista, type TablaArmada } from '@/lib/tablas';
 import type {
@@ -104,8 +106,22 @@ export function VistaBloque({ bloque, ...contexto }: Contexto & { bloque: Bloque
       {bloque.nota && <p className="mt-[8px] shrink-0 text-[13px] leading-[1.4] text-tinta-suave">{conMes(bloque.nota, contexto.periodo)}</p>}
     </div>
   );
-  if (!bloque.fondo) return conMarco;
-  return <div className={`h-full min-h-0 rounded-[14px] px-[22px] py-[12px] ${CLASE_FONDO[bloque.fondo]}`}>{conMarco}</div>;
+  const { colorFondo } = bloque;
+  // Sobre un color oscuro, si no se eligió color de letra, va en blanco.
+  const colorTexto = bloque.colorTexto ?? (colorFondo && esOscuro(colorFondo) ? '#FFFFFF' : undefined);
+  if (!bloque.fondo && !colorFondo && !colorTexto) return conMarco;
+  const relleno = colorFondo || bloque.fondo ? 'rounded-[14px] px-[22px] py-[12px]' : '';
+  const clase = colorFondo ? '' : bloque.fondo ? CLASE_FONDO[bloque.fondo] : '';
+  const estilo = {
+    ...(colorFondo ? { background: colorFondo } : {}),
+    ...(colorTexto ? { '--vp-texto': colorTexto } : {}),
+  } as React.CSSProperties;
+  return <div className={`h-full min-h-0 ${relleno} ${clase} ${colorTexto ? 'vp-color-texto' : ''}`} style={estilo}>{conMarco}</div>;
+}
+
+/** true si sobre ese color se lee mejor la letra blanca. */
+export function esOscuro(hex: string): boolean {
+  return contraste(hex, '#FFFFFF') > contraste(hex, '#241A20');
 }
 
 /** Fondos del bloque. El oscuro cambia los colores del texto (ver globals.css). */
@@ -236,10 +252,19 @@ function Tabla({ tabla, resaltar }: { tabla: TablaArmada; resaltar?: Resaltado }
   );
 }
 
-/** "**así**" se escribe en negrita. */
-function ConNegritas({ texto }: { texto: string }) {
-  const partes = texto.split(/\*\*(.+?)\*\*/g);
-  return <>{partes.map((parte, i) => (i % 2 === 1 ? <strong key={i} className="font-bold">{parte}</strong> : <Fragment key={i}>{parte}</Fragment>))}</>;
+/** "**así**" se escribe en negrita y "{azul:así}" en color (ver formatoTexto.ts). */
+export function ConNegritas({ texto }: { texto: string }) {
+  return (
+    <>
+      {trozos(texto).map((t, i) => {
+        if (!t.negrita && !t.color) return <Fragment key={i}>{t.texto}</Fragment>;
+        const estilo = t.color ? { color: t.color } : undefined;
+        return t.negrita
+          ? <strong key={i} className="font-bold" style={estilo}>{t.texto}</strong>
+          : <span key={i} style={estilo}>{t.texto}</span>;
+      })}
+    </>
+  );
 }
 
 /** Párrafos, viñetas ("- ") y líneas grandes ("# ") de un texto. */

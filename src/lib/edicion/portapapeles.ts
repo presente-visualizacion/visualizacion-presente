@@ -6,7 +6,7 @@
 
 import type { Bloque, Cifra, ConjuntoDatos, Diapositiva, IdPeriodo, PorPeriodo, Presentacion } from '../tipos';
 import type { Operacion } from './operaciones';
-import { idsEnUso, nuevoId } from './plantillas';
+import { conjuntosDeDiapositiva, idsEnUso, nuevoId } from './plantillas';
 import { TOPES } from './validar';
 
 export const CLAVE_PORTAPAPELES = 'vp-portapapeles-diapositiva';
@@ -22,24 +22,11 @@ export interface CopiaDiapositiva {
   copiado: string;
 }
 
-/** Ids de los conjuntos que usa la diapositiva (gráficos, tablas y cifras que salen de datos). */
-function conjuntosDe(d: Diapositiva): Set<string> {
-  const ids = new Set<string>();
-  const deCifras = (cifras: Cifra[] | undefined) => cifras?.forEach((c) => c.desde && ids.add(c.desde.conjunto));
-  for (const b of d.bloques) {
-    if (b.tipo === 'grafico' || b.tipo === 'tabla') ids.add(b.datos);
-    if (b.tipo === 'cifras') {
-      deCifras(b.cifras.valor);
-      Object.values(b.cifras.valores ?? {}).forEach(deCifras);
-    }
-  }
-  return ids;
-}
 
 export function copiarDiapositiva(p: Presentacion, diapositiva: string, periodo: IdPeriodo, ahora = new Date().toISOString()): CopiaDiapositiva | null {
   const d = p.diapositivas.find((x) => x.id === diapositiva);
   if (!d) return null;
-  const conjuntos = [...conjuntosDe(d)].filter((id) => Object.hasOwn(p.datos, id)).map((id) => structuredClone(p.datos[id]));
+  const conjuntos = [...conjuntosDeDiapositiva(d)].filter((id) => Object.hasOwn(p.datos, id)).map((id) => structuredClone(p.datos[id]));
   return {
     version: 1,
     origen: { presentacion: p.id, nombre: p.nombre },
@@ -141,4 +128,52 @@ export function opsPegarDiapositiva(
       { op: 'diapositiva.poner', diapositiva, despues },
     ],
   };
+}
+
+/**
+ * Vuelve a poner una diapositiva guardada (ver `opsQuitarDiapositiva`),
+ * después de `despues`, y la saca de la lista de guardadas.
+ * - Si sus ids siguen libres, vuelve tal cual y usa los conjuntos que todavía
+ *   existen (así sigue conectada a los datos que se actualizan cada mes); los
+ *   que ya no están se reponen desde la copia guardada.
+ * - Si alguno de sus ids está ocupado, entra como copia, con ids nuevos.
+ */
+export function opsVolverAPoner(
+  p: Presentacion, diapositiva: string, despues: string | null, mesDestino: IdPeriodo,
+): { ops: Operacion[]; id: string; avisos: string[] } | { error: string } {
+  const g = p.guardadas?.find((x) => x.diapositiva.id === diapositiva);
+  if (!g) return { error: 'Esa diapositiva ya no está guardada.' };
+  if (p.diapositivas.length >= TOPES.diapositivas) return { error: `La presentación ya tiene ${TOPES.diapositivas} diapositivas.` };
+  const sacar: Operacion = { op: 'guardada.quitar', diapositiva };
+
+  const enUso = new Set([
+    ...p.diapositivas.map((d) => d.id),
+    ...p.diapositivas.flatMap((d) => d.bloques.map((b) => b.id)),
+  ]);
+  const choca = enUso.has(g.diapositiva.id) || g.diapositiva.bloques.some((b) => enUso.has(b.id));
+  if (!choca) {
+    const faltan = g.conjuntos.filter((c) => !Object.hasOwn(p.datos, c.id));
+    if (Object.keys(p.datos).length + faltan.length > TOPES.conjuntos) return { error: `La presentación ya tiene ${TOPES.conjuntos} conjuntos de datos.` };
+    return {
+      ops: [
+        ...faltan.map((c): Operacion => ({ op: 'conjunto.poner', conjunto: structuredClone(c) })),
+        { op: 'diapositiva.poner', diapositiva: structuredClone(g.diapositiva), despues },
+        sacar,
+      ],
+      id: g.diapositiva.id,
+      avisos: [],
+    };
+  }
+
+  const copia: CopiaDiapositiva = {
+    version: 1,
+    origen: { presentacion: p.id, nombre: p.nombre },
+    periodo: mesDestino,
+    diapositiva: g.diapositiva,
+    conjuntos: g.conjuntos,
+    copiado: g.quitada,
+  };
+  const pegado = opsPegarDiapositiva(p, copia, despues, mesDestino);
+  if ('error' in pegado) return pegado;
+  return { ...pegado, ops: [...pegado.ops, sacar] };
 }

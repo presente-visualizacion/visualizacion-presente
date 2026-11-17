@@ -54,7 +54,7 @@ export function MenuMas({ id, periodo, numero, historial }: Props) {
         <div role="menu" className="absolute right-0 top-12 z-40 w-80 rounded-xl border border-linea bg-white p-1.5 shadow-xl">
           <a role="menuitem" href={`/p/${ruta}/pdf?mes=${periodo}&auto=1`} target="_blank" rel="noopener" onClick={cerrar} className={clase}>
             <FileDown size={19} className="mt-0.5 shrink-0 text-primario" aria-hidden />
-            <span><span className="block font-semibold">Descargar PDF</span><span className="block text-sm text-tinta-suave">Todas las diapositivas del mes que estás viendo</span></span>
+            <span><span className="block font-semibold">Descargar PDF</span><span className="block text-sm text-tinta-suave">Todas las del mes que estás viendo, sin enlace ni fecha en los bordes</span></span>
           </a>
           <a role="menuitem" href={`/p/${ruta}/pdf?mes=${periodo}&d=${numero}&auto=1`} target="_blank" rel="noopener" onClick={cerrar} className={clase}>
             <FileDown size={19} className="mt-0.5 shrink-0 text-tinta-suave" aria-hidden />

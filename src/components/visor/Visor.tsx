@@ -173,7 +173,48 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
     toque.current = null;
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       if (dx < 0) siguiente(); else anterior();
+    } else if (presentando && Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx) * 1.5 && !dentroDeDesplazable(e.target, dy > 0 ? -1 : 1, 'y')) {
+      // Al presentar también hacia arriba o abajo, como pasar páginas.
+      if (dy < 0) siguiente(); else anterior();
     }
+  };
+
+  // Al presentar: la rueda del mouse o el panel táctil (arriba, abajo o a los
+  // lados) pasan de diapositiva. Un gesto pasa una sola: el panel táctil sigue
+  // mandando movimiento un rato después de soltar.
+  const rueda = useRef({ acumulado: 0, bloqueada: false, temporizador: null as ReturnType<typeof setTimeout> | null });
+  const alRodar = (e: React.WheelEvent) => {
+    const r = rueda.current;
+    const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+    const delta = horizontal ? e.deltaX : e.deltaY;
+    // Si la rueda cae sobre una tabla que todavía se puede desplazar, se desplaza la tabla.
+    if (dentroDeDesplazable(e.target, Math.sign(delta), horizontal ? 'x' : 'y')) return;
+    if (r.temporizador) clearTimeout(r.temporizador);
+    r.temporizador = setTimeout(() => { r.bloqueada = false; r.acumulado = 0; }, 260);
+    if (r.bloqueada) return;
+    r.acumulado += e.deltaMode === 1 ? delta * 16 : delta;
+    if (Math.abs(r.acumulado) < 45) return;
+    if (r.acumulado > 0) siguiente(); else anterior();
+    r.bloqueada = true;
+    r.acumulado = 0;
+  };
+
+  // Arrastrar con el mouse, como deslizar con el dedo.
+  const arrastre = useRef<{ x: number; y: number } | null>(null);
+  const alApretar = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0 || (e.target as HTMLElement).closest('button, a, select, input, label')) return;
+    arrastre.current = { x: e.clientX, y: e.clientY };
+  };
+  const alLevantar = (e: React.PointerEvent) => {
+    const inicio = arrastre.current;
+    arrastre.current = null;
+    if (!inicio || e.pointerType !== 'mouse') return;
+    const dx = e.clientX - inicio.x;
+    const dy = e.clientY - inicio.y;
+    const [mayor, menor] = Math.abs(dx) >= Math.abs(dy) ? [dx, dy] : [dy, dx];
+    if (Math.abs(mayor) < 80 || Math.abs(mayor) < Math.abs(menor) * 1.5) return;
+    // Arrastrar hacia la izquierda o hacia arriba lleva a la siguiente.
+    if (mayor < 0) siguiente(); else anterior();
   };
 
   const estiloTema = variablesTema(tema) as React.CSSProperties;
@@ -234,10 +275,13 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
       <div
         ref={raiz}
         style={estiloTema}
-        className={`fixed inset-0 z-50 ${comparando ? 'bg-tinta' : 'bg-white'} ${controles ? '' : 'cursor-none'}`}
+        className={`fixed inset-0 z-50 select-none ${comparando ? 'bg-tinta' : 'bg-white'} ${controles ? '' : 'cursor-none'}`}
         onMouseMove={mostrarControles}
         onTouchStart={(e) => { mostrarControles(); alTocar(e); }}
         onTouchEnd={alSoltar}
+        onWheel={alRodar}
+        onPointerDown={alApretar}
+        onPointerUp={alLevantar}
       >
         {comparando ? vistaComparada(true) : <Lienzo marco={false}>{diapositiva}</Lienzo>}
         <div
@@ -501,4 +545,25 @@ function AvisoCopia({ presentacion, copia }: { presentacion: string; copia: { id
       </div>
     </div>
   );
+}
+
+/**
+ * true si `destino` está dentro de una caja con desplazamiento (una tabla
+ * larga) que todavía puede moverse en ese sentido: ahí la rueda desplaza la
+ * caja en vez de cambiar de diapositiva.
+ */
+function dentroDeDesplazable(destino: EventTarget | null, sentido: number, eje: 'x' | 'y'): boolean {
+  let el = destino instanceof Element ? destino : null;
+  while (el && el !== document.body) {
+    const estilo = getComputedStyle(el);
+    const desborde = eje === 'y' ? estilo.overflowY : estilo.overflowX;
+    if (desborde === 'auto' || desborde === 'scroll') {
+      const [pos, visible, total] = eje === 'y'
+        ? [el.scrollTop, el.clientHeight, el.scrollHeight]
+        : [el.scrollLeft, el.clientWidth, el.scrollWidth];
+      if (total > visible + 1 && (sentido > 0 ? pos + visible < total - 1 : pos > 0)) return true;
+    }
+    el = el.parentElement;
+  }
+  return false;
 }

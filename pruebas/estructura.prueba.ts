@@ -306,7 +306,7 @@ describe('acciones del panel', () => {
     valida(r);
     expect(vuelta.reduce(aplicar, r)).toEqual(p);
 
-    expect(opsQuitarDiapositiva(p, 'benchmarking-vis').map((o) => o.op)).toEqual(['diapositiva.quitar', 'conjunto.quitar']);
+    expect(opsQuitarDiapositiva(p, 'benchmarking-vis').map((o) => o.op)).toEqual(['guardada.poner', 'diapositiva.quitar', 'conjunto.quitar']);
 
     const dup = aplicarVarias(p, opsDuplicarBloque(p, 'g-cartera')).presentacion;
     valida(dup);

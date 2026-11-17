@@ -6,6 +6,7 @@ import type { Operacion } from '@/lib/edicion/operaciones';
 import { TOPES } from '@/lib/edicion/validar';
 import { mesParaCopiar } from '@/lib/periodos';
 import type { BloqueTexto, IdPeriodo, Presentacion } from '@/lib/tipos';
+import { FormatoSeleccion } from './Colores';
 import { Campo, MesVacio, SelectorModo } from './piezas';
 
 interface Props {
@@ -46,7 +47,8 @@ export function EditorTexto({ presentacion, bloque, periodo, cambiar }: Props) {
           filas={9}
           maximo={TOPES.texto}
           onCambiar={(texto) => cambiar(poner(texto))}
-          nota={<>Una línea en blanco separa párrafos. Una línea que empieza con «- » es una viñeta. <code>{'{mes}'}</code> se reemplaza por el mes elegido.</>}
+          herramientas={(id) => <FormatoSeleccion idCampo={id} valor={valor ?? ''} onCambiar={(texto) => cambiar(poner(texto))} />}
+          nota={<>Una línea en blanco separa párrafos. Una línea que empieza con «- » es una viñeta. <code>{'{mes}'}</code> se reemplaza por el mes elegido. Para pintar palabras, selecciónalas y toca un color: quedan como <code>{'{azul:así}'}</code>.</>}
         />
       )}
     </div>

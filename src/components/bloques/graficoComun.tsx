@@ -93,6 +93,9 @@ export function reducirMovimiento(): boolean {
 /** true en la página para PDF: los gráficos se dibujan quietos, ya terminados. */
 export const SinAnimacion = createContext(false);
 
+/** true en el PDF: debajo del gráfico va fijo lo que sale al pasar el mouse, si no se ve en el dibujo. */
+export const DetalleFijo = createContext(false);
+
 /** Si los gráficos se animan al aparecer. */
 export function usarAnimar(): boolean {
   return !useContext(SinAnimacion) && !reducirMovimiento();

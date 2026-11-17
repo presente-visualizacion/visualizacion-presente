@@ -16,6 +16,9 @@ import type { DestinoExcel } from '@/lib/excel/cargar';
 import { nombrePeriodo } from '@/lib/periodos';
 import type { Bloque, Diapositiva, Disposicion, IdPeriodo, Presentacion } from '@/lib/tipos';
 import { AgregarBloque } from './AgregarBloque';
+import { ElegirColor, FONDOS_SUGERIDOS, FormatoSeleccion } from './Colores';
+import { DiapositivasGuardadas } from './DiapositivasGuardadas';
+import { esOscuro } from '@/components/bloques/Bloques';
 import { EditorAspecto } from './EditorAspecto';
 import { EditorCifras } from './EditorCifras';
 import { EditorGrafico, FORMAS_INFO } from './EditorGrafico';
@@ -88,6 +91,7 @@ function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEdi
   return (
     <div className="space-y-6">
       <AccionesDiapositiva presentacion={presentacion} diapositiva={diapositiva} indice={indice} periodo={periodo} cambiar={cambiar} onIrA={onIrA} />
+      <DiapositivasGuardadas presentacion={presentacion} diapositiva={diapositiva} periodo={periodo} cambiar={cambiar} onIrA={onIrA} />
 
       <section aria-label="Diapositiva" className="space-y-3">
         <Opcion
@@ -104,6 +108,9 @@ function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEdi
           filas={2}
           maximo={TOPES.titulo}
           onCambiar={(valor) => cambiar({ op: 'diapositiva.titulo', diapositiva: diapositiva.id, valor })}
+          herramientas={(id) => (
+            <FormatoSeleccion idCampo={id} valor={diapositiva.titulo} onCambiar={(valor) => cambiar({ op: 'diapositiva.titulo', diapositiva: diapositiva.id, valor })} />
+          )}
         />
         <Campo
           etiqueta="Subtítulo"
@@ -114,6 +121,16 @@ function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEdi
           marcador="Opcional"
           onCambiar={(valor) => cambiar({ op: 'diapositiva.subtitulo', diapositiva: diapositiva.id, valor })}
           nota={<>El título y el subtítulo son iguales en todos los meses. Escribe <code>{'{mes}'}</code> donde deba ir el mes elegido.</>}
+        />
+        <ElegirColor
+          etiqueta="Fondo de la diapositiva"
+          valor={diapositiva.fondo ?? null}
+          opciones={FONDOS_SUGERIDOS}
+          ninguno="Blanco"
+          onCambiar={(valor) => cambiar({ op: 'diapositiva.fondo', diapositiva: diapositiva.id, valor })}
+          nota={diapositiva.fondo && esOscuro(diapositiva.fondo) && diapositiva.bloques.some((b) => b.tipo === 'grafico')
+            ? 'Con un fondo oscuro los textos pasan a blanco, pero los gráficos siguen en tinta: ponles un fondo claro a esos bloques.'
+            : undefined}
         />
         {contenido && (
           <SelectorDisposicion
@@ -231,7 +248,7 @@ function AccionesDiapositiva({ presentacion, diapositiva, indice, periodo, cambi
         <span className="ml-auto" />
         <BotonConfirmar
           etiqueta="Quitar la diapositiva"
-          pregunta={`Se quitará la diapositiva ${indice + 1} con todo lo que tiene.`}
+          pregunta={`Se quitará la diapositiva ${indice + 1}. Queda guardada en "Diapositivas quitadas" por si la necesitas.`}
           confirmar="Quitar"
           icono={<Trash2 size={17} />}
           compacto

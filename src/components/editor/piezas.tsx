@@ -35,7 +35,7 @@ export function BotonIcono({ etiqueta, onClick, inactivo = false, children }: {
   );
 }
 
-export function Campo({ etiqueta, valor, onCambiar, multilinea = false, filas = 3, maximo, nota, marcador }: {
+export function Campo({ etiqueta, valor, onCambiar, multilinea = false, filas = 3, maximo, nota, marcador, herramientas }: {
   etiqueta: string;
   valor: string;
   onCambiar: (valor: string) => void;
@@ -44,11 +44,14 @@ export function Campo({ etiqueta, valor, onCambiar, multilinea = false, filas = 
   maximo?: number;
   nota?: React.ReactNode;
   marcador?: string;
+  /** Botones entre la etiqueta y el campo; reciben el id del campo. */
+  herramientas?: (id: string) => React.ReactNode;
 }) {
   const id = useId();
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-semibold text-tinta">{etiqueta}</label>
+      {herramientas?.(id)}
       {multilinea ? (
         <textarea
           id={id}

@@ -7,7 +7,7 @@ import type {
 } from '../tipos';
 import { ubicacionesDesde, ubicacionNueva } from '../disposicion';
 import type { ConfigGrafico, Operacion } from './operaciones';
-import { SERIES_POR_FORMA } from './validar';
+import { SERIES_POR_FORMA, TOPES } from './validar';
 
 const LETRAS = 'abcdefghijkmnpqrstuvwxyz23456789';
 
@@ -24,13 +24,35 @@ export function nuevoId(prefijo: 'd' | 'b' | 'c', enUso: Set<string> = new Set()
   }
 }
 
-/** Todos los ids de la presentación (diapositivas, bloques y conjuntos). */
+/**
+ * Todos los ids de la presentación (diapositivas, bloques y conjuntos),
+ * también los de las diapositivas guardadas: así, al volver a poner una, sus
+ * ids siguen libres.
+ */
 export function idsEnUso(p: Presentacion): Set<string> {
+  const guardadas = p.guardadas ?? [];
   return new Set([
     ...p.diapositivas.map((d) => d.id),
     ...p.diapositivas.flatMap((d) => d.bloques.map((b) => b.id)),
     ...Object.keys(p.datos),
+    ...guardadas.map((g) => g.diapositiva.id),
+    ...guardadas.flatMap((g) => g.diapositiva.bloques.map((b) => b.id)),
+    ...guardadas.flatMap((g) => g.conjuntos.map((c) => c.id)),
   ]);
+}
+
+/** Ids de los conjuntos que usa la diapositiva (gráficos, tablas y cifras que salen de datos). */
+export function conjuntosDeDiapositiva(d: Diapositiva): Set<string> {
+  const ids = new Set<string>();
+  const deCifras = (cifras: Cifra[] | undefined) => cifras?.forEach((c) => c.desde && ids.add(c.desde.conjunto));
+  for (const b of d.bloques) {
+    if (b.tipo === 'grafico' || b.tipo === 'tabla') ids.add(b.datos);
+    if (b.tipo === 'cifras') {
+      deCifras(b.cifras.valor);
+      Object.values(b.cifras.valores ?? {}).forEach(deCifras);
+    }
+  }
+  return ids;
 }
 
 /** Primera clave libre del tipo "col1", "col2"... */
@@ -100,6 +122,9 @@ export function bloqueNuevo(tipo: TipoNuevo, enUso: Set<string>, conjunto?: Conj
 // Ajuste al cambiar de forma
 
 /** Formas con un eje de valores al que se le puede fijar el rango. */
+/** Formas que pueden mostrar fijo el detalle de una fila (las de Grafico.tsx). */
+export const CON_DETALLE_FIJO: FormaGrafico[] = ['lineas', 'barras', 'barrasHorizontales', 'area', 'combinado'];
+
 export const CON_RANGO_EJE: FormaGrafico[] = ['lineas', 'barras', 'barrasHorizontales', 'area', 'combinado', 'dispersion', 'radar', 'cascada'];
 
 /** Formas que dibujan líneas de referencia. */
@@ -153,6 +178,7 @@ export function configPara(forma: FormaGrafico, actual: ConfigGrafico, conjunto:
   if (actual.detalleEje && (forma === 'barras' || forma === 'combinado') && columna(actual.detalleEje)) config.detalleEje = actual.detalleEje;
   if (actual.rangoEje && CON_RANGO_EJE.includes(forma)) config.rangoEje = actual.rangoEje;
   if (actual.referencias && CON_REFERENCIAS.includes(forma)) config.referencias = actual.referencias;
+  if (actual.detalleFijo && CON_DETALLE_FIJO.includes(forma)) config.detalleFijo = true;
   if (forma === 'cascada') config.total = actual.forma === 'cascada' ? Boolean(actual.total) : true;
   if (forma === 'dispersion') {
     const nombres = columna(actual.nombres)?.tipo === 'texto' ? actual.nombres : conjunto.columnas.find((c) => !esNumerica(c))?.clave;
@@ -247,10 +273,24 @@ export function opsQuitarBloque(p: Presentacion, bloque: string): Operacion[] {
   ];
 }
 
-export function opsQuitarDiapositiva(p: Presentacion, diapositiva: string): Operacion[] {
-  const d = p.diapositivas.find((x) => x.id === diapositiva);
-  if (!d) return [];
+/**
+ * Quita la diapositiva y la deja guardada (con copia de sus datos) en
+ * `guardadas`, para poder volver a ponerla. Ver "Diapositivas quitadas" en PLAN.md.
+ */
+export function opsQuitarDiapositiva(p: Presentacion, diapositiva: string, ahora = new Date().toISOString()): Operacion[] {
+  const indice = p.diapositivas.findIndex((x) => x.id === diapositiva);
+  if (indice < 0) return [];
+  const d = p.diapositivas[indice];
+  const conjuntos = [...conjuntosDeDiapositiva(d)].filter((c) => Object.hasOwn(p.datos, c)).map((c) => structuredClone(p.datos[c]));
+  const guardadas = p.guardadas ?? [];
+  // Si la lista está llena, se va la más antigua.
+  const sobrantes = guardadas.length >= TOPES.guardadas ? guardadas.slice(TOPES.guardadas - 1) : [];
   return [
+    ...sobrantes.map((g): Operacion => ({ op: 'guardada.quitar', diapositiva: g.diapositiva.id })),
+    {
+      op: 'guardada.poner',
+      guardada: { diapositiva: structuredClone(d), conjuntos, quitada: ahora, despues: indice > 0 ? p.diapositivas[indice - 1].id : null },
+    },
     { op: 'diapositiva.quitar', diapositiva },
     ...conjuntosHuerfanos(p, new Set(d.bloques.map((b) => b.id))).map((c): Operacion => ({ op: 'conjunto.quitar', conjunto: c })),
   ];
