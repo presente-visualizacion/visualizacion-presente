@@ -1,9 +1,13 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Maximize, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Maximize, Pencil, Redo2, Undo2, X } from 'lucide-react';
 import { Diapositiva } from '@/components/diapositivas/Diapositiva';
+import { EstadoGuardado } from '@/components/editor/EstadoGuardado';
+import { usarEdicion } from '@/components/editor/usarEdicion';
+import { TOPES } from '@/lib/edicion/validar';
 import { Logo } from '@/components/Logo';
 import { nombrePeriodo } from '@/lib/periodos';
 import { degradadoCss } from '@/lib/tema';
@@ -11,6 +15,10 @@ import type { IdPeriodo, Presentacion } from '@/lib/tipos';
 import { BarraMeses } from './BarraMeses';
 import { Lienzo } from './Lienzo';
 import { ListaDiapositivas } from './ListaDiapositivas';
+
+// El panel y el editor de datos solo se descargan al entrar a editar.
+const PanelEdicion = dynamic(() => import('@/components/editor/PanelEdicion').then((m) => m.PanelEdicion), { ssr: false });
+const EditorDatos = dynamic(() => import('@/components/editor/EditorDatos').then((m) => m.EditorDatos), { ssr: false });
 
 interface Props {
   presentacion: Presentacion;
@@ -22,12 +30,22 @@ interface Props {
   periodoInicial: IdPeriodo;
 }
 
-export function Visor({ presentacion, indiceInicial, periodoInicial }: Props) {
+export function Visor({ presentacion: inicial, revision, editable, indiceInicial, periodoInicial }: Props) {
+  // La presentación que se dibuja es la del estado de edición: trae aplicados
+  // los cambios locales, aunque todavía se estén guardando.
+  const edicion = usarEdicion(inicial, revision);
+  const { presentacion, cambiar, deshacer, rehacer } = edicion;
   const { diapositivas, periodos, tema } = presentacion;
   const total = diapositivas.length;
 
-  const [indice, setIndice] = useState(indiceInicial);
-  const [periodo, setPeriodo] = useState(periodoInicial);
+  const [indiceElegido, setIndice] = useState(indiceInicial);
+  // Otra persona pudo quitar diapositivas o meses mientras tanto.
+  const indice = Math.min(indiceElegido, total - 1);
+  const [periodoElegido, setPeriodo] = useState(periodoInicial);
+  const periodo = periodos.includes(periodoElegido) ? periodoElegido : periodos[periodos.length - 1];
+  const [editando, setEditando] = useState(false);
+  /** Conjunto de datos abierto en el editor de datos. */
+  const [datosAbiertos, setDatosAbiertos] = useState<string | null>(null);
   const [presentando, setPresentando] = useState(false);
   const [controles, setControles] = useState(true);
   const raiz = useRef<HTMLDivElement>(null);
@@ -45,6 +63,7 @@ export function Visor({ presentacion, indiceInicial, periodoInicial }: Props) {
   }, [indice, periodo]);
 
   const presentar = useCallback(() => {
+    setDatosAbiertos(null);
     setPresentando(true);
     // En iPhone no existe pantalla completa para páginas; ahí la presentación
     // ocupa toda la ventana del navegador.
@@ -67,6 +86,18 @@ export function Visor({ presentacion, indiceInicial, periodoInicial }: Props) {
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
       const destino = e.target as HTMLElement | null;
+      // Deshacer y rehacer valen también dentro de los campos: el deshacer
+      // propio del navegador no sabe de lo que ya se guardó.
+      if (editando && (e.metaKey || e.ctrlKey) && !e.altKey) {
+        const tecla = e.key.toLowerCase();
+        if (tecla === 'z' || tecla === 'y') {
+          e.preventDefault();
+          if (tecla === 'y' || e.shiftKey) rehacer(); else deshacer();
+          return;
+        }
+      }
+      // Con el editor de datos abierto, las teclas son de la cuadrícula.
+      if (datosAbiertos) return;
       if (e.metaKey || e.ctrlKey || e.altKey || destino?.closest('input, textarea, select, [contenteditable="true"]')) return;
       // Espacio y Enter sobre un botón deben accionar el botón, no pasar de diapositiva.
       const enBoton = Boolean(destino?.closest('button, a'));
@@ -79,7 +110,7 @@ export function Visor({ presentacion, indiceInicial, periodoInicial }: Props) {
     };
     window.addEventListener('keydown', alTeclear);
     return () => window.removeEventListener('keydown', alTeclear);
-  }, [anterior, siguiente, ir, total, presentando, presentar, salir]);
+  }, [anterior, siguiente, ir, total, presentando, presentar, salir, editando, datosAbiertos, deshacer, rehacer]);
 
   // En modo presentación los controles aparecen al mover el mouse o tocar la
   // pantalla y se esconden solos.
@@ -163,23 +194,50 @@ export function Visor({ presentacion, indiceInicial, periodoInicial }: Props) {
           <Link href="/" title="Todas las presentaciones" className="shrink-0 rounded-lg">
             <Logo alto={36} src={tema.logo} />
           </Link>
-          <h1 className="min-w-0 truncate text-lg font-semibold">{presentacion.nombre}</h1>
+          {editando ? (
+            <NombreEditable nombre={presentacion.nombre} onCambiar={(valor) => cambiar({ op: 'presentacion.nombre', valor })} />
+          ) : (
+            <h1 className="min-w-0 truncate text-lg font-semibold">{presentacion.nombre}</h1>
+          )}
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {editando && (
+              <div className="hidden items-center gap-1 lg:flex">
+                <EstadoGuardado estado={edicion.estado} detalle={edicion.error} />
+                <span className="mx-1 h-6 w-px bg-linea" aria-hidden />
+                <BotonRedondo etiqueta="Deshacer (Ctrl+Z)" onClick={deshacer} inactivo={!edicion.puedeDeshacer}><Undo2 size={18} /></BotonRedondo>
+                <BotonRedondo etiqueta="Rehacer (Ctrl+Y)" onClick={rehacer} inactivo={!edicion.puedeRehacer}><Redo2 size={18} /></BotonRedondo>
+              </div>
+            )}
+            {editable && (
+              <button
+                type="button"
+                onClick={() => setEditando((valor) => !valor)}
+                aria-pressed={editando}
+                title={editando ? 'Terminar de editar' : 'Editar títulos, textos y datos'}
+                className="hidden h-10 shrink-0 items-center gap-2 rounded-full border border-linea-fuerte bg-white px-4 font-semibold text-tinta transition-colors hover:bg-tinte lg:flex"
+              >
+                {editando ? <Check size={18} aria-hidden /> : <Pencil size={17} aria-hidden />}
+                {editando ? 'Listo' : 'Editar'}
+              </button>
+            )}
           <button
             type="button"
             onClick={presentar}
             aria-label="Presentar"
             title="Presentar en pantalla completa (tecla F)"
-            className="ml-auto flex h-10 shrink-0 items-center gap-2 rounded-full bg-primario px-3 font-semibold text-white transition-[filter] hover:brightness-90 sm:px-4"
+            className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-primario px-3 font-semibold text-white transition-[filter] hover:brightness-90 sm:px-4"
           >
             <Maximize size={18} aria-hidden />
             <span className="hidden sm:inline">Presentar</span>
           </button>
+          </div>
         </div>
         <BarraMeses periodos={periodos} actual={periodo} onCambiar={setPeriodo} />
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <aside aria-label="Diapositivas" className="hidden w-72 shrink-0 overflow-y-auto border-r border-linea bg-white lg:block">
+        {/* Al editar en pantallas medianas la lista cede su sitio al panel. */}
+        <aside aria-label="Diapositivas" className={`hidden w-72 shrink-0 overflow-y-auto border-r border-linea bg-white ${editando ? 'xl:block' : 'lg:block'}`}>
           <ListaDiapositivas diapositivas={diapositivas} indice={indice} periodo={periodo} onIr={ir} />
         </aside>
 
@@ -192,12 +250,65 @@ export function Visor({ presentacion, indiceInicial, periodoInicial }: Props) {
             <span className="min-w-20 text-center text-sm text-tinta-suave">{indice + 1} de {total}</span>
             <BotonRedondo etiqueta="Diapositiva siguiente" onClick={siguiente} inactivo={indice === total - 1}><ChevronRight size={20} /></BotonRedondo>
           </div>
-          <div className="lg:hidden">
+          <div className={editando ? 'xl:hidden' : 'lg:hidden'}>
             <ListaDiapositivas diapositivas={diapositivas} indice={indice} periodo={periodo} onIr={ir} horizontal />
           </div>
         </main>
+
+        {editando && (
+          <PanelEdicion
+            className="hidden lg:flex"
+            presentacion={presentacion}
+            diapositiva={diapositivas[indice]}
+            periodo={periodo}
+            cambiar={cambiar}
+            onEditarDatos={setDatosAbiertos}
+            onCerrar={() => setEditando(false)}
+          />
+        )}
       </div>
+
+      {editando && datosAbiertos && (
+        <EditorDatos presentacion={presentacion} conjuntoId={datosAbiertos} periodo={periodo} cambiar={cambiar} onCerrar={() => setDatosAbiertos(null)} />
+      )}
+
+      {(edicion.error || edicion.aviso) && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4">
+          <div role={edicion.error ? 'alert' : 'status'} className="pointer-events-auto flex max-w-xl items-start gap-3 rounded-xl bg-tinta px-4 py-3 text-[15px] text-white shadow-lg">
+            <p className="min-w-0 flex-1 leading-snug">{edicion.error ?? edicion.aviso}</p>
+            <button type="button" onClick={edicion.descartarAviso} aria-label="Cerrar el aviso" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-white/15">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+/**
+ * Nombre de la presentación, editable en el encabezado. El nombre no puede
+ * quedar vacío: mientras lo esté no se guarda y al salir vuelve el anterior.
+ */
+function NombreEditable({ nombre, onCambiar }: { nombre: string; onCambiar: (nombre: string) => void }) {
+  const [borrador, setBorrador] = useState<string | null>(null);
+  return (
+    <input
+      aria-label="Nombre de la presentación"
+      value={borrador ?? nombre}
+      maxLength={TOPES.nombre}
+      onChange={(e) => {
+        const valor = e.target.value;
+        if (valor.trim()) {
+          setBorrador(null);
+          onCambiar(valor);
+        } else {
+          setBorrador(valor);
+        }
+      }}
+      onBlur={() => setBorrador(null)}
+      className="min-w-0 flex-1 truncate rounded-lg border border-linea-fuerte bg-white px-2.5 py-1 text-lg font-semibold hover:border-tinta-suave focus:border-primario focus:outline-none focus:ring-2 focus:ring-primario/25"
+    />
   );
 }
 

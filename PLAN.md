@@ -56,9 +56,10 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
   quitar, duplicar y reordenar diapositivas; editar títulos y textos; cambiar
   tipo de gráfico, series y colores; editar datos en una tabla; tema de la
   presentación; "Nuevo mes".
-  - [ ] 2A. Base de datos, guardado y edición de datos, textos y títulos.
-    **Diseñada el 2026-11-16, sin programar.** Ver "Diseño de la etapa 2A";
-    los pasos 2A.1 a 2A.6 se marcan allí.
+  - [x] 2A. Base de datos, guardado y edición de datos, textos y títulos.
+    Programada el 2026-11-16 (ver "Diseño de la etapa 2A"). **Falta un paso de
+    la usuaria:** conectar la base en Vercel ("Lo que hace la usuaria en
+    Vercel"). Hasta entonces el sitio publicado sigue en solo lectura.
   - [ ] 2B. Agregar, quitar, duplicar y reordenar diapositivas; tipo de
     gráfico, series y colores; tema; "Nuevo mes".
 - [ ] **Etapa 3. Excel.** Cargar cualquier archivo, elegir hoja y columnas,
@@ -116,10 +117,7 @@ decir "lee PLAN.md y haz la etapa N", porque una conversación larga gasta más 
 cada mensaje.
 
 - **Etapa 2A** (base de datos, guardado, editar datos, textos y títulos): la
-  que más cuesta corregir si queda mal. Mejor con el modelo más capaz. Ya está
-  diseñada: decir "lee PLAN.md y programa la etapa 2A siguiendo el diseño". Si
-  el uso se acaba a mitad, en la conversación siguiente decir "lee PLAN.md y
-  sigue la etapa 2A desde el primer paso sin marcar".
+  que más cuesta corregir si queda mal. Ya está hecha.
 - **Etapa 2B** (agregar, quitar y reordenar diapositivas, tipo de gráfico,
   colores, "Nuevo mes"), **3, 4 y 5**: siguen el diseño ya hecho. Opus es
   suficiente.
@@ -141,14 +139,22 @@ src/
     periodos.ts           meses: nombres, agrupación, {mes} en textos
     formato.ts            números en formato colombiano
     datos.ts              filas y valores del mes seleccionado
+    acceso.ts             quién puede editar (hoy, cualquiera)
+    edicion/              operaciones de edición, validación, pegado de Excel
     almacen/              de dónde se leen y dónde se guardan las presentaciones
+  app/api/presentaciones/ rutas para leer y guardar
   components/
     visor/                Visor, BarraMeses, ListaDiapositivas, Lienzo
     diapositivas/         portada, contenido, cierre
     bloques/              gráfico, tabla, texto, cifras
+    editor/               guardado en el navegador, panel y editor de datos
   datos/semilla/          presentación de muestra (generada, no editar a mano)
+pruebas/                  pruebas automáticas (npm run prueba)
 scripts/crear-semilla.mjs genera la muestra con datos inventados
 referencia/               (ignorada por git) copia local de los datos reales
+.datos-locales/           (ignorada por git) base de datos local de desarrollo
+AGENTS.md                 lo escribe `next dev`: manda a leer la documentación
+                          de Next que viene en node_modules antes de programar
 ```
 
 ### Modelo de datos
@@ -176,12 +182,11 @@ Agregar un tipo de bloque nuevo: definirlo en `tipos.ts`, dibujarlo en
 
 ### Almacén
 
-Las pantallas leen las presentaciones a través de `obtenerAlmacen()`. En la
-etapa 1 solo existe el almacén de muestra, de solo lectura. La etapa 2 agrega
-el de base de datos con `guardar`, sin cambiar las pantallas.
-
-La etapa 2A agrega el almacén de base de datos (Postgres de Neon conectado
-desde Vercel). El diseño completo está en "Diseño de la etapa 2A".
+Las pantallas leen y guardan las presentaciones a través de
+`obtenerAlmacen()`. Hay dos almacenes: el de base de datos (Postgres de Neon en
+producción, PGlite en desarrollo y pruebas) y el de muestra, de solo lectura,
+que se usa en producción mientras no haya base conectada. El diseño completo
+está en "Diseño de la etapa 2A".
 
 ### Diseño
 
@@ -216,9 +221,15 @@ desde Vercel). El diseño completo está en "Diseño de la etapa 2A".
 
 ## Diseño de la etapa 2A: base de datos y guardado
 
-Diseñada el 2026-11-16 sobre el código de la etapa 1. **Nada de esto está
-programado todavía.** Quien la programe sigue este diseño; si en el camino hay
-que cambiar algo, se corrige aquí para que el plan y el código digan lo mismo.
+Diseñada y programada el 2026-11-16. Esta sección describe lo que hay en el
+código; si se cambia algo, se corrige aquí para que el plan y el código digan
+lo mismo.
+
+**Sin probar todavía:** la conexión con Neon de verdad. Desde el entorno de
+Claude no se alcanza a Neon, así que todo se probó con PGlite (el mismo SQL)
+y en navegador contra la base local. La primera prueba real es cuando la
+usuaria conecte la base en Vercel; si el sitio muestra "No se pudo cargar",
+revisar los registros del despliegue (pestaña Logs) antes de tocar el código.
 
 ### Qué entra y qué no
 
@@ -425,10 +436,15 @@ export interface Almacen {
   soloLectura: boolean;
   listar(): Promise<ResumenPresentacion[]>;
   obtener(id: string): Promise<Guardada | null>;
+  /** Solo el número de revisión, para saber si hay cambios sin traer todo. */
+  revision(id: string): Promise<number | null>;
   aplicar(id: string, revisionBase: number, ops: Operacion[]): Promise<ResultadoGuardado>;
-  /** Para sembrar la muestra y, más adelante, importar (etapas 3 a 5). */
-  crear(presentacion: Presentacion, motivo: 'importacion'): Promise<void>;
+  /** Para importar presentaciones completas (etapas 3 a 5). */
+  crear(presentacion: Presentacion): Promise<void>;
 }
+
+/** Devuelve una promesa: `(await obtenerAlmacen()).listar()`. */
+export function obtenerAlmacen(): Promise<Almacen>;
 ```
 
 `aplicar` en el almacén de base de datos:
@@ -454,8 +470,9 @@ export interface Motor { consultar<T>(texto: string, valores?: unknown[]): Promi
   al diseñar era la 1.2). El JSON se pasa como texto con `$n::jsonb`.
 - `motorLocal`: PGlite guardando en `.datos-locales/`. Una sola instancia
   colgada de `globalThis` para que sobreviva a las recargas de `next dev`. Se
-  carga con `import()` solo cuando hace falta y nunca en producción. Agregar
-  `@electric-sql/pglite` a `serverExternalPackages` en `next.config.ts`.
+  carga con `import()` solo cuando hace falta y nunca en producción. En
+  `next.config.ts` está en `serverExternalPackages` y excluida de lo que se
+  publica (`outputFileTracingExcludes`): pesa 27 MB y allá no se usa.
 
 Cuál almacén se usa (`obtenerAlmacen()`):
 
@@ -470,8 +487,8 @@ Cuál almacén se usa (`obtenerAlmacen()`):
 `presentaciones` no tiene ninguna fila (ni siquiera eliminada), inserta la
 presentación de muestra inventada para que el sitio no quede vacío.
 
-Si PGlite da problemas dentro de `next dev`, plan B: usarlo solo en las pruebas
-y dejar el desarrollo local con la muestra; no cambiar el resto del diseño.
+PGlite funciona bien dentro de `next dev` (comprobado). Para empezar de cero
+en local, detener el servidor y borrar la carpeta `.datos-locales/`.
 
 ### Rutas
 
@@ -480,7 +497,10 @@ y dejar el desarrollo local con la muestra; no cambiar el resto del diseño.
 | `GET /api/presentaciones/[id]` | `{ presentacion, revision }`. Con `?solo=revision` devuelve solo el número. Con `?descargar=1` lo entrega como archivo `.json` (el enlace "Descargar copia"). |
 | `POST /api/presentaciones/[id]/cambios` | Recibe `{ revisionBase, operaciones }`. Responde 200 con el `ResultadoGuardado`; 400 si no es válido; 403 sin permiso; 404 si no existe; 409 si quedó `ocupado`; 413 si pasa el tope de tamaño. |
 
-- Las dos con `runtime = 'nodejs'` y sin caché.
+- Las dos con `runtime = 'nodejs'` y sin caché. La de guardado exige
+  `Content-Type: application/json` (415 si no).
+- `src/app/error.tsx`: página de "No se pudo cargar" con botón "Reintentar",
+  por si la base no responde. En esta versión de Next el botón usa `retry`.
 - Páginas: `/` deja de generarse al compilar (`export const dynamic =
   'force-dynamic'`), porque la lista ahora sale de la base. `/p/[id]` ya es
   dinámica; envolver `obtener` con `cache()` de React para que
@@ -510,8 +530,12 @@ rehacer, estado }`. El `Visor` pasa a dibujar la `presentacion` del hook.
 - Respuesta correcta: se actualiza la revisión. Si `ajenos` es verdadero, se
   pide la presentación completa y se le aplican encima los pendientes.
 - Fallo de red, 409 o error del servidor: no se pierde nada; reintenta a los
-  2, 5, 15 y 30 segundos y sigue cada 30. Un 400 o un 413 no se reintenta:
-  se muestra el error y se ofrece deshacer.
+  2, 5, 15 y 30 segundos y sigue cada 30, y de inmediato cuando vuelve la red.
+  Un 400, 403, 404 o 413 no se reintenta: ese cambio se descarta, la pantalla
+  vuelve a lo que está guardado y un aviso explica qué pasó.
+- Un envío lleva como mucho 150 operaciones o 180 KB; lo demás va en el
+  siguiente.
+- Al salir hacia otra página del sitio, lo pendiente se envía en ese momento.
 - Indicador junto al botón: "Guardado", "Guardando…", "Sin conexión:
   reintentando" o "No se pudo guardar".
 - Con cambios pendientes: aviso del navegador al intentar cerrar
@@ -554,8 +578,11 @@ aparece y el visor queda como hoy. En modo presentación no hay edición.
   mes anterior" y "Empezar vacío".
 - **Editor de datos**: ventana ancha sobre el visor con una cuadrícula.
   - Encabezados: nombre de la columna, editable (`datos.columna`).
-  - Celdas editables; Tab y Enter se mueven como en Excel; agregar fila,
-    quitar fila, mover fila.
+  - Celdas editables; Tab pasa a la celda siguiente, Enter y las flechas
+    arriba y abajo cambian de fila; agregar fila, quitar fila, mover fila.
+    Esc descarta lo escrito en la celda; otro Esc cierra la ventana.
+  - Con el foco, la celda muestra el número completo (`14,5`); sin él, con su
+    formato (`14,50%`).
   - **Pegar desde Excel**: al pegar un rango copiado, llena desde la celda
     elegida y agrega las filas que falten.
   - Los números se escriben y se pegan en formato colombiano. Función nueva
@@ -577,6 +604,7 @@ aparece y el visor queda como hoy. En modo presentación no hay edición.
 src/lib/
   edicion/operaciones.ts     tipos de operación, aplicar, inversa, compactar
   edicion/validar.ts         esquemas zod, referencias, topes
+  edicion/pegado.ts          lectura de un rango pegado desde Excel
   almacen/index.ts           (cambia) interfaz nueva y elección de almacén
   almacen/muestra.ts         (cambia) soloLectura
   almacen/bd.ts              almacén sobre SQL
@@ -590,12 +618,14 @@ src/app/
   p/[id]/page.tsx            (cambia) pasa revisión y si se puede editar
   api/presentaciones/[id]/route.ts
   api/presentaciones/[id]/cambios/route.ts
+  error.tsx                  "No se pudo cargar"
 src/components/
   visor/Visor.tsx            (cambia) usa el hook, botón Editar, panel
   editor/usarEdicion.ts      estado, cola, guardado, deshacer
   editor/PanelEdicion.tsx    panel derecho
   editor/EditorTexto.tsx, EditorCifras.tsx, EditorDatos.tsx
   editor/EstadoGuardado.tsx  indicador
+  editor/piezas.tsx          campo, interruptor de meses, "mes vacío", botones
 pruebas/                     pruebas con vitest
 .datos-locales/              (ignorada por git) base local de desarrollo
 ```
@@ -618,16 +648,19 @@ Si el uso se acaba a mitad, lo anterior queda publicado y funcionando.
   inicio dinámico, `robots`. Pruebas sobre PGlite: crear, guardar, choque de
   revisiones con reintento, copia cada 10 minutos, tope de copias. El sitio se
   ve igual que antes, pero ya lee de la base.
-- [ ] **2A.3 Primer cambio de punta a punta.** Hook, indicador de guardado,
+- [x] **2A.3 Primer cambio de punta a punta.** Hook, indicador de guardado,
   botón "Editar", panel con título, subtítulo y nombre de la presentación.
-- [ ] **2A.4 Textos y cifras**, con "igual en todos los meses / propio de cada
+- [x] **2A.4 Textos y cifras**, con "igual en todos los meses / propio de cada
   mes" y "Copiar del mes anterior".
-- [ ] **2A.5 Editor de datos**: cuadrícula y pegado desde Excel.
-- [ ] **2A.6 Cierre.** Deshacer y rehacer, reintentos, aviso al cerrar,
+- [x] **2A.5 Editor de datos**: cuadrícula y pegado desde Excel.
+- [x] **2A.6 Cierre.** Deshacer y rehacer, reintentos, aviso al cerrar,
   recarga al volver a la pestaña, "Descargar copia". Revisión en navegador,
   actualizar `README.md` y este plan.
 
 ### Cómo se comprueba que quedó bien
+
+Todo lo de esta lista se comprobó el 2026-11-16 en navegador (Chrome) contra
+la base local, además de las pruebas automáticas.
 
 - Cambiar un título, recargar la página: el cambio sigue ahí.
 - Cambiar el texto de octubre no cambia el de septiembre si es propio de cada
@@ -688,12 +721,19 @@ Una sola vez, cuando el paso 2A.2 esté subido:
 npm install
 npm run dev        # http://localhost:3000
 npm run tipos      # revisar tipos
+npm run prueba     # pruebas automáticas (operaciones, validación, base de datos)
 npm run build      # compilar como en producción
 npm run semilla    # regenerar la presentación de muestra (datos inventados)
 ```
 
 Para probar la versión compilada: `npm run build` y luego `npx next start`.
 Antes de volver a compilar hay que detener el servidor anterior.
+
+- `npm run dev` guarda en una base local dentro de `.datos-locales/` (se crea
+  sola, con la muestra). Ahí sí aparece "Editar" y se puede probar todo sin
+  conexión. Para empezar de cero, detener el servidor y borrar esa carpeta.
+- `npx next start` sin `DATABASE_URL` se comporta como el sitio publicado antes
+  de conectar la base: muestra de solo lectura, sin "Editar".
 
 ## Publicación en Vercel
 

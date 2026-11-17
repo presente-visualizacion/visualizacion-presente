@@ -34,3 +34,13 @@ export function porAnio(periodos: IdPeriodo[]): { anio: number; periodos: IdPeri
 export function conMes(texto: string, periodo: IdPeriodo): string {
   return texto.replaceAll('{mes}', nombrePeriodo(periodo));
 }
+
+/**
+ * Mes del que conviene copiar cuando `periodo` está vacío: el más cercano
+ * hacia atrás que tenga contenido o, si no hay, el más cercano hacia adelante.
+ */
+export function mesParaCopiar(periodos: IdPeriodo[], periodo: IdPeriodo, tiene: (p: IdPeriodo) => boolean): IdPeriodo | null {
+  const anteriores = periodos.filter((p) => p < periodo && tiene(p));
+  if (anteriores.length) return anteriores[anteriores.length - 1];
+  return periodos.find((p) => p > periodo && tiene(p)) ?? null;
+}
