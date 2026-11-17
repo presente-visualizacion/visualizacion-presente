@@ -24,6 +24,7 @@ original y sus datos reales no están en él; ver "Datos reales" más abajo.
 | Excel | Se puede cargar cualquier Excel: se elige hoja, columna del eje y columnas de series, tipo de gráfico y mes. La herramienta recuerda esa configuración para el mes siguiente. |
 | Diapositivas actuales | Las 25 se conservan, migradas al formato nuevo y editables, incluidas las tablas de propuesta de tasas, el análisis macro y Davivienda/DaviPlata. |
 | Edición | Sin código: datos, títulos, textos, colores, tipo de gráfico, agregar, quitar, duplicar y reordenar diapositivas. |
+| Tipos de gráfico | Líneas, barras, barras horizontales y área (etapa 1), más combinado barras + línea, circular (dona), dispersión, radar y cascada (pedidos el 2026-11-16, entran en la 2B). Un solo eje de valores en todos. |
 | Interactividad | Cifras al pasar el mouse, series que se muestran u ocultan desde la leyenda, filtros. |
 | Diseño | Fondo blanco, colores de Presente y afines, logo actual. |
 | Presentar | Pantalla completa y descarga en PDF. |
@@ -60,8 +61,10 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
     Programada el 2026-11-16 (ver "Diseño de la etapa 2A"). **Falta un paso de
     la usuaria:** conectar la base en Vercel ("Lo que hace la usuaria en
     Vercel"). Hasta entonces el sitio publicado sigue en solo lectura.
-  - [ ] 2B. Agregar, quitar, duplicar y reordenar diapositivas; tipo de
-    gráfico, series y colores; tema; "Nuevo mes".
+  - [ ] 2B. Agregar, quitar, duplicar y reordenar diapositivas y bloques;
+    tipo de gráfico, series y colores; cinco tipos de gráfico nuevos
+    (combinado, circular, dispersión, radar, cascada); columnas; tema;
+    "Nuevo mes" (ver "Diseño de la etapa 2B").
 - [ ] **Etapa 3. Excel.** Cargar cualquier archivo, elegir hoja y columnas,
   vista previa, asignar mes, recordar la configuración por conjunto de datos.
 - [ ] **Etapa 4. Migración.** Las 25 diapositivas originales con todos sus
@@ -171,8 +174,11 @@ de diapositivas y un diccionario de conjuntos de datos.
 - Una **diapositiva** es `portada`, `contenido` o `cierre`. Las de contenido
   tienen título, subtítulo, una disposición (`una`, `columnas`, `filas`,
   `principal-lateral`) y bloques.
-- Un **bloque** es `grafico` (líneas, barras, barras horizontales, área;
-  apilado, etiquetas, resaltar una entidad), `tabla`, `texto` o `cifras`.
+- Un **bloque** es `grafico`, `tabla`, `texto` o `cifras`. Un gráfico tiene
+  una `forma`: `lineas`, `barras`, `barrasHorizontales`, `area`, `combinado`,
+  `circular`, `dispersion`, `radar` o `cascada` (qué usa cada una está en
+  "Diseño de la etapa 2B"); y opciones: apilado, etiquetas, resaltar una
+  entidad.
 - En títulos y textos, `{mes}` se reemplaza por el mes seleccionado.
 - Si el mes elegido no tiene datos para un bloque, se muestra un aviso en vez
   del bloque.
@@ -714,6 +720,225 @@ Una sola vez, cuando el paso 2A.2 esté subido:
   que ya está en la base. La muestra solo entra a una base vacía.
 - **Tamaño.** Si una presentación real pasa de 3 MB, revisar antes de subir el
   tope: probablemente sobren meses viejos en algún conjunto.
+
+## Diseño de la etapa 2B: estructura, gráficos y tema
+
+Diseñada el 2026-11-16. Sigue las reglas de "Operaciones de edición" de la 2A:
+todo cambio es una operación del tipo "dejar este valor", nombrada por `id`,
+que se aplica igual en el navegador y en el servidor y se valida antes de
+guardar. Si se cambia algo en el código, se corrige aquí.
+
+### Qué entra
+
+- Diapositivas: agregar (portada, contenido o cierre), duplicar, quitar,
+  subir y bajar, cambiar el tipo y la disposición.
+- Bloques: agregar (gráfico, tabla, texto o cifras), duplicar, quitar, subir y
+  bajar dentro de su diapositiva.
+- Gráficos: tipo, columna del eje, series (cuáles, en qué orden, color y, en
+  el combinado, si van en barras o en línea), apilado, etiquetas, resaltar una
+  fila, total de la cascada. Cinco tipos nuevos (ver abajo).
+- Tablas: qué columnas se ven y en qué orden; resaltar una fila.
+- Datos: nombre del conjunto; agregar, quitar, reordenar columnas y cambiar
+  su tipo. Un bloque nuevo de gráfico o tabla puede usar datos nuevos o los de
+  otro bloque.
+- Tema: color principal, colores de las series y color neutro, con un botón
+  para volver a los de Presente.
+- Meses: "Nuevo mes" (agrega el mes siguiente al último y copia en él lo que
+  cambia por mes) y "Quitar este mes".
+
+No entra: mover un bloque a otra diapositiva, arrastrar con el mouse para
+reordenar (se usan botones subir y bajar), cambiar el logo o el degradado,
+cargar Excel (etapa 3).
+
+### Tipos de gráfico
+
+| Forma | Qué usa | Notas |
+|---|---|---|
+| `lineas` | Eje: cualquier columna. Series: 1 a 12 numéricas. | Para series de tiempo. |
+| `barras` | Igual. | Apilado opcional. Con una serie, admite resaltar. |
+| `barrasHorizontales` | Igual. | Rankings. Etiquetas y resaltar. |
+| `area` | Igual. | Apilado opcional. |
+| `combinado` | Eje y 1 a 12 series; cada serie dice `tipo: 'barras' \| 'lineas'`. | Barras y líneas sobre **la misma escala**. Si las magnitudes son muy distintas (pesos y porcentaje), usar dos gráficos. |
+| `circular` | Eje: columna con los nombres de las porciones. Una serie con los valores. | Dona con el total en el centro. Valores negativos o vacíos no se dibujan. Más de 6 porciones: las 5 mayores y "Otros", para que se lea. |
+| `dispersion` | Eje: columna **numérica** (eje horizontal). Una serie (eje vertical). `nombres`: columna de texto que nombra cada punto. | Comparar dos variables entre entidades. Admite resaltar y etiquetas (el nombre junto al punto). |
+| `radar` | Eje: columna con los nombres de los ejes del radar. Series: 1 a 6. | Pocas categorías (3 a 10). |
+| `cascada` | Eje: concepto. Una serie con la **variación** de cada fila. `total`: agrega al final una barra con la suma. | La primera fila sale desde cero. Subidas en el color 4 de las series (verde), bajadas en el principal, total en gris oscuro. |
+
+- Todas tienen un solo eje de valores (lo acordado). Las series siempre son
+  columnas numéricas.
+- El validador exige lo de la tabla: por ejemplo, exactamente una serie en
+  circular, dispersión y cascada, y eje numérico en dispersión.
+- Al cambiar de tipo en el panel, la configuración se ajusta sola para que
+  sea válida (quedarse con la primera serie, elegir un eje numérico, marcar
+  barras y línea en el combinado). Las formas que el conjunto no puede usar
+  (por ejemplo dispersión sin dos columnas numéricas) aparecen desactivadas
+  con la explicación.
+- Cambios en `tipos.ts`: `FormaGrafico` suma las cinco; `Serie` suma
+  `tipo?: 'barras' | 'lineas'`; `BloqueGrafico` suma `total?: boolean` y
+  `nombres?: string`.
+
+### Operaciones nuevas
+
+```ts
+// Diapositivas. `despues`: id de la diapositiva que queda antes; null = al principio.
+| { op: 'diapositiva.poner'; diapositiva: Diapositiva; despues: string | null }
+| { op: 'diapositiva.quitar'; diapositiva: string }
+| { op: 'diapositiva.mover'; diapositiva: string; despues: string | null }
+| { op: 'diapositiva.tipo'; diapositiva: string; valor: 'portada' | 'contenido' | 'cierre' }
+| { op: 'diapositiva.disposicion'; diapositiva: string; valor: Disposicion }
+// Bloques. `despues`: id del bloque que queda antes, en la misma diapositiva.
+| { op: 'bloque.poner'; diapositiva: string; bloque: Bloque; despues: string | null }
+| { op: 'bloque.quitar'; bloque: string }
+| { op: 'bloque.mover'; bloque: string; despues: string | null }
+| { op: 'grafico.config'; bloque: string; valor: Omit<BloqueGrafico, 'id' | 'tipo'> }
+| { op: 'tabla.config'; bloque: string; valor: Omit<BloqueTabla, 'id' | 'tipo'> }
+// Conjuntos de datos.
+| { op: 'conjunto.poner'; conjunto: ConjuntoDatos }
+| { op: 'conjunto.quitar'; conjunto: string }
+| { op: 'datos.nombre'; conjunto: string; valor: string }
+| { op: 'datos.columnas'; conjunto: string; valor: Columna[] }
+// Presentación.
+| { op: 'tema'; valor: Tema }
+| { op: 'periodo.agregar'; periodo: IdPeriodo; copiarDe: IdPeriodo | null }
+| { op: 'periodo.quitar'; periodo: IdPeriodo }
+```
+
+Reglas de cada una:
+
+- **`poner`** crea o reemplaza (si el `id` ya existe) y deja el elemento en su
+  sitio. Sirve para agregar, duplicar y deshacer un "quitar". Aplicarla dos
+  veces da lo mismo.
+- **`quitar`** de algo que ya no existe se salta (regla 7).
+- **`mover`** deja el elemento justo después de `despues`. Si `despues` ya no
+  existe, se salta. Subir y bajar son un `mover`.
+- `conjunto.quitar` se salta si algún bloque todavía usa el conjunto. El panel,
+  al quitar el último bloque que usa un conjunto, manda en el mismo cambio
+  `bloque.quitar` y `conjunto.quitar` (así deshacer devuelve los dos).
+- **`datos.columnas`** deja la lista completa de columnas. Las filas se
+  ajustan solas en todos los meses: se borra el valor de las columnas que se
+  quitan y, si una columna cambia de tipo, los textos pasan a número con
+  `interpretarNumero` (lo que no se entiende queda vacío) y los números a
+  texto. Se salta si quita una columna que usa algún bloque (el panel no lo
+  permite y dice qué bloque la usa). Su inversa devuelve las columnas y las
+  filas de cada mes.
+- **`periodo.agregar`** inserta el mes en orden. Si `copiarDe` tiene valor,
+  copia a ese mes todo lo que es "propio de cada mes" (filas de cada conjunto,
+  textos y cifras). Si el mes ya existe, no hace nada: así reenviarla no pisa
+  lo que se editó después. Su inversa es `periodo.quitar`.
+- **`periodo.quitar`** borra el mes y todo lo suyo. Se salta si es el único
+  mes. Su inversa es `periodo.agregar` sin copiar más una operación por cada
+  valor que tenía ese mes.
+- `grafico.config`, `tabla.config`, `tema`, `datos.nombre`, `diapositiva.tipo`
+  y `diapositiva.disposicion` se compactan como las de la 2A (queda la última
+  de cada destino). Las de estructura (`poner`, `quitar`, `mover`,
+  `datos.columnas`, `periodo.*`) nunca se compactan ni dejan compactar a
+  través de ellas: cambian el significado de las vecinas.
+- Los `id` nuevos los crea el navegador: prefijo según lo que es y 8
+  caracteres al azar (`d-k3f9x2ab`, `b-...`, `c-...`). Las claves de columna
+  nuevas son `col1`, `col2`... (la primera libre).
+- Duplicar una diapositiva o un bloque **copia también sus datos** en
+  conjuntos nuevos ("Nombre (copia)"): la copia se edita sin tocar el
+  original. Para que dos bloques muestren los mismos datos (gráfico y tabla),
+  al agregar el bloque se elige "Usar los datos de...".
+
+### Pantalla de edición
+
+El panel derecho tiene dos pestañas: **Diapositiva** y **Presentación**.
+
+Pestaña Diapositiva:
+
+- Barra de acciones: agregar diapositiva después de esta (eligiendo el tipo),
+  duplicar, subir, bajar, quitar (pide confirmación; se puede deshacer). No se
+  puede quitar la única diapositiva.
+- Tipo (portada, contenido, cierre), título, subtítulo. En las de contenido,
+  disposición con cuatro botones dibujados. Si la disposición es "una" y hay
+  más de un bloque, aviso: solo se ve el primero. Agregar un segundo bloque a
+  una diapositiva con disposición "una" la pasa a "columnas" en el mismo
+  cambio.
+- Una tarjeta por bloque, con subir, bajar, duplicar y quitar en su
+  encabezado. Además de lo de la 2A:
+  - **Gráfico**: tipo (nueve botones con dibujo), eje, series (marcar cuáles,
+    subir y bajar, color de la paleta del tema o automático, y barras o línea
+    en el combinado), apilado, etiquetas, resaltar (columna de texto y fila),
+    total de la cascada, nombres de los puntos de la dispersión. Solo se
+    muestran las opciones que usa el tipo elegido.
+  - **Tabla**: columnas visibles (marcar y ordenar) y resaltar.
+- Al final, "Agregar bloque": gráfico, tabla, texto o cifras. Para gráfico y
+  tabla se elige "Datos nuevos" o uno de los conjuntos que ya existen. Los
+  datos nuevos traen tres filas de ejemplo con las columnas que pide el tipo
+  de gráfico, y el editor de datos se abre solo para pegar los de verdad.
+- Tope: 8 bloques por diapositiva y 200 diapositivas (el botón se desactiva).
+
+Pestaña Presentación:
+
+- Descripción.
+- **Meses**: lista de meses; "Nuevo mes" agrega el siguiente al último
+  (por ejemplo noviembre 2026 tras octubre) copiando el último, y lleva la
+  barra de meses a él. "Quitar este mes" quita el mes elegido en la barra
+  (pide confirmación; se puede deshacer).
+- **Colores**: principal, seis colores de series y neutro, cada uno con su
+  selector. Al lado de cada color, aviso si contrasta poco con el fondo blanco
+  (menos de 3 a 1). Botón "Volver a los colores de Presente". El orden de la
+  paleta de Presente está validado para daltonismo: si se cambia, revisar que
+  los gráficos se sigan distinguiendo.
+- "Descargar copia" (de la 2A).
+
+Editor de datos: botón "Columnas" que abre una lista con nombre, tipo,
+decimales, unidad, subir, bajar y quitar de cada columna, y "Agregar columna".
+El nombre del conjunto se edita en el encabezado.
+
+### Archivos
+
+```
+src/lib/tipos.ts                 (cambia) formas nuevas, Serie.tipo, total, nombres
+src/lib/edicion/operaciones.ts   (cambia) operaciones nuevas
+src/lib/edicion/validar.ts       (cambia) esquemas y reglas por forma
+src/lib/edicion/plantillas.ts    ids nuevos, bloques y conjuntos de ejemplo, duplicar, ajustar config al cambiar de forma
+src/lib/color.ts                 contraste de colores
+src/components/bloques/Grafico.tsx           (cambia) los cinco tipos nuevos
+src/components/editor/PanelEdicion.tsx       (cambia) pestañas, acciones
+src/components/editor/EditorGrafico.tsx      configuración de gráfico
+src/components/editor/EditorTabla.tsx        configuración de tabla
+src/components/editor/AgregarBloque.tsx
+src/components/editor/PanelPresentacion.tsx  meses y colores
+src/components/editor/EditorColumnas.tsx     columnas del conjunto
+pruebas/                                     operaciones y validación nuevas
+```
+
+### Orden de trabajo
+
+- [ ] **2B.1 Modelo y operaciones**: tipos, operaciones, inversas, validación,
+  plantillas y pruebas.
+- [ ] **2B.2 Gráficos nuevos** en `Grafico.tsx`.
+- [ ] **2B.3 Pantallas**: panel con pestañas, estructura, configuración de
+  gráfico y tabla, agregar bloque, columnas, tema y meses.
+- [ ] **2B.4 Cierre**: revisión en navegador, README y este plan.
+
+### Cómo se comprueba
+
+- Agregar, duplicar, mover y quitar diapositivas y bloques; recargar la
+  página: queda igual. Ctrl+Z deshace cada paso, también quitar.
+- Cambiar un gráfico por cada uno de los nueve tipos: se dibuja sin errores y
+  el panel muestra solo las opciones que corresponden.
+- Agregar un gráfico con datos nuevos, pegar datos desde Excel, verlo.
+- Quitar una columna usada por un gráfico: el panel no lo deja y dice cuál.
+- Cambiar el color principal: cambia en portada, títulos y gráficos.
+- "Nuevo mes": aparece el mes, con los datos del anterior copiados; editar el
+  nuevo no cambia el anterior. Deshacer lo quita.
+- Dos pestañas: una quita una diapositiva mientras la otra edita su título:
+  se guarda sin error (la operación de la otra se salta).
+- `npm run tipos`, `npm run prueba` y `npm run build` sin errores.
+
+### Riesgos
+
+- **Envíos grandes.** Duplicar una diapositiva con muchos datos por mes manda
+  los conjuntos completos en un solo cambio. Pasa de 256 KB con unos 3.000
+  filas en total; el servidor lo rechazaría (413) y el cambio se descarta con
+  aviso. Con los datos actuales no ocurre; si pasa, subir el tope del envío.
+- **Colores propios.** El tema deja elegir cualquier color; el aviso de
+  contraste ayuda pero no impide combinaciones que se confundan.
+- **Combinado con escalas distintas.** La herramienta no lo impide; la nota
+  en el panel lo recuerda.
 
 ## Cómo trabajar
 
