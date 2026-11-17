@@ -145,7 +145,7 @@ describe('interpretación de la hoja', () => {
     expect(tipo(2)).toEqual({ tipo: 'numero', decimales: 0 });
     expect(tipo(3)).toEqual({ tipo: 'moneda', decimales: 0 });
     expect(tipo(4)).toEqual({ tipo: 'texto', fechas: 'dia' });
-    expect(tipo(5)).toEqual({ tipo: 'numero' });
+    expect(tipo(5)).toEqual({ tipo: 'numero', decimales: 4 });
     const serie = hoja(abrir('tasas-octubre.xlsx'), 'Serie').celdas.slice(1);
     expect(proponerTipo(serie.map((f) => f[0]))).toEqual({ tipo: 'texto', fechas: 'mes' });
     // En un CSV todo llega como texto: se reconoce por cómo está escrito.

@@ -89,3 +89,8 @@ export function opsActualizarDesdeExcel(p: Presentacion, conjunto: string, filas
     { op: 'datos.origen', conjunto, valor: origen },
   ];
 }
+
+/** Qué abre la ventana de carga: un bloque nuevo en una diapositiva o unos datos que ya existen. */
+export type DestinoExcel =
+  | { modo: 'nuevo'; diapositiva: string; tipo: 'grafico' | 'tabla' }
+  | { modo: 'conjunto'; conjunto: string };

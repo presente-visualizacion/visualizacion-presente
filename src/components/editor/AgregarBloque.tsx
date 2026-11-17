@@ -1,7 +1,8 @@
 'use client';
 
 // "Agregar bloque": elegir el tipo y, para gráficos y tablas, de dónde salen
-// los datos (nuevos o los de un conjunto que ya existe).
+// los datos (nuevos, desde un archivo de Excel o los de un conjunto que ya
+// existe).
 
 import { useState } from 'react';
 import { ChartColumn, Hash, Plus, Table2, Type } from 'lucide-react';
@@ -24,21 +25,28 @@ interface Props {
   cambiar: (ops: Operacion | Operacion[], grupo?: string) => void;
   /** Se llama con el conjunto nuevo, para abrir el editor de datos. */
   onDatosNuevos: (conjunto: string) => void;
+  /** Abre la ventana de Excel para crear el bloque desde un archivo. */
+  onDesdeExcel: (tipo: 'grafico' | 'tabla') => void;
 }
 
-export function AgregarBloque({ presentacion, diapositiva, cambiar, onDatosNuevos }: Props) {
+export function AgregarBloque({ presentacion, diapositiva, cambiar, onDatosNuevos, onDesdeExcel }: Props) {
   const [abierto, setAbierto] = useState(false);
   const [tipo, setTipo] = useState<TipoNuevo | null>(null);
-  const [datos, setDatos] = useState('nuevo');
+  const [datos, setDatos] = useState('excel');
   const lleno = diapositiva.bloques.length >= TOPES.bloquesPorDiapositiva;
   const conjuntos = Object.values(presentacion.datos).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
   const cerrar = () => {
     setAbierto(false);
     setTipo(null);
-    setDatos('nuevo');
+    setDatos('excel');
   };
   const agregar = (t: TipoNuevo, origen: string) => {
+    if (origen === 'excel' && (t === 'grafico' || t === 'tabla')) {
+      cerrar();
+      onDesdeExcel(t);
+      return;
+    }
     const r = opsAgregarBloque(presentacion, diapositiva.id, t, origen);
     if (!r) return;
     cambiar(r.ops);
@@ -74,11 +82,16 @@ export function AgregarBloque({ presentacion, diapositiva, cambiar, onDatosNuevo
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-tinta" htmlFor="agregar-datos">Datos</label>
           <select id="agregar-datos" value={datos} onChange={(e) => setDatos(e.target.value)} className={`${CLASE_CAMPO} h-10 py-0`}>
+            <option value="excel">Desde un archivo de Excel</option>
             <option value="nuevo">Datos nuevos (con un ejemplo para reemplazar)</option>
             {conjuntos.map((c) => <option key={c.id} value={c.id}>Usar los de: {c.nombre}</option>)}
           </select>
           <p className="text-[13px] leading-snug text-tinta-suave">
-            {datos === 'nuevo' ? 'Se abre el editor de datos para pegar los de verdad desde Excel.' : 'Los dos bloques mostrarán los mismos datos: lo que cambies en uno se ve en el otro.'}
+            {datos === 'excel'
+              ? 'Se abre una ventana para elegir el archivo, la hoja y las columnas.'
+              : datos === 'nuevo'
+                ? 'Se abre el editor de datos para pegar los de verdad desde Excel.'
+                : 'Los dos bloques mostrarán los mismos datos: lo que cambies en uno se ve en el otro.'}
           </p>
         </div>
       )}

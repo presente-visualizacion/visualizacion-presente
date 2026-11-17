@@ -8,6 +8,7 @@ import { Diapositiva } from '@/components/diapositivas/Diapositiva';
 import { EstadoGuardado } from '@/components/editor/EstadoGuardado';
 import { usarEdicion } from '@/components/editor/usarEdicion';
 import { TOPES } from '@/lib/edicion/validar';
+import type { DestinoExcel } from '@/lib/excel/cargar';
 import { Logo } from '@/components/Logo';
 import { nombrePeriodo } from '@/lib/periodos';
 import { degradadoCss } from '@/lib/tema';
@@ -19,6 +20,8 @@ import { ListaDiapositivas } from './ListaDiapositivas';
 // El panel y el editor de datos solo se descargan al entrar a editar.
 const PanelEdicion = dynamic(() => import('@/components/editor/PanelEdicion').then((m) => m.PanelEdicion), { ssr: false });
 const EditorDatos = dynamic(() => import('@/components/editor/EditorDatos').then((m) => m.EditorDatos), { ssr: false });
+// La ventana de Excel (y el lector) solo se descargan al abrirla.
+const CargarExcel = dynamic(() => import('@/components/editor/CargarExcel').then((m) => m.CargarExcel), { ssr: false });
 
 interface Props {
   presentacion: Presentacion;
@@ -54,6 +57,8 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
   }, [irA, diapositivas]);
   /** Conjunto de datos abierto en el editor de datos. */
   const [datosAbiertos, setDatosAbiertos] = useState<string | null>(null);
+  /** Ventana de carga desde Excel abierta. */
+  const [excel, setExcel] = useState<DestinoExcel | null>(null);
   const [presentando, setPresentando] = useState(false);
   const [controles, setControles] = useState(true);
   const raiz = useRef<HTMLDivElement>(null);
@@ -72,6 +77,7 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
 
   const presentar = useCallback(() => {
     setDatosAbiertos(null);
+    setExcel(null);
     setPresentando(true);
     // En iPhone no existe pantalla completa para páginas; ahí la presentación
     // ocupa toda la ventana del navegador.
@@ -94,6 +100,8 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
       const destino = e.target as HTMLElement | null;
+      // La ventana de Excel no cambia nada hasta "Cargar": ahí no hay atajos.
+      if (excel) return;
       // Deshacer y rehacer valen también dentro de los campos: el deshacer
       // propio del navegador no sabe de lo que ya se guardó.
       if (editando && (e.metaKey || e.ctrlKey) && !e.altKey) {
@@ -118,7 +126,7 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
     };
     window.addEventListener('keydown', alTeclear);
     return () => window.removeEventListener('keydown', alTeclear);
-  }, [anterior, siguiente, ir, total, presentando, presentar, salir, editando, datosAbiertos, deshacer, rehacer]);
+  }, [anterior, siguiente, ir, total, presentando, presentar, salir, editando, datosAbiertos, excel, deshacer, rehacer]);
 
   // En modo presentación los controles aparecen al mover el mouse o tocar la
   // pantalla y se esconden solos.
@@ -271,6 +279,7 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
             periodo={periodo}
             cambiar={cambiar}
             onEditarDatos={setDatosAbiertos}
+            onCargarExcel={setExcel}
             onIrA={setIrA}
             onPeriodo={setPeriodo}
             onCerrar={() => setEditando(false)}
@@ -280,6 +289,10 @@ export function Visor({ presentacion: inicial, revision, editable, indiceInicial
 
       {editando && datosAbiertos && (
         <EditorDatos presentacion={presentacion} conjuntoId={datosAbiertos} periodo={periodo} cambiar={cambiar} onCerrar={() => setDatosAbiertos(null)} />
+      )}
+
+      {editando && excel && (
+        <CargarExcel presentacion={presentacion} destino={excel} periodo={periodo} cambiar={cambiar} onPeriodo={setPeriodo} onCerrar={() => setExcel(null)} />
       )}
 
       {(edicion.error || edicion.aviso) && (

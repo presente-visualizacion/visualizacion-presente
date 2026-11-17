@@ -215,7 +215,13 @@ export function proponerTipo(celdas: Celda[]): TipoPropuesto {
   const tipo: TipoColumna = porcentaje > numeros.length / 2 ? 'porcentaje' : moneda > numeros.length / 2 ? 'moneda' : 'numero';
   const conFormato = numeros.find((c) => c.t === 'n' && c.formato?.decimales !== undefined);
   const propuesto: TipoPropuesto = { tipo };
-  if (conFormato?.t === 'n' && conFormato.formato?.decimales !== undefined) propuesto.decimales = conFormato.formato.decimales;
+  if (conFormato?.t === 'n' && conFormato.formato?.decimales !== undefined) {
+    propuesto.decimales = conFormato.formato.decimales;
+  } else if (numeros.some((c) => c.t === 'n')) {
+    // Sin formato en Excel: los decimales que traen los números, hasta 4.
+    const decimales = Math.max(...numeros.map((c) => (c.t === 'n' ? (String(redondear(c.v)).split('.')[1]?.length ?? 0) : 0)));
+    if (decimales > 0) propuesto.decimales = Math.min(decimales, 4);
+  }
   return propuesto;
 }
 

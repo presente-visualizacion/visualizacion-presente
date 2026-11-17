@@ -5,11 +5,12 @@
 // presentación (meses y colores). Ver "Pantalla de edición" en PLAN.md (2A y 2B).
 
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ChartColumn, Copy, Hash, Plus, Table2, Trash2, Type, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChartColumn, Copy, FileSpreadsheet, Hash, Plus, Table2, Trash2, Type, X } from 'lucide-react';
 import { conjuntoDe, filasDe } from '@/lib/datos';
 import type { Operacion } from '@/lib/edicion/operaciones';
 import { diapositivaNueva, idsEnUso, opsDuplicarBloque, opsDuplicarDiapositiva, opsQuitarBloque, opsQuitarDiapositiva } from '@/lib/edicion/plantillas';
 import { TOPES } from '@/lib/edicion/validar';
+import type { DestinoExcel } from '@/lib/excel/cargar';
 import { nombrePeriodo } from '@/lib/periodos';
 import type { Bloque, Diapositiva, Disposicion, IdPeriodo, Presentacion } from '@/lib/tipos';
 import { AgregarBloque } from './AgregarBloque';
@@ -27,6 +28,8 @@ interface Props {
   cambiar: (ops: Operacion | Operacion[], grupo?: string) => void;
   /** Abre el editor de datos de un conjunto. */
   onEditarDatos: (conjunto: string) => void;
+  /** Abre la ventana para cargar datos desde Excel. */
+  onCargarExcel: (destino: DestinoExcel) => void;
   /** Lleva el visor a esa diapositiva (cuando aparece después del cambio). */
   onIrA: (diapositiva: string) => void;
   onPeriodo: (periodo: IdPeriodo) => void;
@@ -72,7 +75,7 @@ export function PanelEdicion(props: Props) {
   );
 }
 
-function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEditarDatos, onIrA }: Props) {
+function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEditarDatos, onCargarExcel, onIrA }: Props) {
   const { diapositivas } = presentacion;
   const indice = diapositivas.findIndex((d) => d.id === diapositiva.id);
   const contenido = diapositiva.tipo === 'contenido';
@@ -127,13 +130,20 @@ function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEdi
           periodo={periodo}
           cambiar={cambiar}
           onEditarDatos={onEditarDatos}
+          onCargarExcel={onCargarExcel}
           oculto={disposicion === 'una' && i > 0}
         />
       ))}
 
       {contenido && (
         <div className="border-t border-linea pt-5">
-          <AgregarBloque presentacion={presentacion} diapositiva={diapositiva} cambiar={cambiar} onDatosNuevos={onEditarDatos} />
+          <AgregarBloque
+            presentacion={presentacion}
+            diapositiva={diapositiva}
+            cambiar={cambiar}
+            onDatosNuevos={onEditarDatos}
+            onDesdeExcel={(tipo) => onCargarExcel({ modo: 'nuevo', diapositiva: diapositiva.id, tipo })}
+          />
         </div>
       )}
     </div>
@@ -238,7 +248,7 @@ function SelectorDisposicion({ valor, bloques, onCambiar }: { valor: Disposicion
   );
 }
 
-function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cambiar, onEditarDatos, oculto }: {
+function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cambiar, onEditarDatos, onCargarExcel, oculto }: {
   presentacion: Presentacion;
   diapositiva: Diapositiva;
   bloque: Bloque;
@@ -246,6 +256,7 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
   periodo: IdPeriodo;
   cambiar: Props['cambiar'];
   onEditarDatos: Props['onEditarDatos'];
+  onCargarExcel: Props['onCargarExcel'];
   oculto: boolean;
 }) {
   const Icono = ICONOS[bloque.tipo];
@@ -275,7 +286,13 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
       {bloque.tipo === 'texto' && <EditorTexto key={`${bloque.id}|${periodo}`} presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {bloque.tipo === 'cifras' && <EditorCifras presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {(bloque.tipo === 'grafico' || bloque.tipo === 'tabla') && (
-        <ResumenDatos presentacion={presentacion} conjuntoId={bloque.datos} periodo={periodo} onEditar={() => onEditarDatos(bloque.datos)} />
+        <ResumenDatos
+          presentacion={presentacion}
+          conjuntoId={bloque.datos}
+          periodo={periodo}
+          onEditar={() => onEditarDatos(bloque.datos)}
+          onCargarExcel={() => onCargarExcel({ modo: 'conjunto', conjunto: bloque.datos })}
+        />
       )}
       {bloque.tipo === 'grafico' && <EditorGrafico presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {bloque.tipo === 'tabla' && <EditorTabla presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
@@ -283,7 +300,13 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
   );
 }
 
-function ResumenDatos({ presentacion, conjuntoId, periodo, onEditar }: { presentacion: Presentacion; conjuntoId: string; periodo: IdPeriodo; onEditar: () => void }) {
+function ResumenDatos({ presentacion, conjuntoId, periodo, onEditar, onCargarExcel }: {
+  presentacion: Presentacion;
+  conjuntoId: string;
+  periodo: IdPeriodo;
+  onEditar: () => void;
+  onCargarExcel: () => void;
+}) {
   const conjunto = conjuntoDe(presentacion, conjuntoId);
   if (!conjunto) return <p className="text-sm text-tinta-suave">Este bloque no tiene datos asociados.</p>;
   const filas = filasDe(conjunto, periodo);
@@ -294,9 +317,19 @@ function ResumenDatos({ presentacion, conjuntoId, periodo, onEditar }: { present
       <p className="mt-0.5 text-[13px] text-tinta-suave">
         {conjunto.porPeriodo ? 'Propio de cada mes' : 'Igual en todos los meses'} · {cuantas}
       </p>
-      <button type="button" className={`${CLASE_BOTON} mt-3`} onClick={onEditar}>
-        <Table2 size={16} aria-hidden /> Editar datos
-      </button>
+      {conjunto.origen && (
+        <p className="mt-1 truncate text-[13px] text-tinta-suave" title={`${conjunto.origen.archivo} · hoja ${conjunto.origen.hoja}`}>
+          Último Excel: {conjunto.origen.archivo} · {conjunto.origen.hoja} · {new Date(conjunto.origen.cargado).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+        </p>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" className={CLASE_BOTON} onClick={onEditar}>
+          <Table2 size={16} aria-hidden /> Editar datos
+        </button>
+        <button type="button" className={CLASE_BOTON} onClick={onCargarExcel} title={conjunto.origen ? 'Se propone lo mismo que la última vez' : 'Cargar estos datos desde un archivo de Excel'}>
+          <FileSpreadsheet size={16} aria-hidden /> Cargar Excel
+        </button>
+      </div>
     </div>
   );
 }

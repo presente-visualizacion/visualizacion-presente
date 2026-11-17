@@ -14,7 +14,7 @@ npm run dev
 
 Abre http://localhost:3000.
 
-## Qué hay hoy (etapas 1, 2A y 2B)
+## Qué hay hoy (etapas 1, 2A, 2B y 3)
 
 - Lista de presentaciones y visor.
 - Barra de meses: al elegir un mes cambia toda la presentación.
@@ -30,11 +30,16 @@ Abre http://localhost:3000.
   quitar diapositivas y bloques; elegir tipo de gráfico, series y colores;
   columnas de los datos; colores del tema; "Nuevo mes" y quitar un mes. Se
   guarda solo; hay deshacer y rehacer.
+- **Cargar desde Excel** (.xlsx o CSV): crear un gráfico o una tabla desde un
+  archivo, o actualizar los datos de uno que ya existe en cualquier mes (o en
+  un mes nuevo). Se elige la hoja, los encabezados y las columnas, con vista
+  previa. La herramienta recuerda de dónde salió cada columna y el mes
+  siguiente lo propone sola. El archivo se lee en el navegador y no se sube.
 - Base de datos (Postgres de Neon conectado desde Vercel). Sin base conectada,
   el sitio publicado muestra la presentación de ejemplo en solo lectura.
 - Una presentación de muestra del Comité de Precios con datos inventados.
 
-Todavía no se puede cargar un archivo de Excel (etapa 3) ni crear
+Todavía no están las 25 diapositivas originales (etapa 4) ni se puede crear
 presentaciones nuevas, descargar en PDF o ver el historial (etapa 5).
 
 ## Pruebas

@@ -65,8 +65,9 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
     tipo de gráfico, series y colores; cinco tipos de gráfico nuevos
     (combinado, circular, dispersión, radar, cascada); columnas; tema;
     "Nuevo mes". Programada el 2026-11-16 (ver "Diseño de la etapa 2B").
-- [ ] **Etapa 3. Excel.** Cargar cualquier archivo, elegir hoja y columnas,
+- [x] **Etapa 3. Excel.** Cargar cualquier archivo, elegir hoja y columnas,
   vista previa, asignar mes, recordar la configuración por conjunto de datos.
+  Programada el 2026-11-17 (ver "Diseño de la etapa 3").
 - [ ] **Etapa 4. Migración.** Las 25 diapositivas originales con todos sus
   meses. Bloques que falten para las diapositivas especiales.
 - [ ] **Etapa 5. Cierre.** Crear y duplicar presentaciones, PDF, respaldo en
@@ -122,7 +123,8 @@ cada mensaje.
 - **Etapa 2A** (base de datos, guardado, editar datos, textos y títulos): la
   que más cuesta corregir si queda mal. Ya está hecha.
 - **Etapa 2B**: hecha.
-- **Etapas 3, 4 y 5**: siguen el diseño ya hecho. Opus es suficiente.
+- **Etapa 3**: hecha.
+- **Etapas 4 y 5**: siguen el diseño ya hecho. Opus es suficiente.
 - Al terminar cada etapa se sube a GitHub, así que si el uso se acaba a mitad,
   lo terminado no se pierde.
 
@@ -137,6 +139,7 @@ src/
   app/                    páginas: inicio (lista) y /p/[id] (visor)
   lib/
     tipos.ts              modelo de datos (leer primero)
+    excel/                lectura de Excel y CSV, interpretación, operaciones de carga
     tema.ts               colores de Presente
     periodos.ts           meses: nombres, agrupación, {mes} en textos
     formato.ts            números en formato colombiano
@@ -154,7 +157,7 @@ src/
                           GraficosEspeciales.tsx: circular, dispersión, cascada)
     editor/               guardado en el navegador, panel (pestañas Diapositiva
                           y Presentación), editores de gráfico, tabla, datos y
-                          columnas
+                          columnas, ventana de carga desde Excel (CargarExcel)
   datos/semilla/          presentación de muestra (generada, no editar a mano)
 pruebas/                  pruebas automáticas (npm run prueba)
 scripts/crear-semilla.mjs genera la muestra con datos inventados
@@ -1037,8 +1040,11 @@ Operación nueva, compactable por conjunto (queda la última):
 - Filas de datos: desde la siguiente a la de encabezados hasta la primera fila
   del todo vacía (o hasta el final, si se elige). Las filas sin nada en las
   columnas elegidas se saltan.
-- Tipo propuesto de cada columna: porcentaje, moneda o número si todo lo que
-  tiene son números (por su formato); texto si no. En un CSV los números se
+- Tipo propuesto de cada columna: porcentaje, moneda o número si más de la
+  mitad de lo que tiene son números (por su formato); texto si no. Los
+  decimales salen del formato de Excel o, sin formato, de los números (hasta
+  4). En un gráfico nuevo se proponen como series las columnas del mismo tipo
+  que la primera (un solo eje de valores). En un CSV los números se
   leen con `interpretarNumero` (formato colombiano, igual que al pegar).
 - Una celda con texto en una columna numérica queda vacía y se marca en rojo
   en la vista previa, con el total de celdas así.
@@ -1085,13 +1091,18 @@ scripts/crear-archivos-prueba.py  cómo se hicieron (openpyxl y LibreOffice)
 
 ### Orden de trabajo
 
-- [ ] **3.1 Lector**: `leer.ts`, archivos de prueba y pruebas.
-- [ ] **3.2 Interpretación y operaciones**: `tabla.ts`, `cargar.ts`,
+- [x] **3.1 Lector**: `leer.ts`, archivos de prueba y pruebas.
+- [x] **3.2 Interpretación y operaciones**: `tabla.ts`, `cargar.ts`,
   `datos.origen`, validación y pruebas.
-- [ ] **3.3 Pantalla** y entradas.
-- [ ] **3.4 Cierre**: revisión en navegador, README y este plan.
+- [x] **3.3 Pantalla** y entradas.
+- [x] **3.4 Cierre**: revisión en navegador, README y este plan.
 
 ### Cómo se comprueba
+
+Todo lo de esta lista se comprobó el 2026-11-17 en navegador (Chrome, sin
+ventana) contra la base local, además de las pruebas automáticas
+(`pruebas/excel.prueba.ts`). Falta probarlo con un Excel real del Comité
+(sin subirlo): ver "Riesgos".
 
 - Un Excel con título arriba, encabezados en la fila 3, porcentajes, moneda y
   fechas: se propone la fila 3, los tipos y "Oct 26"; el gráfico se ve igual
