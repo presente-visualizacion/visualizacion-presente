@@ -947,6 +947,176 @@ la base local, además de las pruebas automáticas (`pruebas/estructura.prueba.t
 - **Combinado con escalas distintas.** La herramienta no lo impide; la nota
   en el panel lo recuerda.
 
+## Diseño de la etapa 3: cargar Excel
+
+Diseñada y programada el 2026-11-17. Sigue las reglas de "Operaciones de
+edición" de la 2A. Si se cambia algo en el código, se corrige aquí.
+
+### Qué entra
+
+- Cargar un archivo `.xlsx` o `.xlsm` (Excel 2007 en adelante) o `.csv`.
+- Elegir la hoja, dónde están los encabezados (fila o columna, con su número)
+  y, con eso, las columnas.
+- Dos caminos:
+  - **Bloque nuevo desde Excel** ("Agregar bloque" → gráfico o tabla →
+    "Desde un archivo de Excel"): se elige la columna del eje, las series (o,
+    en una tabla, las columnas), el tipo de cada columna, el tipo de gráfico y
+    si los datos son propios de cada mes o iguales en todos.
+  - **Actualizar unos datos que ya existen** (botón "Cargar Excel" en la
+    tarjeta del gráfico o la tabla): para cada columna del conjunto se elige
+    de qué columna del archivo sale. La primera vez se proponen por nombre.
+- Mes: cualquiera de la presentación o "Nuevo mes" (el siguiente al último,
+  igual que el botón "Nuevo mes": copia el último y luego carga encima).
+- Vista previa: la hoja tal como viene (con la fila de encabezados marcada) y
+  el resultado (la diapositiva con los datos nuevos y la tabla de filas, con
+  las celdas que no se entendieron en rojo).
+- **Recordar la configuración por conjunto de datos**: hoja, encabezados y de
+  qué encabezado sale cada columna. El mes siguiente basta con elegir el
+  archivo: todo llega propuesto y se revisa en la vista previa.
+
+No entra: Excel antiguo (`.xls`), `.xlsb` y `.ods` (se pide guardarlo como
+`.xlsx`); archivos con clave; actualizar varios conjuntos con un solo archivo
+de una vez (posible mejora después: hoy se carga bloque por bloque, pero el
+archivo queda en memoria mientras la pestaña esté abierta y no hay que volver
+a elegirlo).
+
+### Decisiones
+
+| Tema | Decisión | Por qué |
+|---|---|---|
+| Dónde se lee el archivo | **En el navegador.** El archivo no se sube a ninguna parte: solo viajan las filas resultantes, como operaciones normales. | Los Excel reales no pasan por el servidor ni quedan guardados. El servidor valida igual que siempre. |
+| Librería | Lector propio (`src/lib/excel/leer.ts`) sobre **`fflate`** (descomprime el `.xlsx`, que es un zip de XML). | SheetJS ya no publica en npm (la versión de npm es vieja y con fallos de seguridad conocidos) y su servidor no es alcanzable desde el entorno de Claude; `exceljs` pesa mucho y arrastra paquetes de Node. Para leer valores, formatos y fechas basta un lector pequeño que se prueba aquí. |
+| Carga bajo demanda | La ventana de carga y el lector se descargan solo al usarlos. | Lo pide "Gráficos bajo demanda". |
+| Dónde se recuerda | Campo `origen` del conjunto de datos, dentro de la presentación. Operación nueva `datos.origen`. | Viaja con la presentación (copias, historial, descarga) y se guarda como todo lo demás. |
+| Columnas por nombre | Se recuerda el **texto del encabezado**, no la letra de la columna. Si el encabezado cambió de fila, se busca en las primeras 50 filas. | Los archivos de cada mes suelen agregar o mover columnas; el nombre se mantiene. |
+| Porcentajes | Una celda con formato de porcentaje (`14,5 %`, guardada por Excel como `0,145`) se guarda como `14.5`. | Así están los porcentajes en el modelo (ver 2A). |
+| Fechas | Pasan a texto: "Oct 26" (mes y año, como la muestra), "31/10/2026" (día) o "2026". Se propone "mes" si no hay dos fechas del mismo mes. | El eje de los gráficos es texto. |
+| Más de 500 filas | Se avisa y se elige: las primeras 500 o las últimas (propuesto si el eje son fechas). | Tope de filas por mes de la 2A. |
+| Antes de guardar | La ventana aplica las operaciones en el navegador y valida el resultado con `validarPresentacion`; si no pasa o el envío pesa más de 180 KB, no deja cargar y explica por qué. | Evita el 400 o el 413 del servidor después de cerrar la ventana. |
+
+### Modelo
+
+En `tipos.ts`:
+
+```ts
+export interface OrigenExcel {
+  archivo: string;                 // nombre del último archivo cargado (para mostrarlo)
+  hoja: string;
+  orientacion: 'filas' | 'columnas'; // encabezados en una fila (lo normal) o en una columna
+  encabezados: number;             // número de esa fila o columna, desde 1 como en Excel
+  columnas: { clave: string; encabezado: string; fechas?: 'dia' | 'mes' | 'anio' }[];
+  hasta: 'vacia' | 'final';        // leer hasta la primera fila vacía o todas
+  invertir?: boolean;              // dar vuelta el orden de las filas
+  sobrantes?: 'primeras' | 'ultimas';
+  cargado: string;                 // fecha y hora de la última carga (ISO)
+  periodo: IdPeriodo | null;       // mes en que se cargó (null: igual en todos)
+}
+// ConjuntoDatos suma: origen?: OrigenExcel
+```
+
+Operación nueva, compactable por conjunto (queda la última):
+
+```ts
+| { op: 'datos.origen'; conjunto: string; valor: OrigenExcel | null }
+```
+
+- Las claves de `origen.columnas` que ya no existan en el conjunto se ignoran
+  al cargar (no son un error): así quitar una columna no obliga a tocar el
+  origen.
+- Topes: archivo 200 caracteres, hoja 100, encabezado 200, 40 columnas.
+
+### Cómo se lee una hoja
+
+- Celdas: número (con su formato: porcentaje, moneda, decimales), fecha o
+  texto. Vacías, errores de Excel (`#N/A`) y fórmulas sin valor calculado
+  quedan vacías. Las fórmulas se leen por su último valor calculado.
+- Encabezados repetidos se distinguen con "(2)"; uno vacío con datos debajo se
+  llama "Columna C".
+- Se propone como fila de encabezados la primera, entre las 30 primeras, que
+  tenga al menos dos textos y datos debajo.
+- Filas de datos: desde la siguiente a la de encabezados hasta la primera fila
+  del todo vacía (o hasta el final, si se elige). Las filas sin nada en las
+  columnas elegidas se saltan.
+- Tipo propuesto de cada columna: porcentaje, moneda o número si todo lo que
+  tiene son números (por su formato); texto si no. En un CSV los números se
+  leen con `interpretarNumero` (formato colombiano, igual que al pegar).
+- Una celda con texto en una columna numérica queda vacía y se marca en rojo
+  en la vista previa, con el total de celdas así.
+- CSV: separador `;`, `,` o tabulador (el que se repita igual en las primeras
+  filas); texto en UTF-8 o, si no lo es, en la codificación de Windows.
+- Topes de lectura: 30 MB por archivo, 20.000 filas y 256 columnas por hoja.
+- `.xls` antiguo o con clave: se reconoce y se pide guardarlo como `.xlsx`.
+
+### Pantalla
+
+Ventana ancha sobre el visor, como el editor de datos:
+
+- Izquierda, la configuración: archivo (botón o arrastrar; "Usar el mismo
+  archivo" si ya se eligió uno en la pestaña), hoja, encabezados, columnas
+  (según el camino), mes, filas (hasta la primera vacía, invertir el orden,
+  sobrantes) y, en un bloque nuevo, el nombre de los datos y el tipo de
+  gráfico.
+- Derecha, dos pestañas: **Archivo** (la hoja como en Excel, con letras y
+  números; clic en el número de una fila la vuelve la fila de encabezados) y
+  **Resultado** (la diapositiva con los datos nuevos y las filas).
+- Pie: "Se cargarán 24 filas en Octubre 2026", avisos, "Cancelar" y
+  "Cargar". Todo lo que hace "Cargar" es un solo paso de deshacer.
+- La tarjeta del gráfico o la tabla muestra, si hay origen, "Último Excel:
+  archivo · hoja · fecha".
+
+### Archivos
+
+```
+src/lib/excel/leer.ts           abrir xlsx y csv: hojas y celdas
+src/lib/excel/tabla.ts          encabezados, filas, tipos, fechas, columnas recordadas
+src/lib/excel/cargar.ts         operaciones de "bloque nuevo" y "actualizar datos"
+src/lib/tipos.ts                (cambia) OrigenExcel
+src/lib/edicion/operaciones.ts  (cambia) datos.origen
+src/lib/edicion/validar.ts      (cambia) esquema de origen y de la operación
+src/components/editor/CargarExcel.tsx  la ventana
+src/components/editor/AgregarBloque.tsx, PanelEdicion.tsx, visor/Visor.tsx  (cambian) entradas
+pruebas/excel.prueba.ts         lector, interpretación y operaciones
+pruebas/archivos/               Excel y CSV de prueba, con datos inventados
+scripts/crear-archivos-prueba.py  cómo se hicieron (openpyxl y LibreOffice)
+```
+
+`.gitignore` ignora `*.xlsx`, `*.xlsm`, `*.xls` y `*.csv` fuera de
+`pruebas/archivos/`, para que un Excel real no se suba por descuido.
+
+### Orden de trabajo
+
+- [ ] **3.1 Lector**: `leer.ts`, archivos de prueba y pruebas.
+- [ ] **3.2 Interpretación y operaciones**: `tabla.ts`, `cargar.ts`,
+  `datos.origen`, validación y pruebas.
+- [ ] **3.3 Pantalla** y entradas.
+- [ ] **3.4 Cierre**: revisión en navegador, README y este plan.
+
+### Cómo se comprueba
+
+- Un Excel con título arriba, encabezados en la fila 3, porcentajes, moneda y
+  fechas: se propone la fila 3, los tipos y "Oct 26"; el gráfico se ve igual
+  que en Excel.
+- Crear un gráfico desde Excel, recargar la página: sigue ahí. Ctrl+Z lo
+  quita entero.
+- "Nuevo mes" desde la ventana con el archivo del mes siguiente (columnas en
+  otro orden y una fila más): todo llega propuesto, se carga en el mes nuevo y
+  el mes anterior no cambia.
+- Un CSV con `;` y comas decimales, guardado desde Excel en español.
+- Un `.xls` da el aviso de guardarlo como `.xlsx`.
+- Más de 500 filas: aviso y elección.
+- `npm run tipos`, `npm run prueba` y `npm run build` sin errores.
+
+### Riesgos
+
+- **Archivos raros.** El lector cubre lo que escriben Excel, LibreOffice y
+  Google Sheets. Si un archivo no abre, guardarlo de nuevo desde Excel suele
+  resolverlo; si no, revisar `leer.ts` con ese archivo (sin subirlo).
+- **Encabezado renombrado.** Si el archivo del mes cambia el nombre de una
+  columna, la ventana la deja sin elegir y lo dice; se elige a mano y queda
+  recordada con el nombre nuevo.
+- **Porcentajes sin formato.** Un `0,145` sin formato de porcentaje en Excel
+  se carga como `0,145`. La vista previa lo deja ver antes de cargar.
+
 ## Cómo trabajar
 
 ```

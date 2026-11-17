@@ -33,6 +33,36 @@ export interface Columna {
 
 export type Fila = Record<string, string | number | null>;
 
+/** Cómo se muestra una fecha leída de Excel: "31/10/2026", "Oct 26" o "2026". */
+export type FormatoFecha = 'dia' | 'mes' | 'anio';
+
+/**
+ * De dónde salieron los datos la última vez que se cargaron desde Excel. Se
+ * recuerda para proponer lo mismo con el archivo del mes siguiente (ver
+ * "Diseño de la etapa 3" en PLAN.md).
+ */
+export interface OrigenExcel {
+  /** Nombre del último archivo cargado, solo para mostrarlo. */
+  archivo: string;
+  hoja: string;
+  /** Encabezados en una fila (lo normal) o en una columna. */
+  orientacion: 'filas' | 'columnas';
+  /** Número de esa fila o columna, desde 1 como en Excel. */
+  encabezados: number;
+  /** De qué encabezado del archivo sale cada columna del conjunto. */
+  columnas: { clave: string; encabezado: string; fechas?: FormatoFecha }[];
+  /** Leer hasta la primera fila vacía o todas las filas. */
+  hasta: 'vacia' | 'final';
+  /** Dar vuelta el orden de las filas. */
+  invertir?: boolean;
+  /** Si hay más filas que el tope: cuáles se quedan. */
+  sobrantes?: 'primeras' | 'ultimas';
+  /** Fecha y hora de la última carga (ISO). */
+  cargado: string;
+  /** Mes en que se cargó; null si los datos son iguales en todos los meses. */
+  periodo: IdPeriodo | null;
+}
+
 export interface ConjuntoDatos {
   id: string;
   nombre: string;
@@ -41,6 +71,8 @@ export interface ConjuntoDatos {
   porPeriodo: boolean;
   filas?: Fila[];
   filasPorPeriodo?: Record<IdPeriodo, Fila[]>;
+  /** Configuración de la última carga desde Excel (etapa 3). */
+  origen?: OrigenExcel;
 }
 
 /** Valor que puede ser único o distinto en cada mes. */

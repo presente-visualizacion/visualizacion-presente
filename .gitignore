@@ -13,3 +13,13 @@ next-env.d.ts
 
 # Base de datos local de desarrollo: puede tener datos reales (ver PLAN.md)
 /.datos-locales/
+
+# Archivos de Excel y CSV: pueden tener datos reales. Solo se suben los de
+# prueba, que son inventados (ver PLAN.md, etapa 3).
+*.xlsx
+*.xlsm
+*.xls
+*.xlsb
+*.ods
+*.csv
+!/pruebas/archivos/*

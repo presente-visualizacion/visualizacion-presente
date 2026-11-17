@@ -8,7 +8,7 @@
 // coincidir con los tipos, el compilador avisa.
 
 import { z } from 'zod';
-import type { Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, Fila, Presentacion, Tema } from '../tipos';
+import type { Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, Fila, OrigenExcel, Presentacion, Tema } from '../tipos';
 import type { ConfigGrafico, ConfigTabla, Operacion } from './operaciones';
 
 // Mensajes de error en español.
@@ -64,6 +64,25 @@ const celda = z.union([z.string().max(TOPES.celdaTexto), z.number(), z.null()]);
 const fila = z.record(clave, celda) satisfies z.ZodType<Fila>;
 const filas = z.array(fila).max(TOPES.filasPorMes);
 
+// Las claves de `columnas` que ya no estén en el conjunto se ignoran al cargar:
+// no se revisan como referencias (ver "Modelo" en el diseño de la etapa 3).
+const origen = z.strictObject({
+  archivo: z.string().max(200),
+  hoja: z.string().max(100),
+  orientacion: z.enum(['filas', 'columnas']),
+  encabezados: z.number().int().min(1).max(1_048_576),
+  columnas: z.array(z.strictObject({
+    clave,
+    encabezado: z.string().max(TOPES.titulo),
+    fechas: z.enum(['dia', 'mes', 'anio']).optional(),
+  })).max(TOPES.columnas),
+  hasta: z.enum(['vacia', 'final']),
+  invertir: z.boolean().optional(),
+  sobrantes: z.enum(['primeras', 'ultimas']).optional(),
+  cargado: z.string().max(40),
+  periodo: idPeriodo.nullable(),
+}) satisfies z.ZodType<OrigenExcel>;
+
 const conjunto = z.strictObject({
   id,
   nombre: z.string().max(TOPES.titulo),
@@ -71,6 +90,7 @@ const conjunto = z.strictObject({
   porPeriodo: z.boolean(),
   filas: filas.optional(),
   filasPorPeriodo: z.record(idPeriodo, filas).optional(),
+  origen: origen.optional(),
 }) satisfies z.ZodType<ConjuntoDatos>;
 
 const cifra = z.strictObject({
@@ -182,6 +202,7 @@ const operacion = z.discriminatedUnion('op', [
   z.strictObject({ op: z.literal('tema'), valor: tema }),
   z.strictObject({ op: z.literal('periodo.agregar'), periodo: idPeriodo, copiarDe: idPeriodo.nullable() }),
   z.strictObject({ op: z.literal('periodo.quitar'), periodo: idPeriodo }),
+  z.strictObject({ op: z.literal('datos.origen'), conjunto: id, valor: origen.nullable() }),
 ]) satisfies z.ZodType<Operacion>;
 
 // ---------------------------------------------------------------------------

@@ -245,7 +245,7 @@ export function opsDuplicarDiapositiva(p: Presentacion, diapositiva: string): { 
 }
 
 /** Con la disposición "una" solo se ve el primer bloque: al pasar de uno, se reparten en columnas. */
-function opsDisposicionPara(d: Diapositiva, bloques: number): Operacion[] {
+export function opsDisposicionPara(d: Diapositiva, bloques: number): Operacion[] {
   return (d.disposicion ?? 'una') === 'una' && bloques > 1 ? [{ op: 'diapositiva.disposicion', diapositiva: d.id, valor: 'columnas' }] : [];
 }
 

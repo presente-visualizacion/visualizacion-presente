@@ -17,7 +17,7 @@
 import { interpretarNumero, numeroEditable } from '../formato';
 import type {
   Bloque, BloqueGrafico, BloqueTabla, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, Fila, IdPeriodo,
-  PorPeriodo, Presentacion, Tema, TipoColumna,
+  OrigenExcel, PorPeriodo, Presentacion, Tema, TipoColumna,
 } from '../tipos';
 
 export type ConfigGrafico = Omit<BloqueGrafico, 'id' | 'tipo'>;
@@ -71,7 +71,10 @@ export type Operacion =
   /** Agrega el mes (si no existe) y copia en él lo propio de cada mes de `copiarDe`. */
   | { op: 'periodo.agregar'; periodo: IdPeriodo; copiarDe: IdPeriodo | null }
   /** Quita el mes y todo lo suyo. Se salta si es el único. */
-  | { op: 'periodo.quitar'; periodo: IdPeriodo };
+  | { op: 'periodo.quitar'; periodo: IdPeriodo }
+  // --- Etapa 3: de dónde salieron los datos al cargarlos desde Excel.
+  /** Deja la configuración recordada del conjunto; null la quita. */
+  | { op: 'datos.origen'; conjunto: string; valor: OrigenExcel | null };
 
 /**
  * La operación no se puede aplicar a esta presentación: el destino ya no
@@ -394,6 +397,9 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
     case 'datos.nombre':
       return conConjunto(p, op.conjunto, (c) => ({ ...c, nombre: op.valor }));
 
+    case 'datos.origen':
+      return conConjunto(p, op.conjunto, ({ origen: _origen, ...c }) => (op.valor === null ? c : { ...c, origen: op.valor }));
+
     case 'datos.columnas':
       return conConjunto(p, op.conjunto, (c) => {
         const nuevas = new Map(op.valor.map((col) => [col.clave, col]));
@@ -632,6 +638,11 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
       return c ? [{ op: op.op, conjunto: c.id, valor: c.nombre }] : [];
     }
 
+    case 'datos.origen': {
+      const c = Object.hasOwn(p.datos, op.conjunto) ? p.datos[op.conjunto] : undefined;
+      return c ? [{ op: op.op, conjunto: c.id, valor: c.origen ?? null }] : [];
+    }
+
     case 'datos.columnas': {
       const c = Object.hasOwn(p.datos, op.conjunto) ? p.datos[op.conjunto] : undefined;
       if (!c) return [];
@@ -699,6 +710,7 @@ export function claveDe(op: Operacion): string | null {
     case 'tabla.config':
       return `${op.op}|${op.bloque}`;
     case 'datos.nombre':
+    case 'datos.origen':
       return `${op.op}|${op.conjunto}`;
     case 'tema':
       return op.op;
