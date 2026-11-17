@@ -55,6 +55,8 @@ export interface Serie {
   clave: string;
   /** Color fijo para esta serie. Si falta, se toma del tema según su posición. */
   color?: string;
+  /** Solo en el gráfico combinado: si la serie va en barras o en línea. */
+  tipo?: 'barras' | 'lineas';
 }
 
 export interface Resaltado {
@@ -62,7 +64,17 @@ export interface Resaltado {
   valor: string;
 }
 
-export type FormaGrafico = 'lineas' | 'barras' | 'barrasHorizontales' | 'area';
+/**
+ * Qué usa cada forma (ver "Tipos de gráfico" en PLAN.md):
+ * - lineas, barras, barrasHorizontales, area, radar: eje de categorías y una o más series.
+ * - combinado: como barras, pero cada serie dice si va en barras o en línea; misma escala.
+ * - circular: el eje nombra las porciones; una serie con los valores.
+ * - dispersion: eje numérico (horizontal) y una serie (vertical); `nombres` nombra los puntos.
+ * - cascada: el eje es el concepto; una serie con la variación de cada fila.
+ */
+export type FormaGrafico =
+  | 'lineas' | 'barras' | 'barrasHorizontales' | 'area'
+  | 'combinado' | 'circular' | 'dispersion' | 'radar' | 'cascada';
 
 export interface BloqueGrafico {
   id: string;
@@ -76,6 +88,10 @@ export interface BloqueGrafico {
   etiquetas?: boolean;
   /** Pinta con el color principal las barras cuya columna tenga ese valor. */
   resaltar?: Resaltado;
+  /** Cascada: agrega al final una barra con la suma. */
+  total?: boolean;
+  /** Dispersión: columna de texto con el nombre de cada punto. */
+  nombres?: string;
 }
 
 export interface BloqueTabla {

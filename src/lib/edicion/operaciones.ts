@@ -14,7 +14,14 @@
 //
 // Este archivo no depende de React ni de la base de datos.
 
-import type { Bloque, Cifra, Columna, ConjuntoDatos, Fila, IdPeriodo, PorPeriodo, Presentacion } from '../tipos';
+import { interpretarNumero, numeroEditable } from '../formato';
+import type {
+  Bloque, BloqueGrafico, BloqueTabla, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, Fila, IdPeriodo,
+  PorPeriodo, Presentacion, Tema, TipoColumna,
+} from '../tipos';
+
+export type ConfigGrafico = Omit<BloqueGrafico, 'id' | 'tipo'>;
+export type ConfigTabla = Omit<BloqueTabla, 'id' | 'tipo'>;
 
 export type Operacion =
   | { op: 'presentacion.nombre'; valor: string }
@@ -33,7 +40,38 @@ export type Operacion =
    * (true). A true copia el valor único a todos los meses; a false deja como
    * único el valor de `periodo` y descarta los demás.
    */
-  | { op: 'porPeriodo'; destino: { bloque: string } | { conjunto: string }; valor: boolean; periodo: IdPeriodo };
+  | { op: 'porPeriodo'; destino: { bloque: string } | { conjunto: string }; valor: boolean; periodo: IdPeriodo }
+  // --- Etapa 2B: estructura. `despues` es el id del elemento que queda antes
+  // (en la misma lista); null lo deja al principio.
+  /** Crea o reemplaza la diapositiva y la deja después de `despues`. */
+  | { op: 'diapositiva.poner'; diapositiva: Diapositiva; despues: string | null }
+  | { op: 'diapositiva.quitar'; diapositiva: string }
+  | { op: 'diapositiva.mover'; diapositiva: string; despues: string | null }
+  | { op: 'diapositiva.tipo'; diapositiva: string; valor: Diapositiva['tipo'] }
+  | { op: 'diapositiva.disposicion'; diapositiva: string; valor: Disposicion }
+  /** Crea o reemplaza el bloque en esa diapositiva, después del bloque `despues`. */
+  | { op: 'bloque.poner'; diapositiva: string; bloque: Bloque; despues: string | null }
+  | { op: 'bloque.quitar'; bloque: string }
+  /** Mueve el bloque dentro de su diapositiva. */
+  | { op: 'bloque.mover'; bloque: string; despues: string | null }
+  | { op: 'grafico.config'; bloque: string; valor: ConfigGrafico }
+  | { op: 'tabla.config'; bloque: string; valor: ConfigTabla }
+  /** Crea o reemplaza un conjunto de datos completo. */
+  | { op: 'conjunto.poner'; conjunto: ConjuntoDatos }
+  /** Se salta si algún bloque todavía usa el conjunto. */
+  | { op: 'conjunto.quitar'; conjunto: string }
+  | { op: 'datos.nombre'; conjunto: string; valor: string }
+  /**
+   * Lista completa de columnas. Las filas se ajustan en todos los meses. Se
+   * salta si quita una columna que usa un bloque o la cambia entre texto y
+   * número.
+   */
+  | { op: 'datos.columnas'; conjunto: string; valor: Columna[] }
+  | { op: 'tema'; valor: Tema }
+  /** Agrega el mes (si no existe) y copia en él lo propio de cada mes de `copiarDe`. */
+  | { op: 'periodo.agregar'; periodo: IdPeriodo; copiarDe: IdPeriodo | null }
+  /** Quita el mes y todo lo suyo. Se salta si es el único. */
+  | { op: 'periodo.quitar'; periodo: IdPeriodo };
 
 /**
  * La operación no se puede aplicar a esta presentación: el destino ya no
@@ -87,6 +125,73 @@ function conConjunto(p: Presentacion, id: string, cambiar: (c: ConjuntoDatos) =>
   const conjunto = Object.hasOwn(p.datos, id) ? p.datos[id] : undefined;
   if (!conjunto) throw new OperacionNoAplicable(`No existe el conjunto de datos "${id}".`);
   return { ...p, datos: { ...p.datos, [id]: cambiar(conjunto) } };
+}
+
+/**
+ * Lista con `elemento` justo después del que tiene id `despues` (al principio
+ * si es null). Si ya estaba, lo saca de donde estaba.
+ */
+function ponerDespues<T extends { id: string }>(lista: T[], elemento: T, despues: string | null): T[] {
+  if (despues === elemento.id) throw new OperacionNoAplicable('Un elemento no puede ir después de sí mismo.');
+  const resto = lista.filter((x) => x.id !== elemento.id);
+  if (despues === null) return [elemento, ...resto];
+  const indice = resto.findIndex((x) => x.id === despues);
+  if (indice < 0) throw new OperacionNoAplicable(`No existe "${despues}" para ubicar "${elemento.id}" después.`);
+  return [...resto.slice(0, indice + 1), elemento, ...resto.slice(indice + 1)];
+}
+
+/** Id del elemento anterior, o null si es el primero. */
+function anteriorDe<T extends { id: string }>(lista: T[], id: string): string | null {
+  const indice = lista.findIndex((x) => x.id === id);
+  return indice > 0 ? lista[indice - 1].id : null;
+}
+
+/** Columnas del conjunto que usa cada bloque, para no quitarlas por debajo. */
+export function columnasUsadas(p: Presentacion, conjunto: string): Map<string, string[]> {
+  const usadas = new Map<string, string[]>();
+  const anotar = (clave: string, bloque: string) => usadas.set(clave, [...(usadas.get(clave) ?? []), bloque]);
+  for (const d of p.diapositivas) {
+    for (const b of d.bloques) {
+      if ((b.tipo !== 'grafico' && b.tipo !== 'tabla') || b.datos !== conjunto) continue;
+      if (b.tipo === 'grafico') {
+        anotar(b.ejeX, b.id);
+        for (const serie of b.series) anotar(serie.clave, b.id);
+        if (b.nombres) anotar(b.nombres, b.id);
+      } else {
+        for (const c of b.columnas ?? []) anotar(c, b.id);
+      }
+      if (b.resaltar) anotar(b.resaltar.columna, b.id);
+    }
+  }
+  return usadas;
+}
+
+/** Bloques que muestran el conjunto. */
+export function bloquesQueUsan(p: Presentacion, conjunto: string): string[] {
+  return p.diapositivas.flatMap((d) => d.bloques.filter((b) => (b.tipo === 'grafico' || b.tipo === 'tabla') && b.datos === conjunto).map((b) => b.id));
+}
+
+const esTexto = (tipo: TipoColumna) => tipo === 'texto';
+
+function convertirCelda(valor: Fila[string], antes: TipoColumna, despues: TipoColumna): Fila[string] {
+  if (valor === null || valor === undefined || esTexto(antes) === esTexto(despues)) return valor ?? null;
+  if (esTexto(despues)) return typeof valor === 'number' ? numeroEditable(valor) : valor;
+  if (typeof valor === 'number') return valor;
+  const numero = interpretarNumero(valor);
+  return numero === null || Number.isNaN(numero) ? null : numero;
+}
+
+function ajustarFilas(filas: Fila[], antes: Columna[], despues: Columna[]): Fila[] {
+  const tipoAntes = new Map(antes.map((c) => [c.clave, c.tipo]));
+  return filas.map((fila) => {
+    const nueva: Fila = {};
+    for (const c of despues) {
+      const tipo = tipoAntes.get(c.clave);
+      if (tipo === undefined || !Object.hasOwn(fila, c.clave)) continue;
+      nueva[c.clave] = convertirCelda(fila[c.clave], tipo, c.tipo);
+    }
+    return nueva;
+  });
 }
 
 function exigirPeriodo(p: Presentacion, periodo: IdPeriodo): void {
@@ -219,6 +324,137 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
         throw new OperacionNoAplicable(`El bloque "${id}" no tiene contenido por mes.`);
       });
     }
+
+    case 'diapositiva.poner':
+      return { ...p, diapositivas: ponerDespues(p.diapositivas, op.diapositiva, op.despues) };
+
+    case 'diapositiva.quitar': {
+      if (!p.diapositivas.some((d) => d.id === op.diapositiva)) throw new OperacionNoAplicable(`No existe la diapositiva "${op.diapositiva}".`);
+      if (p.diapositivas.length === 1) throw new OperacionNoAplicable('No se puede quitar la única diapositiva.');
+      return { ...p, diapositivas: p.diapositivas.filter((d) => d.id !== op.diapositiva) };
+    }
+
+    case 'diapositiva.mover': {
+      const d = p.diapositivas.find((x) => x.id === op.diapositiva);
+      if (!d) throw new OperacionNoAplicable(`No existe la diapositiva "${op.diapositiva}".`);
+      return { ...p, diapositivas: ponerDespues(p.diapositivas, d, op.despues) };
+    }
+
+    case 'diapositiva.tipo':
+      return conDiapositiva(p, op.diapositiva, (d) => ({ ...d, tipo: op.valor }));
+
+    case 'diapositiva.disposicion':
+      return conDiapositiva(p, op.diapositiva, (d) => ({ ...d, disposicion: op.valor }));
+
+    case 'bloque.poner': {
+      if (!p.diapositivas.some((d) => d.id === op.diapositiva)) throw new OperacionNoAplicable(`No existe la diapositiva "${op.diapositiva}".`);
+      // Los ids de bloque son únicos en toda la presentación: si ya estaba en
+      // otra diapositiva, sale de allá.
+      const diapositivas = p.diapositivas.map((d) => {
+        if (d.id === op.diapositiva) return { ...d, bloques: ponerDespues(d.bloques, op.bloque, op.despues) };
+        return d.bloques.some((b) => b.id === op.bloque.id) ? { ...d, bloques: d.bloques.filter((b) => b.id !== op.bloque.id) } : d;
+      });
+      return { ...p, diapositivas };
+    }
+
+    case 'bloque.quitar': {
+      const pos = posicionBloque(p, op.bloque);
+      if (!pos) throw new OperacionNoAplicable(`No existe el bloque "${op.bloque}".`);
+      return conDiapositiva(p, p.diapositivas[pos.d].id, (d) => ({ ...d, bloques: d.bloques.filter((b) => b.id !== op.bloque) }));
+    }
+
+    case 'bloque.mover': {
+      const pos = posicionBloque(p, op.bloque);
+      if (!pos) throw new OperacionNoAplicable(`No existe el bloque "${op.bloque}".`);
+      const d = p.diapositivas[pos.d];
+      return conDiapositiva(p, d.id, (x) => ({ ...x, bloques: ponerDespues(x.bloques, d.bloques[pos.b], op.despues) }));
+    }
+
+    case 'grafico.config':
+      return conBloque(p, op.bloque, (b) => {
+        if (b.tipo !== 'grafico') throw new OperacionNoAplicable(`El bloque "${op.bloque}" no es un gráfico.`);
+        return { ...op.valor, id: b.id, tipo: 'grafico' };
+      });
+
+    case 'tabla.config':
+      return conBloque(p, op.bloque, (b) => {
+        if (b.tipo !== 'tabla') throw new OperacionNoAplicable(`El bloque "${op.bloque}" no es una tabla.`);
+        return { ...op.valor, id: b.id, tipo: 'tabla' };
+      });
+
+    case 'conjunto.poner':
+      return { ...p, datos: { ...p.datos, [op.conjunto.id]: op.conjunto } };
+
+    case 'conjunto.quitar': {
+      if (!Object.hasOwn(p.datos, op.conjunto)) throw new OperacionNoAplicable(`No existe el conjunto de datos "${op.conjunto}".`);
+      if (bloquesQueUsan(p, op.conjunto).length) throw new OperacionNoAplicable(`El conjunto "${op.conjunto}" todavía se usa.`);
+      return { ...p, datos: sinClave(p.datos, op.conjunto) };
+    }
+
+    case 'datos.nombre':
+      return conConjunto(p, op.conjunto, (c) => ({ ...c, nombre: op.valor }));
+
+    case 'datos.columnas':
+      return conConjunto(p, op.conjunto, (c) => {
+        const nuevas = new Map(op.valor.map((col) => [col.clave, col]));
+        for (const [clave] of columnasUsadas(p, op.conjunto)) {
+          const antes = c.columnas.find((col) => col.clave === clave);
+          const despues = nuevas.get(clave);
+          if (!despues) throw new OperacionNoAplicable(`La columna "${clave}" se usa en un bloque.`);
+          if (antes && esTexto(antes.tipo) !== esTexto(despues.tipo)) throw new OperacionNoAplicable(`La columna "${clave}" se usa en un bloque y no puede cambiar entre texto y número.`);
+        }
+        const ajustar = (filas: Fila[]) => ajustarFilas(filas, c.columnas, op.valor);
+        const resultado: ConjuntoDatos = { ...c, columnas: op.valor };
+        if (c.filas) resultado.filas = ajustar(c.filas);
+        if (c.filasPorPeriodo) resultado.filasPorPeriodo = Object.fromEntries(Object.entries(c.filasPorPeriodo).map(([m, f]) => [m, ajustar(f)]));
+        return resultado;
+      });
+
+    case 'tema':
+      return { ...p, tema: op.valor };
+
+    case 'periodo.agregar': {
+      if (p.periodos.includes(op.periodo)) return p;
+      if (op.copiarDe !== null) exigirPeriodo(p, op.copiarDe);
+      const periodos = [...p.periodos, op.periodo].sort();
+      const origen = op.copiarDe;
+      if (origen === null) return { ...p, periodos };
+      const copiar = <T>(dato: PorPeriodo<T>): PorPeriodo<T> =>
+        dato.porPeriodo && dato.valores && Object.hasOwn(dato.valores, origen) ? { ...dato, valores: { ...dato.valores, [op.periodo]: dato.valores[origen] } } : dato;
+      const datos = Object.fromEntries(Object.entries(p.datos).map(([k, c]) => [
+        k,
+        c.porPeriodo && c.filasPorPeriodo && Object.hasOwn(c.filasPorPeriodo, origen) ? { ...c, filasPorPeriodo: { ...c.filasPorPeriodo, [op.periodo]: c.filasPorPeriodo[origen] } } : c,
+      ]));
+      const diapositivas = p.diapositivas.map((d) => ({
+        ...d,
+        bloques: d.bloques.map((b): Bloque => {
+          if (b.tipo === 'texto') return { ...b, contenido: copiar(b.contenido) };
+          if (b.tipo === 'cifras') return { ...b, cifras: copiar(b.cifras) };
+          return b;
+        }),
+      }));
+      return { ...p, periodos, datos, diapositivas };
+    }
+
+    case 'periodo.quitar': {
+      exigirPeriodo(p, op.periodo);
+      if (p.periodos.length === 1) throw new OperacionNoAplicable('No se puede quitar el único mes.');
+      const quitar = <T>(dato: PorPeriodo<T>): PorPeriodo<T> =>
+        dato.porPeriodo && dato.valores ? { ...dato, valores: sinClave(dato.valores, op.periodo) } : dato;
+      const datos = Object.fromEntries(Object.entries(p.datos).map(([k, c]) => [
+        k,
+        c.filasPorPeriodo ? { ...c, filasPorPeriodo: sinClave(c.filasPorPeriodo, op.periodo) } : c,
+      ]));
+      const diapositivas = p.diapositivas.map((d) => ({
+        ...d,
+        bloques: d.bloques.map((b): Bloque => {
+          if (b.tipo === 'texto') return { ...b, contenido: quitar(b.contenido) };
+          if (b.tipo === 'cifras') return { ...b, cifras: quitar(b.cifras) };
+          return b;
+        }),
+      }));
+      return { ...p, periodos: p.periodos.filter((m) => m !== op.periodo), datos, diapositivas };
+    }
   }
 }
 
@@ -321,6 +557,117 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
       }
       return [];
     }
+
+    case 'diapositiva.poner': {
+      const antes = p.diapositivas.find((d) => d.id === op.diapositiva.id);
+      if (!antes) return [{ op: 'diapositiva.quitar', diapositiva: op.diapositiva.id }];
+      return [{ op: 'diapositiva.poner', diapositiva: antes, despues: anteriorDe(p.diapositivas, antes.id) }];
+    }
+
+    case 'diapositiva.quitar': {
+      const antes = p.diapositivas.find((d) => d.id === op.diapositiva);
+      return antes ? [{ op: 'diapositiva.poner', diapositiva: antes, despues: anteriorDe(p.diapositivas, antes.id) }] : [];
+    }
+
+    case 'diapositiva.mover':
+      return p.diapositivas.some((d) => d.id === op.diapositiva)
+        ? [{ op: op.op, diapositiva: op.diapositiva, despues: anteriorDe(p.diapositivas, op.diapositiva) }]
+        : [];
+
+    case 'diapositiva.tipo': {
+      const d = p.diapositivas.find((x) => x.id === op.diapositiva);
+      return d ? [{ op: op.op, diapositiva: d.id, valor: d.tipo }] : [];
+    }
+
+    case 'diapositiva.disposicion': {
+      const d = p.diapositivas.find((x) => x.id === op.diapositiva);
+      return d ? [{ op: op.op, diapositiva: d.id, valor: d.disposicion ?? 'una' }] : [];
+    }
+
+    case 'bloque.poner': {
+      const pos = posicionBloque(p, op.bloque.id);
+      if (!pos) return [{ op: 'bloque.quitar', bloque: op.bloque.id }];
+      const d = p.diapositivas[pos.d];
+      return [{ op: 'bloque.poner', diapositiva: d.id, bloque: d.bloques[pos.b], despues: anteriorDe(d.bloques, op.bloque.id) }];
+    }
+
+    case 'bloque.quitar': {
+      const pos = posicionBloque(p, op.bloque);
+      if (!pos) return [];
+      const d = p.diapositivas[pos.d];
+      return [{ op: 'bloque.poner', diapositiva: d.id, bloque: d.bloques[pos.b], despues: anteriorDe(d.bloques, op.bloque) }];
+    }
+
+    case 'bloque.mover': {
+      const pos = posicionBloque(p, op.bloque);
+      return pos ? [{ op: op.op, bloque: op.bloque, despues: anteriorDe(p.diapositivas[pos.d].bloques, op.bloque) }] : [];
+    }
+
+    case 'grafico.config': {
+      const b = bloqueDe(p, op.bloque);
+      if (b?.tipo !== 'grafico') return [];
+      const { id: _id, tipo: _tipo, ...valor } = b;
+      return [{ op: op.op, bloque: op.bloque, valor }];
+    }
+
+    case 'tabla.config': {
+      const b = bloqueDe(p, op.bloque);
+      if (b?.tipo !== 'tabla') return [];
+      const { id: _id, tipo: _tipo, ...valor } = b;
+      return [{ op: op.op, bloque: op.bloque, valor }];
+    }
+
+    case 'conjunto.poner': {
+      const antes = Object.hasOwn(p.datos, op.conjunto.id) ? p.datos[op.conjunto.id] : undefined;
+      return antes ? [{ op: 'conjunto.poner', conjunto: antes }] : [{ op: 'conjunto.quitar', conjunto: op.conjunto.id }];
+    }
+
+    case 'conjunto.quitar': {
+      const antes = Object.hasOwn(p.datos, op.conjunto) ? p.datos[op.conjunto] : undefined;
+      return antes ? [{ op: 'conjunto.poner', conjunto: antes }] : [];
+    }
+
+    case 'datos.nombre': {
+      const c = Object.hasOwn(p.datos, op.conjunto) ? p.datos[op.conjunto] : undefined;
+      return c ? [{ op: op.op, conjunto: c.id, valor: c.nombre }] : [];
+    }
+
+    case 'datos.columnas': {
+      const c = Object.hasOwn(p.datos, op.conjunto) ? p.datos[op.conjunto] : undefined;
+      if (!c) return [];
+      // Las columnas primero: las filas de vuelta usan las claves de antes.
+      const vuelta: Operacion[] = [{ op: 'datos.columnas', conjunto: c.id, valor: c.columnas }];
+      if (!c.porPeriodo) vuelta.push({ op: 'datos.filas', conjunto: c.id, periodo: null, valor: c.filas ?? null });
+      else for (const m of p.periodos) vuelta.push({ op: 'datos.filas', conjunto: c.id, periodo: m, valor: c.filasPorPeriodo?.[m] ?? null });
+      return vuelta;
+    }
+
+    case 'tema':
+      return [{ op: 'tema', valor: p.tema }];
+
+    case 'periodo.agregar':
+      return p.periodos.includes(op.periodo) ? [] : [{ op: 'periodo.quitar', periodo: op.periodo }];
+
+    case 'periodo.quitar': {
+      const m = op.periodo;
+      if (!p.periodos.includes(m) || p.periodos.length === 1) return [];
+      const vuelta: Operacion[] = [{ op: 'periodo.agregar', periodo: m, copiarDe: null }];
+      for (const c of Object.values(p.datos)) {
+        const filas = c.porPeriodo ? c.filasPorPeriodo?.[m] : undefined;
+        if (filas) vuelta.push({ op: 'datos.filas', conjunto: c.id, periodo: m, valor: filas });
+      }
+      for (const d of p.diapositivas) {
+        for (const b of d.bloques) {
+          if (b.tipo === 'texto' && b.contenido.porPeriodo && b.contenido.valores?.[m] !== undefined) {
+            vuelta.push({ op: 'texto.contenido', bloque: b.id, periodo: m, valor: b.contenido.valores[m] });
+          }
+          if (b.tipo === 'cifras' && b.cifras.porPeriodo && b.cifras.valores?.[m] !== undefined) {
+            vuelta.push({ op: 'cifras.valor', bloque: b.id, periodo: m, valor: b.cifras.valores[m] });
+          }
+        }
+      }
+      return vuelta;
+    }
   }
 }
 
@@ -345,8 +692,29 @@ export function claveDe(op: Operacion): string | null {
       const campos = (['nombre', 'decimales', 'unidad'] as const).filter((campo) => op[campo] !== undefined);
       return `${op.op}|${op.conjunto}|${op.clave}|${campos.join(',')}`;
     }
+    case 'diapositiva.tipo':
+    case 'diapositiva.disposicion':
+      return `${op.op}|${op.diapositiva}`;
+    case 'grafico.config':
+    case 'tabla.config':
+      return `${op.op}|${op.bloque}`;
+    case 'datos.nombre':
+      return `${op.op}|${op.conjunto}`;
+    case 'tema':
+      return op.op;
     case 'porPeriodo':
-      // Cambia el significado de las operaciones vecinas: nunca se compacta.
+    case 'diapositiva.poner':
+    case 'diapositiva.quitar':
+    case 'diapositiva.mover':
+    case 'bloque.poner':
+    case 'bloque.quitar':
+    case 'bloque.mover':
+    case 'conjunto.poner':
+    case 'conjunto.quitar':
+    case 'datos.columnas':
+    case 'periodo.agregar':
+    case 'periodo.quitar':
+      // Cambian el significado de las operaciones vecinas: nunca se compactan.
       return null;
   }
 }

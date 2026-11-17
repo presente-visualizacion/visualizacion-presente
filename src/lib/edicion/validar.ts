@@ -8,8 +8,8 @@
 // coincidir con los tipos, el compilador avisa.
 
 import { z } from 'zod';
-import type { Bloque, Cifra, Columna, ConjuntoDatos, Diapositiva, Fila, Presentacion, Tema } from '../tipos';
-import type { Operacion } from './operaciones';
+import type { Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, Fila, Presentacion, Tema } from '../tipos';
+import type { ConfigGrafico, ConfigTabla, Operacion } from './operaciones';
 
 // Mensajes de error en español.
 z.config(z.locales.es());
@@ -91,35 +91,43 @@ function porPeriodo<T extends z.ZodType>(valor: T) {
 
 const resaltado = z.strictObject({ columna: clave, valor: z.string().max(TOPES.celdaTexto) });
 
+export const FORMAS = ['lineas', 'barras', 'barrasHorizontales', 'area', 'combinado', 'circular', 'dispersion', 'radar', 'cascada'] as const;
+
+const camposGrafico = {
+  datos: id,
+  forma: z.enum(FORMAS),
+  ejeX: clave,
+  series: z.array(z.strictObject({ clave, color: color.optional(), tipo: z.enum(['barras', 'lineas']).optional() })).min(1).max(12),
+  apilado: z.boolean().optional(),
+  etiquetas: z.boolean().optional(),
+  resaltar: resaltado.optional(),
+  total: z.boolean().optional(),
+  nombres: clave.optional(),
+};
+const camposTabla = {
+  datos: id,
+  columnas: z.array(clave).min(1).max(TOPES.columnas).optional(),
+  resaltar: resaltado.optional(),
+};
+const configGrafico = z.strictObject(camposGrafico) satisfies z.ZodType<ConfigGrafico>;
+const configTabla = z.strictObject(camposTabla) satisfies z.ZodType<ConfigTabla>;
+
 const bloque = z.discriminatedUnion('tipo', [
-  z.strictObject({
-    id,
-    tipo: z.literal('grafico'),
-    datos: id,
-    forma: z.enum(['lineas', 'barras', 'barrasHorizontales', 'area']),
-    ejeX: clave,
-    series: z.array(z.strictObject({ clave, color: color.optional() })).min(1).max(12),
-    apilado: z.boolean().optional(),
-    etiquetas: z.boolean().optional(),
-    resaltar: resaltado.optional(),
-  }),
-  z.strictObject({
-    id,
-    tipo: z.literal('tabla'),
-    datos: id,
-    columnas: z.array(clave).min(1).max(TOPES.columnas).optional(),
-    resaltar: resaltado.optional(),
-  }),
+  z.strictObject({ id, tipo: z.literal('grafico'), ...camposGrafico }),
+  z.strictObject({ id, tipo: z.literal('tabla'), ...camposTabla }),
   z.strictObject({ id, tipo: z.literal('texto'), contenido: porPeriodo(texto) }),
   z.strictObject({ id, tipo: z.literal('cifras'), cifras: porPeriodo(cifras) }),
 ]) satisfies z.ZodType<Bloque>;
 
+const tipoDiapositiva = z.enum(['portada', 'contenido', 'cierre']);
+const disposicion = z.enum(['una', 'columnas', 'filas', 'principal-lateral']);
+
 const diapositiva = z.strictObject({
   id,
-  tipo: z.enum(['portada', 'contenido', 'cierre']),
+  tipo: tipoDiapositiva,
   titulo: z.string().max(TOPES.titulo),
   subtitulo: z.string().max(TOPES.titulo).optional(),
-  disposicion: z.enum(['una', 'columnas', 'filas', 'principal-lateral']).optional(),
+  disposicion: disposicion.optional(),
   bloques: z.array(bloque).max(TOPES.bloquesPorDiapositiva),
 }) satisfies z.ZodType<Diapositiva>;
 
@@ -157,6 +165,23 @@ const operacion = z.discriminatedUnion('op', [
     valor: z.boolean(),
     periodo: idPeriodo,
   }),
+  z.strictObject({ op: z.literal('diapositiva.poner'), diapositiva, despues: id.nullable() }),
+  z.strictObject({ op: z.literal('diapositiva.quitar'), diapositiva: id }),
+  z.strictObject({ op: z.literal('diapositiva.mover'), diapositiva: id, despues: id.nullable() }),
+  z.strictObject({ op: z.literal('diapositiva.tipo'), diapositiva: id, valor: tipoDiapositiva }),
+  z.strictObject({ op: z.literal('diapositiva.disposicion'), diapositiva: id, valor: disposicion }),
+  z.strictObject({ op: z.literal('bloque.poner'), diapositiva: id, bloque, despues: id.nullable() }),
+  z.strictObject({ op: z.literal('bloque.quitar'), bloque: id }),
+  z.strictObject({ op: z.literal('bloque.mover'), bloque: id, despues: id.nullable() }),
+  z.strictObject({ op: z.literal('grafico.config'), bloque: id, valor: configGrafico }),
+  z.strictObject({ op: z.literal('tabla.config'), bloque: id, valor: configTabla }),
+  z.strictObject({ op: z.literal('conjunto.poner'), conjunto }),
+  z.strictObject({ op: z.literal('conjunto.quitar'), conjunto: id }),
+  z.strictObject({ op: z.literal('datos.nombre'), conjunto: id, valor: z.string().max(TOPES.titulo) }),
+  z.strictObject({ op: z.literal('datos.columnas'), conjunto: id, valor: z.array(columna).min(1).max(TOPES.columnas) }),
+  z.strictObject({ op: z.literal('tema'), valor: tema }),
+  z.strictObject({ op: z.literal('periodo.agregar'), periodo: idPeriodo, copiarDe: idPeriodo.nullable() }),
+  z.strictObject({ op: z.literal('periodo.quitar'), periodo: idPeriodo }),
 ]) satisfies z.ZodType<Operacion>;
 
 // ---------------------------------------------------------------------------
@@ -197,6 +222,27 @@ function revisarFilas(conj: ConjuntoDatos, juego: Fila[], donde: string, errores
       if (errores.length > 20) return;
     }
   }
+}
+
+/** Series que admite cada forma: [mínimo, máximo]. */
+export const SERIES_POR_FORMA: Record<(typeof FORMAS)[number], [number, number]> = {
+  lineas: [1, 12], barras: [1, 12], barrasHorizontales: [1, 12], area: [1, 12], combinado: [1, 12],
+  circular: [1, 1], dispersion: [1, 1], cascada: [1, 1], radar: [1, 6],
+};
+
+/** Lo que exige cada forma de gráfico (ver "Tipos de gráfico" en PLAN.md). */
+export function problemasDeForma(b: BloqueGrafico, conj: ConjuntoDatos): string[] {
+  const errores: string[] = [];
+  const tipo = new Map(conj.columnas.map((c) => [c.clave, c.tipo]));
+  const [minimo, maximo] = SERIES_POR_FORMA[b.forma];
+  if (b.series.length < minimo || b.series.length > maximo) {
+    errores.push(minimo === maximo ? `este tipo de gráfico usa exactamente ${minimo} serie.` : `este tipo de gráfico usa de ${minimo} a ${maximo} series.`);
+  }
+  for (const s of b.series) if (tipo.get(s.clave) === 'texto') errores.push(`la serie "${s.clave}" debe ser una columna numérica.`);
+  for (const r of repetidos(b.series.map((s) => s.clave))) errores.push(`la serie "${r}" está repetida.`);
+  if (b.forma === 'dispersion' && tipo.get(b.ejeX) === 'texto') errores.push('en la dispersión el eje debe ser una columna numérica.');
+  if (b.nombres && tipo.get(b.nombres) !== undefined && tipo.get(b.nombres) !== 'texto') errores.push('los nombres de los puntos deben ser una columna de texto.');
+  return errores;
 }
 
 /**
@@ -241,7 +287,9 @@ export function revisarReferencias(p: Presentacion): string[] {
         const columnas = new Set(conj.columnas.map((c) => c.clave));
         const usadas = b.tipo === 'grafico' ? [b.ejeX, ...b.series.map((s) => s.clave)] : b.columnas ?? [];
         if (b.resaltar) usadas.push(b.resaltar.columna);
+        if (b.tipo === 'grafico' && b.nombres) usadas.push(b.nombres);
         for (const c of usadas) if (!columnas.has(c)) errores.push(`${donde}: la columna "${c}" no existe en "${b.datos}".`);
+        if (b.tipo === 'grafico') errores.push(...problemasDeForma(b, conj).map((e) => `${donde}: ${e}`));
       } else {
         const dato = b.tipo === 'texto' ? b.contenido : b.cifras;
         if (dato.porPeriodo && dato.valor !== undefined) errores.push(`${donde}: es propio de cada mes pero trae un valor único.`);

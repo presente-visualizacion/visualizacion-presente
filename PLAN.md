@@ -907,7 +907,7 @@ pruebas/                                     operaciones y validación nuevas
 
 ### Orden de trabajo
 
-- [ ] **2B.1 Modelo y operaciones**: tipos, operaciones, inversas, validación,
+- [x] **2B.1 Modelo y operaciones**: tipos, operaciones, inversas, validación,
   plantillas y pruebas.
 - [ ] **2B.2 Gráficos nuevos** en `Grafico.tsx`.
 - [ ] **2B.3 Pantallas**: panel con pestañas, estructura, configuración de
