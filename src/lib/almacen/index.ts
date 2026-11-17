@@ -62,6 +62,10 @@ async function crearAlmacen(): Promise<Almacen> {
  * - Sin ella, en producción: presentación de muestra, solo lectura.
  */
 export function obtenerAlmacen(): Promise<Almacen> {
-  global.__vpAlmacen ??= crearAlmacen();
+  // Si falla al crearse, el siguiente pedido lo intenta de nuevo.
+  global.__vpAlmacen ??= crearAlmacen().catch((error) => {
+    global.__vpAlmacen = undefined;
+    throw error;
+  });
   return global.__vpAlmacen;
 }
