@@ -1,6 +1,6 @@
 // Piezas que comparten los dibujos de gráficos (Grafico.tsx y GraficosEspeciales.tsx).
 
-import type { BloqueGrafico, Columna, ConjuntoDatos, Fila, Tema } from '@/lib/tipos';
+import type { BloqueGrafico, Columna, ConjuntoDatos, Fila, RangoEje, Tema } from '@/lib/tipos';
 
 export const TINTA = '#241A20';
 export const SUAVE = '#675C63';
@@ -22,6 +22,18 @@ export interface SerieLista {
   /** Solo en el combinado. */
   tipo?: 'barras' | 'lineas';
   punteada?: boolean;
+}
+
+type Extremo = number | 'auto';
+
+/**
+ * Dominio del eje de valores: el rango que eligió la usuaria y, en lo que
+ * falte, el de siempre. Con rango fijo, lo que se salga se recorta en lugar de
+ * estirar el eje.
+ */
+export function dominioEje(rango: RangoEje | undefined, porDefecto: [Extremo, Extremo]): { domain: [Extremo, Extremo]; allowDataOverflow?: boolean } {
+  if (!rango || (rango.desde === undefined && rango.hasta === undefined)) return { domain: porDefecto };
+  return { domain: [rango.desde ?? porDefecto[0], rango.hasta ?? porDefecto[1]], allowDataOverflow: true };
 }
 
 /** Trazo de una línea punteada. */

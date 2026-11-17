@@ -140,6 +140,17 @@ export interface BloqueGrafico extends BaseBloque {
   nombres?: string;
   /** Columna que se escribe debajo de cada categoría del eje ("TPP 18,29%"). */
   detalleEje?: string;
+  /**
+   * Desde y hasta dónde va el eje de los valores (el vertical; en barras
+   * horizontales, el horizontal). Lo que falte se calcula solo. En la misma
+   * unidad que los datos: 3 es 3 % si la columna es porcentaje.
+   */
+  rangoEje?: RangoEje;
+}
+
+export interface RangoEje {
+  desde?: number;
+  hasta?: number;
 }
 
 /**
@@ -255,4 +266,6 @@ export interface ResumenPresentacion {
   periodos: IdPeriodo[];
   diapositivas: number;
   actualizado: string;
+  /** Solo en la lista de eliminadas: cuándo se eliminó. */
+  eliminado?: string;
 }

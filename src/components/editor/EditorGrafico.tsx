@@ -4,17 +4,18 @@
 // cambio es una operación `grafico.config` con la configuración completa.
 // Qué usa cada tipo está en "Tipos de gráfico" de PLAN.md.
 
-import { useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import {
   ArrowDown, ArrowUp, ChartArea, ChartBar, ChartColumn, ChartColumnDecreasing, ChartLine, ChartNoAxesCombined, ChartPie,
   ChartRadar, ChartScatter, type LucideIcon,
 } from 'lucide-react';
-import { filasDe } from '@/lib/datos';
+import { columnaDe, filasDe } from '@/lib/datos';
+import { interpretarNumero, numeroEditable } from '@/lib/formato';
 import type { ConfigGrafico, Operacion } from '@/lib/edicion/operaciones';
-import { configPara, esNumerica, motivoNoDisponible } from '@/lib/edicion/plantillas';
+import { CON_RANGO_EJE, configPara, esNumerica, motivoNoDisponible } from '@/lib/edicion/plantillas';
 import { FORMAS, SERIES_POR_FORMA } from '@/lib/edicion/validar';
-import type { BloqueGrafico, ConjuntoDatos, FormaGrafico, IdPeriodo, Presentacion, Resaltado, Serie } from '@/lib/tipos';
-import { BotonIcono, Casilla, Opcion, Subtitulo } from './piezas';
+import type { BloqueGrafico, Columna, ConjuntoDatos, FormaGrafico, IdPeriodo, Presentacion, RangoEje, Resaltado, Serie } from '@/lib/tipos';
+import { BotonIcono, Casilla, CLASE_CAMPO, Opcion, Subtitulo } from './piezas';
 
 export const FORMAS_INFO: Record<FormaGrafico, { nombre: string; icono: LucideIcon; ayuda: string }> = {
   lineas: { nombre: 'Líneas', icono: ChartLine, ayuda: 'Para ver cómo cambian una o más series en el tiempo.' },
@@ -241,8 +242,106 @@ export function EditorGrafico({ presentacion, bloque, periodo, cambiar }: Props)
         )}
       </div>
 
+      {CON_RANGO_EJE.includes(forma) && (
+        <SelectorRangoEje
+          rango={bloque.rangoEje}
+          columna={columnaDe(conjunto, bloque.series[0]?.clave ?? '')}
+          etiqueta={forma === 'barrasHorizontales' ? 'Rango del eje horizontal (valores)' : forma === 'radar' ? 'Rango del radar (del centro al borde)' : 'Rango del eje vertical (valores)'}
+          onCambiar={(rangoEje) => poner({ rangoEje })}
+        />
+      )}
+
       {CON_RESALTAR.includes(forma) && (
         <SelectorResaltado conjunto={conjunto} periodo={periodo} resaltar={bloque.resaltar} onCambiar={(resaltar) => poner({ resaltar })} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Desde y hasta dónde va el eje de los valores. Vacío = automático. Se guarda
+ * al salir del campo o con Enter, no con cada tecla.
+ */
+function SelectorRangoEje({ rango, columna, etiqueta, onCambiar }: {
+  rango?: RangoEje;
+  columna?: Columna;
+  etiqueta: string;
+  onCambiar: (rango: RangoEje | undefined) => void;
+}) {
+  const id = useId();
+  const comoTexto = (v?: number) => (v === undefined ? '' : numeroEditable(v));
+  const [desde, setDesde] = useState(comoTexto(rango?.desde));
+  const [hasta, setHasta] = useState(comoTexto(rango?.hasta));
+  const [aviso, setAviso] = useState<string | null>(null);
+  // Si el rango cambia por fuera (deshacer, otra persona), se muestra el nuevo.
+  useEffect(() => {
+    setDesde(comoTexto(rango?.desde));
+    setHasta(comoTexto(rango?.hasta));
+    setAviso(null);
+  }, [rango?.desde, rango?.hasta]);
+
+  const unidad = columna?.tipo === 'porcentaje' ? '%' : columna?.unidad ? ` ${columna.unidad}` : '';
+  const leer = (texto: string): number | undefined | null => {
+    if (texto.trim() === '') return undefined;
+    const n = interpretarNumero(texto);
+    return n === null || Number.isNaN(n) ? null : n;
+  };
+
+  const guardar = (textoDesde = desde, textoHasta = hasta) => {
+    const d = leer(textoDesde);
+    const h = leer(textoHasta);
+    if (d === null || h === null) return setAviso('Escribe un número, por ejemplo 3 o 3,5. Déjalo vacío para que sea automático.');
+    if (d !== undefined && h !== undefined && d >= h) return setAviso('"Desde" debe ser menor que "Hasta".');
+    setAviso(null);
+    if (d === rango?.desde && h === rango?.hasta) return;
+    const nuevo: RangoEje = {};
+    if (d !== undefined) nuevo.desde = d;
+    if (h !== undefined) nuevo.hasta = h;
+    onCambiar(d === undefined && h === undefined ? undefined : nuevo);
+  };
+
+  const campo = (nombre: string, valor: string, poner: (v: string) => void) => (
+    <label className="flex min-w-0 flex-1 flex-col gap-1">
+      <span className="text-[13px] text-tinta-suave">{nombre}{unidad && ` (${unidad.trim()})`}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={valor}
+        placeholder="Automático"
+        aria-describedby={`${id}-nota`}
+        aria-invalid={Boolean(aviso) || undefined}
+        onChange={(e) => poner(e.target.value)}
+        onBlur={() => guardar()}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); guardar(); } }}
+        className={`${CLASE_CAMPO} h-10 py-0`}
+      />
+    </label>
+  );
+
+  const fijo = rango?.desde !== undefined || rango?.hasta !== undefined;
+  return (
+    <div>
+      <Subtitulo>{etiqueta}</Subtitulo>
+      <div className="mt-1 flex gap-2">
+        {campo('Desde', desde, setDesde)}
+        {campo('Hasta', hasta, setHasta)}
+      </div>
+      {aviso ? (
+        <p id={`${id}-nota`} role="alert" className="mt-1 text-[13px] leading-snug text-[#8E1015]">{aviso}</p>
+      ) : (
+        <p id={`${id}-nota`} className="mt-1 text-[13px] leading-snug text-tinta-suave">
+          {fijo
+            ? 'Rango fijo para todos los meses. Lo que quede por fuera se corta.'
+            : 'Vacío = automático. Escribe, por ejemplo, 3 para que el eje empiece en 3 en lugar de 0.'}
+          {fijo && (
+            <>
+              {' '}
+              <button type="button" className="underline underline-offset-2 hover:text-tinta" onClick={() => { setDesde(''); setHasta(''); onCambiar(undefined); }}>
+                Volver a automático
+              </button>
+            </>
+          )}
+        </p>
       )}
     </div>
   );

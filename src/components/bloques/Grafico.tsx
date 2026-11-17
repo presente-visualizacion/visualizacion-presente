@@ -9,7 +9,7 @@ import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import type { Columna, Fila } from '@/lib/tipos';
 import {
-  anchoTexto, BLANCO, ejeCategorias, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, reducirMovimiento, SUAVE, TINTA,
+  anchoTexto, BLANCO, dominioEje, ejeCategorias, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, reducirMovimiento, SUAVE, TINTA,
   type PropsGrafico, type SerieLista,
 } from './graficoComun';
 import { Cascada, Circular, Dispersion } from './GraficosEspeciales';
@@ -89,6 +89,8 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   const anchoValores = Math.ceil(
     Math.max(
       anchoTexto(marcaEje(Math.ceil(extremos.maximo * 1.2), columnaValor), 15),
+      anchoTexto(marcaEje(bloque.rangoEje?.hasta ?? 0, columnaValor), 15),
+      anchoTexto(marcaEje(bloque.rangoEje?.desde ?? 0, columnaValor), 15),
       anchoTexto(marcaEje(Math.floor(extremos.minimo), columnaValor), 15),
       anchoTexto(columnaValor?.tipo === 'porcentaje' ? '00,5%' : '0', 15),
     ) + 14,
@@ -148,7 +150,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
     grafico = (
       <BarChart data={filas} layout="vertical" margin={{ top: 4, right: anchoEtiqueta, bottom: 0, left: 0 }} barCategoryGap="28%">
         <CartesianGrid horizontal={false} stroke={LINEA} />
-        <XAxis type="number" domain={[0, 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        <XAxis type="number" {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
         <YAxis type="category" dataKey={bloque.ejeX} width={anchoCategorias} interval={0} {...ejeCategorias} tick={{ fontSize: 16, fill: TINTA }} />
         {globo}
         {visibles.map((s) => (
@@ -169,7 +171,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
       <BarChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
         <CartesianGrid vertical={false} stroke={LINEA} />
         <XAxis dataKey={bloque.ejeX} {...ejeCategoriasBarras} />
-        <YAxis width={anchoValores} domain={[0, 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
         {/* Con varias series, la categoría resaltada lleva una franja de fondo. */}
         {bloque.resaltar && series.length > 1 && filas.filter(esResaltada).map((f, i) => (
           <ReferenceArea key={i} x1={String(f[bloque.ejeX])} x2={String(f[bloque.ejeX])} fill="#FCEEF4" fillOpacity={1} strokeOpacity={0} />
@@ -200,7 +202,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
       <ComposedChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
         <CartesianGrid vertical={false} stroke={LINEA} />
         <XAxis dataKey={bloque.ejeX} {...ejeCategoriasBarras} />
-        <YAxis width={anchoValores} domain={[minimo < 0 ? 'auto' : 0, 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [minimo < 0 ? 'auto' : 0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
         {globo}
         {visibles.map((s) => (s.tipo === 'lineas' ? (
           <Line
@@ -222,7 +224,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
       <RadarChart data={filas} outerRadius="78%" margin={{ top: 8, right: 24, bottom: 8, left: 24 }}>
         <PolarGrid stroke={LINEA} />
         <PolarAngleAxis dataKey={bloque.ejeX} tick={{ fontSize: 15, fill: TINTA }} />
-        <PolarRadiusAxis angle={90} axisLine={false} tick={{ fontSize: 13, fill: SUAVE }} tickFormatter={(v: number) => marcaEje(v, columnaValor)} />
+        <PolarRadiusAxis angle={90} {...dominioEje(bloque.rangoEje, [0, 'auto'])} axisLine={false} tick={{ fontSize: 13, fill: SUAVE }} tickFormatter={(v: number) => marcaEje(v, columnaValor)} />
         {globo}
         {visibles.map((s) => (
           <Radar
@@ -237,7 +239,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
       <AreaChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke={LINEA} />
         <XAxis dataKey={bloque.ejeX} minTickGap={24} {...ejeCategorias} />
-        <YAxis width={anchoValores} domain={[0, 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
         {globo}
         {visibles.map((s) => (
           <Area
@@ -253,7 +255,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
       <LineChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke={LINEA} />
         <XAxis dataKey={bloque.ejeX} minTickGap={24} {...ejeCategorias} />
-        <YAxis width={anchoValores} domain={['auto', 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, ['auto', 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
         {globo}
         {visibles.map((s) => (
           <Line

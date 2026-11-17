@@ -72,8 +72,13 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
   2026-11-17 (ver "Diseño de la etapa 4"). **Falta un paso de la usuaria:**
   importar la presentación en el sitio publicado ("Lo que hace la usuaria",
   en el diseño de la etapa 4).
-- [ ] **Etapa 5. Cierre.** Crear y duplicar presentaciones, PDF, respaldo en
-  Excel, historial de versiones, comparar con el mes anterior.
+- [x] **Ajustes antes de la etapa 5** (2026-11-17, ver "Ajustes del
+  2026-11-17"): crear, duplicar, eliminar y recuperar presentaciones desde el
+  inicio; rango del eje de valores en los gráficos; mover una diapositiva a
+  cualquier posición.
+- [ ] **Etapa 5. Cierre.** PDF, respaldo en Excel, historial de versiones,
+  comparar con el mes anterior. (Crear y duplicar presentaciones ya quedó
+  hecho en los ajustes del 2026-11-17.)
 
 Al terminar cada etapa: compilar, revisar en navegador (escritorio y móvil),
 revisar que no se cuelen datos reales, subir a GitHub y marcarla aquí.
@@ -271,7 +276,7 @@ No entra (para no mezclar etapas):
 - 2B: agregar, quitar, duplicar y reordenar diapositivas y bloques; tipo de
   gráfico, series y colores; tema; "Nuevo mes"; agregar o quitar columnas.
 - Etapa 3: cargar archivos de Excel.
-- Etapa 5: pantalla del historial, crear, duplicar y borrar presentaciones.
+- Etapa 5: pantalla del historial. (Crear, duplicar y eliminar presentaciones: hecho el 2026-11-17.)
 
 ### Decisiones
 
@@ -1374,7 +1379,73 @@ subirlo):
 3. Escribir la nota al pie de "Benchmarking CDATs" y, si se quiere, la
    cifra del nombre de la serie "Servicio del crédito" (ver arriba).
 4. Cuando la nueva esté bien, la presentación de muestra puede quedarse o
-   borrarse (borrar presentaciones llega en la etapa 5).
+   mandarse a la papelera desde el inicio (ícono de basura).
+
+## Ajustes del 2026-11-17 (antes de la etapa 5)
+
+### Crear y eliminar presentaciones
+
+- En el inicio: botón **"Nueva presentación"**. Ventana con nombre y "Partir
+  de": *En blanco* (portada con el nombre, una diapositiva de contenido vacía
+  y cierre, en un mes que se elige; por defecto el mes anterior al de hoy) o
+  *Copia de* otra presentación (todo: diapositivas, datos y meses).
+- En cada fila del inicio: **Duplicar** (abre la misma ventana con "Copia de"
+  esa presentación) y **Eliminar** (con confirmación).
+- Eliminar **no borra**: pone `eliminado = now()` en la fila (la columna ya
+  existía desde la 2A). La presentación deja de verse y de poder editarse, y
+  aparece en **"Papelera"**, al final del inicio, con "Recuperar". No hay
+  borrado definitivo desde la pantalla (si algún día hace falta, es un
+  `delete` en Neon).
+- `POST /api/presentaciones` acepta además `{ nueva: { nombre, periodo } }` y
+  `{ copiaDe, nombre }` (se arman en el servidor: `src/lib/edicion/nueva.ts`).
+  El id sale del nombre ("Comité Diciembre" → `comite-diciembre`) y, si ya
+  existe (también en la papelera), se le agrega "-2", "-3"...
+- `POST /api/presentaciones/[id]/eliminar` y `/recuperar`. Piden JSON, como
+  todas las rutas que cambian algo.
+- El tema de una presentación en blanco es el de la muestra (colores de
+  Presente).
+- Con todo en la papelera, la muestra no se vuelve a sembrar: solo se siembra
+  si la tabla está vacía del todo.
+
+### Rango del eje de valores
+
+- Campo nuevo `rangoEje?: { desde?, hasta? }` en `BloqueGrafico`. En el
+  editor del gráfico: "Rango del eje vertical (valores)" con **Desde** y
+  **Hasta**; vacío = automático. Se guarda al salir del campo o con Enter.
+  "Volver a automático" lo quita.
+- Mismas unidades que los datos (14,5 = 14,5 %). Acepta coma o punto.
+- Vale para líneas, barras, barras horizontales (eje horizontal), área,
+  combinado, dispersión (eje vertical), radar (del centro al borde) y
+  cascada. No para circular. Se conserva al cambiar a otra forma que lo admita.
+- Con rango fijo se usa `allowDataOverflow` de Recharts: lo que quede por
+  fuera se corta en lugar de estirar el eje. En barras apiladas, un "desde"
+  alto corta las series de abajo.
+- Es el mismo en todos los meses.
+
+### Mover diapositivas
+
+- Ya existían subir, bajar, duplicar y quitar (panel → pestaña Diapositiva).
+  Se agregó **"Mover a la posición N de M"**.
+- Corregido: al subir, bajar o mover, el visor seguía en el mismo número y
+  el panel pasaba a mostrar otra diapositiva. Ahora acompaña a la movida.
+
+### Los datos no se pierden al publicar código nuevo
+
+Las presentaciones viven en la base de Neon, no en el código. Publicar en
+Vercel cambia el programa, no la base: las tablas se crean con `if not
+exists`, la muestra solo se siembra con la tabla vacía y ningún arranque
+borra ni reemplaza filas. Para que siga así, **reglas para todo cambio
+futuro**:
+
+1. Un campo nuevo del modelo siempre es opcional (como `rangoEje`), o el
+   código que lee le pone un valor por defecto.
+2. Nunca renombrar, quitar ni volver obligatorio un campo que ya existe. Si
+   hace falta, subir `formato` a 2 y escribir una función que convierta lo
+   guardado al leerlo.
+3. Las tablas solo cambian con `add column if not exists` y similares
+   (`esquema.ts`).
+4. Antes de publicar, las pruebas deben pasar con la muestra y con una
+   presentación importada (validan lo ya guardado contra el validador nuevo).
 
 ## Cómo trabajar
 

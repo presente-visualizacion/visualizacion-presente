@@ -37,6 +37,12 @@ export interface Almacen {
   aplicar(id: string, revisionBase: number, ops: Operacion[]): Promise<ResultadoGuardado>;
   /** Para importar presentaciones completas (etapas 3 a 5). */
   crear(presentacion: Presentacion): Promise<void>;
+  /** La manda a la papelera: no se borra, deja de verse y se puede recuperar. false si no existe. */
+  eliminar(id: string): Promise<boolean>;
+  /** La saca de la papelera. false si no estaba eliminada. */
+  recuperar(id: string): Promise<boolean>;
+  /** Las que están en la papelera, la más reciente primero. */
+  listarEliminadas(): Promise<ResumenPresentacion[]>;
 }
 
 // El almacén se guarda en `globalThis` para que sobreviva a las recargas de

@@ -45,6 +45,30 @@ const GUARDAR = `
   )
   select revision, actualizado from cambio`;
 
+async function resumenes(m: Motor, eliminadas: boolean): Promise<ResumenPresentacion[]> {
+  const filas = await m.consultar<{ id: string; nombre: string; descripcion: string | null; periodos: unknown; diapositivas: number; actualizado: string; eliminado: string | null }>(
+    `select id,
+            contenido->>'nombre' as nombre,
+            contenido->>'descripcion' as descripcion,
+            contenido->'periodos' as periodos,
+            jsonb_array_length(contenido->'diapositivas') as diapositivas,
+            ${ISO} as actualizado,
+            to_char(eliminado at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as eliminado
+     from presentaciones
+     where ${eliminadas ? 'eliminado is not null' : 'eliminado is null'}
+     order by ${eliminadas ? 'eliminado desc' : 'actualizado desc'}, id`,
+  );
+  return filas.map((f): ResumenPresentacion => ({
+    id: f.id,
+    nombre: f.nombre,
+    descripcion: f.descripcion ?? undefined,
+    periodos: json<string[]>(f.periodos),
+    diapositivas: Number(f.diapositivas),
+    actualizado: f.actualizado,
+    ...(f.eliminado ? { eliminado: f.eliminado } : {}),
+  }));
+}
+
 /** Los motores devuelven jsonb ya leído; por si alguno lo entrega como texto. */
 function json<T>(valor: unknown): T {
   return (typeof valor === 'string' ? JSON.parse(valor) : valor) as T;
@@ -72,25 +96,27 @@ export function almacenBd(obtenerMotor: () => Promise<Motor>, opciones: Opciones
     soloLectura: false,
 
     async listar() {
-      const filas = await (await motor()).consultar<{ id: string; nombre: string; descripcion: string | null; periodos: unknown; diapositivas: number; actualizado: string }>(
-        `select id,
-                contenido->>'nombre' as nombre,
-                contenido->>'descripcion' as descripcion,
-                contenido->'periodos' as periodos,
-                jsonb_array_length(contenido->'diapositivas') as diapositivas,
-                ${ISO} as actualizado
-         from presentaciones
-         where eliminado is null
-         order by actualizado desc, id`,
+      return resumenes(await motor(), false);
+    },
+
+    async listarEliminadas() {
+      return resumenes(await motor(), true);
+    },
+
+    async eliminar(id) {
+      const filas = await (await motor()).consultar(
+        `update presentaciones set eliminado = now() where id = $1 and eliminado is null returning id`,
+        [id],
       );
-      return filas.map((f): ResumenPresentacion => ({
-        id: f.id,
-        nombre: f.nombre,
-        descripcion: f.descripcion ?? undefined,
-        periodos: json<string[]>(f.periodos),
-        diapositivas: Number(f.diapositivas),
-        actualizado: f.actualizado,
-      }));
+      return filas.length > 0;
+    },
+
+    async recuperar(id) {
+      const filas = await (await motor()).consultar(
+        `update presentaciones set eliminado = null, actualizado = now() where id = $1 and eliminado is not null returning id`,
+        [id],
+      );
+      return filas.length > 0;
     },
 
     async obtener(id): Promise<Guardada | null> {

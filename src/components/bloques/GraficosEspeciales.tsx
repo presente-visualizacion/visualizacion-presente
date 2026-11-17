@@ -10,7 +10,7 @@ import {
 import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import {
-  anchoTexto, BLANCO, CajaGlobo, ejeCategorias, ejeValores, FilaGlobo, LINEA, marcaEje, Muestra, reducirMovimiento, SUAVE, TINTA,
+  anchoTexto, BLANCO, CajaGlobo, dominioEje, ejeCategorias, ejeValores, FilaGlobo, LINEA, marcaEje, Muestra, reducirMovimiento, SUAVE, TINTA,
   type PropsGrafico,
 } from './graficoComun';
 
@@ -116,7 +116,7 @@ export function Dispersion({ bloque, conjunto, filas, tema }: PropsGrafico) {
           <ScatterChart margin={{ top: 34, right: 48, bottom: 4, left: 0 }}>
             <CartesianGrid stroke={LINEA} />
             <XAxis type="number" dataKey={bloque.ejeX} name={columnaX?.nombre} domain={['auto', 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaX)} {...ejeCategorias} />
-            <YAxis type="number" dataKey={serie.clave} name={columnaY?.nombre} width={anchoY} domain={['auto', 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaY)} {...ejeValores} />
+            <YAxis type="number" dataKey={serie.clave} name={columnaY?.nombre} width={anchoY} {...dominioEje(bloque.rangoEje, ['auto', 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaY)} {...ejeValores} />
             <Tooltip
               isAnimationActive={false}
               cursor={{ stroke: '#CFC6CB', strokeDasharray: '4 4' }}
@@ -198,7 +198,7 @@ export function Cascada({ bloque, conjunto, filas, tema }: PropsGrafico) {
           <BarChart data={escalones} margin={{ top: 24, right: 16, bottom: 0, left: 0 }} barCategoryGap="22%">
             <CartesianGrid vertical={false} stroke={LINEA} />
             <XAxis dataKey="nombre" interval={0} {...ejeCategorias} />
-            <YAxis width={anchoY} domain={[minimo < 0 ? 'auto' : 0, 'auto']} tickFormatter={(v: number) => marcaEje(v, columna)} {...ejeValores} />
+            <YAxis width={anchoY} {...dominioEje(bloque.rangoEje, [minimo < 0 ? 'auto' : 0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columna)} {...ejeValores} />
             <Tooltip
               isAnimationActive={false}
               cursor={{ fill: '#F5EFF2' }}

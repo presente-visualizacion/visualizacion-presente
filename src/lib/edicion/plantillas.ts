@@ -98,6 +98,9 @@ export function bloqueNuevo(tipo: TipoNuevo, enUso: Set<string>, conjunto?: Conj
 // ---------------------------------------------------------------------------
 // Ajuste al cambiar de forma
 
+/** Formas con un eje de valores al que se le puede fijar el rango. */
+export const CON_RANGO_EJE: FormaGrafico[] = ['lineas', 'barras', 'barrasHorizontales', 'area', 'combinado', 'dispersion', 'radar', 'cascada'];
+
 /** Por qué el conjunto no sirve para esa forma; null si sirve. */
 export function motivoNoDisponible(forma: FormaGrafico, conjunto: ConjuntoDatos): string | null {
   const numericas = conjunto.columnas.filter(esNumerica).length;
@@ -144,6 +147,7 @@ export function configPara(forma: FormaGrafico, actual: ConfigGrafico, conjunto:
   if (actual.etiquetas && ['barras', 'barrasHorizontales', 'combinado', 'cascada', 'circular', 'dispersion'].includes(forma)) config.etiquetas = true;
   if (actual.resaltar && ['barras', 'barrasHorizontales', 'dispersion'].includes(forma) && columna(actual.resaltar.columna)) config.resaltar = actual.resaltar;
   if (actual.detalleEje && (forma === 'barras' || forma === 'combinado') && columna(actual.detalleEje)) config.detalleEje = actual.detalleEje;
+  if (actual.rangoEje && CON_RANGO_EJE.includes(forma)) config.rangoEje = actual.rangoEje;
   if (forma === 'cascada') config.total = actual.forma === 'cascada' ? Boolean(actual.total) : true;
   if (forma === 'dispersion') {
     const nombres = columna(actual.nombres)?.tipo === 'texto' ? actual.nombres : conjunto.columnas.find((c) => !esNumerica(c))?.clave;

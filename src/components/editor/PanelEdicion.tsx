@@ -162,7 +162,6 @@ function AccionesDiapositiva({ presentacion, diapositiva, indice, cambiar, onIrA
   const [tipo, setTipo] = useState<Diapositiva['tipo']>('contenido');
   const { diapositivas } = presentacion;
   const llenas = diapositivas.length >= TOPES.diapositivas;
-  const anteriorA = (i: number) => (i <= 0 ? null : diapositivas[i - 1].id);
 
   const agregar = () => {
     const nueva = diapositivaNueva(tipo, idsEnUso(presentacion));
@@ -175,6 +174,15 @@ function AccionesDiapositiva({ presentacion, diapositiva, indice, cambiar, onIrA
     if (!r) return;
     cambiar(r.ops);
     onIrA(r.id);
+  };
+  // Mover a la posición `destino` (desde 0): queda después de la que ocupe
+  // ese lugar una vez sacada la actual.
+  const moverA = (destino: number) => {
+    if (destino === indice || destino < 0 || destino >= diapositivas.length) return;
+    const despues = destino === 0 ? null : destino > indice ? diapositivas[destino].id : diapositivas[destino - 1].id;
+    cambiar({ op: 'diapositiva.mover', diapositiva: diapositiva.id, despues });
+    // El visor sigue la diapositiva por su lugar: se le dice que la acompañe.
+    onIrA(diapositiva.id);
   };
   const quitar = () => {
     const vecina = diapositivas[indice + 1] ?? diapositivas[indice - 1];
@@ -189,8 +197,8 @@ function AccionesDiapositiva({ presentacion, diapositiva, indice, cambiar, onIrA
           <Plus size={16} aria-hidden /> Nueva
         </button>
         <BotonIcono etiqueta="Duplicar la diapositiva" onClick={duplicar} inactivo={llenas}><Copy size={17} /></BotonIcono>
-        <BotonIcono etiqueta="Subir la diapositiva" onClick={() => cambiar({ op: 'diapositiva.mover', diapositiva: diapositiva.id, despues: anteriorA(indice - 1) })} inactivo={indice === 0}><ArrowUp size={17} /></BotonIcono>
-        <BotonIcono etiqueta="Bajar la diapositiva" onClick={() => cambiar({ op: 'diapositiva.mover', diapositiva: diapositiva.id, despues: diapositivas[indice + 1]?.id ?? null })} inactivo={indice === diapositivas.length - 1}><ArrowDown size={17} /></BotonIcono>
+        <BotonIcono etiqueta="Subir la diapositiva" onClick={() => moverA(indice - 1)} inactivo={indice === 0}><ArrowUp size={17} /></BotonIcono>
+        <BotonIcono etiqueta="Bajar la diapositiva" onClick={() => moverA(indice + 1)} inactivo={indice === diapositivas.length - 1}><ArrowDown size={17} /></BotonIcono>
         <span className="ml-auto" />
         <BotonConfirmar
           etiqueta="Quitar la diapositiva"
@@ -202,6 +210,22 @@ function AccionesDiapositiva({ presentacion, diapositiva, indice, cambiar, onIrA
           onConfirmar={quitar}
         />
       </div>
+      {diapositivas.length > 2 && (
+        <label className="flex items-center gap-2 text-[13px] text-tinta-suave">
+          Mover a la posición
+          <select
+            value={indice}
+            onChange={(e) => moverA(Number(e.target.value))}
+            className="h-8 rounded-lg border border-linea-fuerte bg-white px-2 text-[13px] text-tinta hover:border-tinta-suave focus:border-primario focus:outline-none focus:ring-2 focus:ring-primario/25"
+            aria-label="Mover la diapositiva a la posición"
+          >
+            {diapositivas.map((d, i) => (
+              <option key={d.id} value={i}>{i + 1}{i === indice ? ' (aquí)' : ''}</option>
+            ))}
+          </select>
+          <span>de {diapositivas.length}</span>
+        </label>
+      )}
       {agregando && (
         <div className="space-y-3 rounded-lg border border-linea-fuerte p-3">
           <Opcion etiqueta="Diapositiva nueva, después de esta" valor={tipo} opciones={TIPOS_DIAPOSITIVA} onCambiar={setTipo} />

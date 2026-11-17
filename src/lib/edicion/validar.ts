@@ -151,6 +151,12 @@ const camposGrafico = {
   total: z.boolean().optional(),
   nombres: clave.optional(),
   detalleEje: clave.optional(),
+  rangoEje: z.strictObject({
+    desde: z.number().finite().optional(),
+    hasta: z.number().finite().optional(),
+  }).refine((r) => r.desde === undefined || r.hasta === undefined || r.desde < r.hasta, {
+    message: 'En el rango del eje, "desde" debe ser menor que "hasta".',
+  }).optional(),
 };
 const camposTabla = {
   datos: id,
