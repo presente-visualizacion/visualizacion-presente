@@ -60,7 +60,7 @@ interface Props {
 export function EditorGrafico({ presentacion, bloque, periodo, cambiar }: Props) {
   const conjunto = presentacion.datos[bloque.datos];
   if (!conjunto) return null;
-  const { id: _id, tipo: _tipo, ...actual } = bloque;
+  const { id: _id, tipo: _tipo, titulo: _titulo, nota: _nota, ...actual } = bloque;
   const { forma } = bloque;
   const poner = (cambios: Partial<ConfigGrafico>) => cambiar({ op: 'grafico.config', bloque: bloque.id, valor: limpio({ ...actual, ...cambios }) });
   const unaSerie = SERIES_POR_FORMA[forma][1] === 1;
@@ -91,6 +91,7 @@ export function EditorGrafico({ presentacion, bloque, periodo, cambiar }: Props)
       if (s.clave !== clave) return s;
       const nueva = { ...s, ...cambios };
       if (nueva.color === undefined) delete nueva.color;
+      if (!nueva.punteada) delete nueva.punteada;
       return nueva;
     }));
 
@@ -160,6 +161,20 @@ export function EditorGrafico({ presentacion, bloque, periodo, cambiar }: Props)
                       <BotonIcono etiqueta={`Bajar ${c.nombre}`} onClick={() => moverSerie(indice!, indice! + 1)} inactivo={indice === bloque.series.length - 1}><ArrowDown size={15} /></BotonIcono>
                     </>
                   )}
+                  {serie && (forma === 'lineas' || forma === 'area' || (forma === 'combinado' && serie.tipo === 'lineas')) && (
+                    <button
+                      type="button"
+                      aria-pressed={Boolean(serie.punteada)}
+                      aria-label={`Línea punteada para ${c.nombre}`}
+                      title={serie.punteada ? 'Línea punteada (clic para continua)' : 'Línea continua (clic para punteada)'}
+                      onClick={() => ponerEnSerie(c.clave, { punteada: serie.punteada ? undefined : true })}
+                      className={`flex h-8 w-8 items-center justify-center rounded-full ${serie.punteada ? 'bg-tinte text-primario' : 'text-tinta-suave hover:bg-fondo-app'}`}
+                    >
+                      <svg viewBox="0 0 20 4" className="h-1 w-5" aria-hidden>
+                        <line x1="1" y1="2" x2="19" y2="2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray={serie.punteada ? '3 3' : undefined} />
+                      </svg>
+                    </button>
+                  )}
                   {serie && !['circular', 'cascada'].includes(forma) && !(forma === 'dispersion' && bloque.resaltar) && (
                     <SelectorColor color={serie.color} automatico={colorAuto} paleta={presentacion.tema.series} nombre={c.nombre} onCambiar={(color) => ponerEnSerie(c.clave, { color })} />
                   )}
@@ -204,6 +219,16 @@ export function EditorGrafico({ presentacion, bloque, periodo, cambiar }: Props)
         />
       )}
 
+      {(forma === 'barras' || forma === 'combinado') && (
+        <Opcion
+          etiqueta="Debajo de cada categoría"
+          valor={bloque.detalleEje ?? ''}
+          opciones={[{ valor: '', nombre: 'Nada' }, ...conjunto.columnas.filter((c) => c.clave !== bloque.ejeX).map((c) => ({ valor: c.clave, nombre: c.nombre || c.clave }))]}
+          onCambiar={(detalleEje) => poner({ detalleEje: detalleEje || undefined })}
+          nota={bloque.detalleEje ? 'Se escribe el nombre de la columna y su valor, por ejemplo "TPP 18,29%".' : undefined}
+        />
+      )}
+
       <div className="space-y-2">
         {CON_APILADO.includes(forma) && bloque.series.length > 1 && (
           <Casilla etiqueta="Apilar las series" marcada={Boolean(bloque.apilado)} onCambiar={(apilado) => poner({ apilado })} nota="Una encima de otra, para ver el total." />
@@ -216,7 +241,7 @@ export function EditorGrafico({ presentacion, bloque, periodo, cambiar }: Props)
         )}
       </div>
 
-      {CON_RESALTAR.includes(forma) && (forma !== 'barras' || bloque.series.length === 1) && (
+      {CON_RESALTAR.includes(forma) && (
         <SelectorResaltado conjunto={conjunto} periodo={periodo} resaltar={bloque.resaltar} onCambiar={(resaltar) => poner({ resaltar })} />
       )}
     </div>

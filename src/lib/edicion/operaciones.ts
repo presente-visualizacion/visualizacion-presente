@@ -17,11 +17,13 @@
 import { interpretarNumero, numeroEditable } from '../formato';
 import type {
   Bloque, BloqueGrafico, BloqueTabla, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, Fila, IdPeriodo,
-  OrigenExcel, PorPeriodo, Presentacion, Tema, TipoColumna,
+  OrigenExcel, PorPeriodo, Presentacion, SelectorFila, Tarjeta, Tema, TipoColumna,
 } from '../tipos';
 
-export type ConfigGrafico = Omit<BloqueGrafico, 'id' | 'tipo'>;
-export type ConfigTabla = Omit<BloqueTabla, 'id' | 'tipo'>;
+/** El título y la nota de un bloque van por `bloque.marco`, no por la configuración. */
+type Marco = 'id' | 'tipo' | 'titulo' | 'nota';
+export type ConfigGrafico = Omit<BloqueGrafico, Marco>;
+export type ConfigTabla = Omit<BloqueTabla, Marco>;
 
 export type Operacion =
   | { op: 'presentacion.nombre'; valor: string }
@@ -32,9 +34,13 @@ export type Operacion =
   | { op: 'diapositiva.subtitulo'; diapositiva: string; valor: string }
   | { op: 'texto.contenido'; bloque: string; periodo: IdPeriodo | null; valor: string | null }
   | { op: 'cifras.valor'; bloque: string; periodo: IdPeriodo | null; valor: Cifra[] | null }
+  // --- Etapa 4
+  | { op: 'tarjetas.valor'; bloque: string; periodo: IdPeriodo | null; valor: Tarjeta[] | null }
+  /** Título (arriba) y nota (debajo) de cualquier bloque. '' los quita. */
+  | { op: 'bloque.marco'; bloque: string; titulo: string; nota: string }
   | { op: 'datos.filas'; conjunto: string; periodo: IdPeriodo | null; valor: Fila[] | null }
-  /** Solo cambia los campos presentes. `decimales: null` y `unidad: ''` los quitan. */
-  | { op: 'datos.columna'; conjunto: string; clave: string; nombre?: string; decimales?: number | null; unidad?: string }
+  /** Solo cambia los campos presentes. `decimales: null`, `unidad: ''`, `grupo: ''` y `signo: false` los quitan. */
+  | { op: 'datos.columna'; conjunto: string; clave: string; nombre?: string; decimales?: number | null; unidad?: string; grupo?: string; signo?: boolean }
   /**
    * Cambia entre "igual en todos los meses" (false) y "propio de cada mes"
    * (true). A true copia el valor único a todos los meses; a false deja como
@@ -155,13 +161,24 @@ export function columnasUsadas(p: Presentacion, conjunto: string): Map<string, s
   const anotar = (clave: string, bloque: string) => usadas.set(clave, [...(usadas.get(clave) ?? []), bloque]);
   for (const d of p.diapositivas) {
     for (const b of d.bloques) {
+      if (b.tipo === 'cifras') {
+        for (const cifra of cifrasDe(b)) {
+          const f = cifra.desde;
+          if (!f || f.conjunto !== conjunto) continue;
+          for (const c of columnasDeFuente(f)) anotar(c, b.id);
+        }
+        continue;
+      }
       if ((b.tipo !== 'grafico' && b.tipo !== 'tabla') || b.datos !== conjunto) continue;
       if (b.tipo === 'grafico') {
         anotar(b.ejeX, b.id);
         for (const serie of b.series) anotar(serie.clave, b.id);
         if (b.nombres) anotar(b.nombres, b.id);
+        if (b.detalleEje) anotar(b.detalleEje, b.id);
       } else {
         for (const c of b.columnas ?? []) anotar(c, b.id);
+        if (b.secciones) anotar(b.secciones, b.id);
+        for (const c of b.calculadas ?? []) anotar(c.columna, b.id);
       }
       if (b.resaltar) anotar(b.resaltar.columna, b.id);
     }
@@ -169,9 +186,24 @@ export function columnasUsadas(p: Presentacion, conjunto: string): Map<string, s
   return usadas;
 }
 
-/** Bloques que muestran el conjunto. */
+/** Todas las cifras de un bloque, de todos los meses. */
+export function cifrasDe(b: Extract<Bloque, { tipo: 'cifras' }>): Cifra[] {
+  return b.cifras.porPeriodo ? Object.values(b.cifras.valores ?? {}).flat() : b.cifras.valor ?? [];
+}
+
+/** Columnas del conjunto que nombra una cifra calculada. */
+export function columnasDeFuente(f: NonNullable<Cifra['desde']>): string[] {
+  const deFila = (s: SelectorFila | undefined) => (s && typeof s === 'object' ? [s.columna] : []);
+  return [f.columna, ...deFila(f.fila), ...deFila(f.comparar), ...(f.detalle ? [f.detalle] : [])];
+}
+
+/** Bloques que muestran el conjunto (incluidas las cifras que salen de él). */
 export function bloquesQueUsan(p: Presentacion, conjunto: string): string[] {
-  return p.diapositivas.flatMap((d) => d.bloques.filter((b) => (b.tipo === 'grafico' || b.tipo === 'tabla') && b.datos === conjunto).map((b) => b.id));
+  return p.diapositivas.flatMap((d) => d.bloques.filter((b) => {
+    if (b.tipo === 'grafico' || b.tipo === 'tabla') return b.datos === conjunto;
+    if (b.tipo === 'cifras') return cifrasDe(b).some((c) => c.desde?.conjunto === conjunto);
+    return false;
+  }).map((b) => b.id));
 }
 
 const esTexto = (tipo: TipoColumna) => tipo === 'texto';
@@ -252,11 +284,25 @@ function cambiarModoConjunto(p: Presentacion, conjunto: ConjuntoDatos, aPorPerio
   return delMes ? { ...resto, porPeriodo: false, filas: delMes } : { ...resto, porPeriodo: false };
 }
 
-/** El dato por mes de un bloque de texto o de cifras; los demás bloques no tienen. */
-function datoDeBloque(bloque: Bloque): PorPeriodo<string> | PorPeriodo<Cifra[]> | undefined {
+/** El dato por mes de un bloque de texto, cifras o tarjetas; los demás bloques no tienen. */
+function datoDeBloque(bloque: Bloque): PorPeriodo<string> | PorPeriodo<Cifra[]> | PorPeriodo<Tarjeta[]> | undefined {
   if (bloque.tipo === 'texto') return bloque.contenido;
   if (bloque.tipo === 'cifras') return bloque.cifras;
+  if (bloque.tipo === 'tarjetas') return bloque.tarjetas;
   return undefined;
+}
+
+/** Título y nota del bloque, para conservarlos al cambiar su configuración. */
+function marcoDe(b: Bloque): { titulo?: string; nota?: string } {
+  return { ...(b.titulo ? { titulo: b.titulo } : {}), ...(b.nota ? { nota: b.nota } : {}) };
+}
+
+/** Copia del bloque con su dato por mes cambiado (texto, cifras o tarjetas). */
+function conDatoDeBloque(b: Bloque, cambiar: <T>(dato: PorPeriodo<T>) => PorPeriodo<T>): Bloque {
+  if (b.tipo === 'texto') return { ...b, contenido: cambiar(b.contenido) };
+  if (b.tipo === 'cifras') return { ...b, cifras: cambiar(b.cifras) };
+  if (b.tipo === 'tarjetas') return { ...b, tarjetas: cambiar(b.tarjetas) };
+  return b;
 }
 
 // ---------------------------------------------------------------------------
@@ -297,6 +343,19 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
         return { ...b, cifras: ponerValor(p, b.cifras, op.periodo, op.valor) };
       });
 
+    case 'tarjetas.valor':
+      return conBloque(p, op.bloque, (b) => {
+        if (b.tipo !== 'tarjetas') throw new OperacionNoAplicable(`El bloque "${op.bloque}" no es de tarjetas.`);
+        return { ...b, tarjetas: ponerValor(p, b.tarjetas, op.periodo, op.valor) };
+      });
+
+    case 'bloque.marco':
+      return conBloque(p, op.bloque, ({ titulo: _titulo, nota: _nota, ...b }) => ({
+        ...b,
+        ...(op.titulo ? { titulo: op.titulo } : {}),
+        ...(op.nota ? { nota: op.nota } : {}),
+      }) as Bloque);
+
     case 'datos.filas':
       return conConjunto(p, op.conjunto, (c) => ponerFilas(p, c, op.periodo, op.valor));
 
@@ -310,6 +369,10 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
         else if (op.decimales !== undefined) columna.decimales = op.decimales;
         if (op.unidad === '') delete columna.unidad;
         else if (op.unidad !== undefined) columna.unidad = op.unidad;
+        if (op.grupo === '') delete columna.grupo;
+        else if (op.grupo !== undefined) columna.grupo = op.grupo;
+        if (op.signo === false) delete columna.signo;
+        else if (op.signo) columna.signo = true;
         const columnas = c.columnas.slice();
         columnas[indice] = columna;
         return { ...c, columnas };
@@ -324,6 +387,7 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
       return conBloque(p, id, (b) => {
         if (b.tipo === 'texto') return { ...b, contenido: cambiarModo(p, b.contenido, op.valor, op.periodo) };
         if (b.tipo === 'cifras') return { ...b, cifras: cambiarModo(p, b.cifras, op.valor, op.periodo) };
+        if (b.tipo === 'tarjetas') return { ...b, tarjetas: cambiarModo(p, b.tarjetas, op.valor, op.periodo) };
         throw new OperacionNoAplicable(`El bloque "${id}" no tiene contenido por mes.`);
       });
     }
@@ -376,13 +440,13 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
     case 'grafico.config':
       return conBloque(p, op.bloque, (b) => {
         if (b.tipo !== 'grafico') throw new OperacionNoAplicable(`El bloque "${op.bloque}" no es un gráfico.`);
-        return { ...op.valor, id: b.id, tipo: 'grafico' };
+        return { ...op.valor, ...marcoDe(b), id: b.id, tipo: 'grafico' };
       });
 
     case 'tabla.config':
       return conBloque(p, op.bloque, (b) => {
         if (b.tipo !== 'tabla') throw new OperacionNoAplicable(`El bloque "${op.bloque}" no es una tabla.`);
-        return { ...op.valor, id: b.id, tipo: 'tabla' };
+        return { ...op.valor, ...marcoDe(b), id: b.id, tipo: 'tabla' };
       });
 
     case 'conjunto.poner':
@@ -433,11 +497,7 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
       ]));
       const diapositivas = p.diapositivas.map((d) => ({
         ...d,
-        bloques: d.bloques.map((b): Bloque => {
-          if (b.tipo === 'texto') return { ...b, contenido: copiar(b.contenido) };
-          if (b.tipo === 'cifras') return { ...b, cifras: copiar(b.cifras) };
-          return b;
-        }),
+        bloques: d.bloques.map((b): Bloque => conDatoDeBloque(b, copiar)),
       }));
       return { ...p, periodos, datos, diapositivas };
     }
@@ -453,11 +513,7 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
       ]));
       const diapositivas = p.diapositivas.map((d) => ({
         ...d,
-        bloques: d.bloques.map((b): Bloque => {
-          if (b.tipo === 'texto') return { ...b, contenido: quitar(b.contenido) };
-          if (b.tipo === 'cifras') return { ...b, cifras: quitar(b.cifras) };
-          return b;
-        }),
+        bloques: d.bloques.map((b): Bloque => conDatoDeBloque(b, quitar)),
       }));
       return { ...p, periodos: p.periodos.filter((m) => m !== op.periodo), datos, diapositivas };
     }
@@ -521,6 +577,18 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
       return [{ op: op.op, bloque: op.bloque, periodo: op.periodo, valor: antes ?? null }];
     }
 
+    case 'tarjetas.valor': {
+      const b = bloqueDe(p, op.bloque);
+      if (b?.tipo !== 'tarjetas') return [];
+      const antes = op.periodo === null ? b.tarjetas.valor : b.tarjetas.valores?.[op.periodo];
+      return [{ op: op.op, bloque: op.bloque, periodo: op.periodo, valor: antes ?? null }];
+    }
+
+    case 'bloque.marco': {
+      const b = bloqueDe(p, op.bloque);
+      return b ? [{ op: op.op, bloque: b.id, titulo: b.titulo ?? '', nota: b.nota ?? '' }] : [];
+    }
+
     case 'datos.filas': {
       const c = Object.hasOwn(p.datos, op.conjunto) ? p.datos[op.conjunto] : undefined;
       if (!c) return [];
@@ -536,6 +604,8 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
       if (op.nombre !== undefined) vuelta.nombre = columna.nombre;
       if (op.decimales !== undefined) vuelta.decimales = columna.decimales ?? null;
       if (op.unidad !== undefined) vuelta.unidad = columna.unidad ?? '';
+      if (op.grupo !== undefined) vuelta.grupo = columna.grupo ?? '';
+      if (op.signo !== undefined) vuelta.signo = Boolean(columna.signo);
       return [vuelta];
     }
 
@@ -560,6 +630,9 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
       }
       if (b.tipo === 'cifras') {
         return [volver, ...p.periodos.map((m): Operacion => ({ op: 'cifras.valor', bloque: id, periodo: m, valor: b.cifras.valores?.[m] ?? null }))];
+      }
+      if (b.tipo === 'tarjetas') {
+        return [volver, ...p.periodos.map((m): Operacion => ({ op: 'tarjetas.valor', bloque: id, periodo: m, valor: b.tarjetas.valores?.[m] ?? null }))];
       }
       return [];
     }
@@ -612,14 +685,14 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
     case 'grafico.config': {
       const b = bloqueDe(p, op.bloque);
       if (b?.tipo !== 'grafico') return [];
-      const { id: _id, tipo: _tipo, ...valor } = b;
+      const { id: _id, tipo: _tipo, titulo: _titulo, nota: _nota, ...valor } = b;
       return [{ op: op.op, bloque: op.bloque, valor }];
     }
 
     case 'tabla.config': {
       const b = bloqueDe(p, op.bloque);
       if (b?.tipo !== 'tabla') return [];
-      const { id: _id, tipo: _tipo, ...valor } = b;
+      const { id: _id, tipo: _tipo, titulo: _titulo, nota: _nota, ...valor } = b;
       return [{ op: op.op, bloque: op.bloque, valor }];
     }
 
@@ -675,6 +748,9 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
           if (b.tipo === 'cifras' && b.cifras.porPeriodo && b.cifras.valores?.[m] !== undefined) {
             vuelta.push({ op: 'cifras.valor', bloque: b.id, periodo: m, valor: b.cifras.valores[m] });
           }
+          if (b.tipo === 'tarjetas' && b.tarjetas.porPeriodo && b.tarjetas.valores?.[m] !== undefined) {
+            vuelta.push({ op: 'tarjetas.valor', bloque: b.id, periodo: m, valor: b.tarjetas.valores[m] });
+          }
         }
       }
       return vuelta;
@@ -696,11 +772,14 @@ export function claveDe(op: Operacion): string | null {
       return `${op.op}|${op.diapositiva}`;
     case 'texto.contenido':
     case 'cifras.valor':
+    case 'tarjetas.valor':
       return `${op.op}|${op.bloque}|${op.periodo ?? ''}`;
+    case 'bloque.marco':
+      return `${op.op}|${op.bloque}`;
     case 'datos.filas':
       return `${op.op}|${op.conjunto}|${op.periodo ?? ''}`;
     case 'datos.columna': {
-      const campos = (['nombre', 'decimales', 'unidad'] as const).filter((campo) => op[campo] !== undefined);
+      const campos = (['nombre', 'decimales', 'unidad', 'grupo', 'signo'] as const).filter((campo) => op[campo] !== undefined);
       return `${op.op}|${op.conjunto}|${op.clave}|${campos.join(',')}`;
     }
     case 'diapositiva.tipo':

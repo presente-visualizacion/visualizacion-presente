@@ -3,7 +3,7 @@
 // de un gráfico cuando cambia de tipo. Sin React: se prueba aparte.
 
 import type {
-  Bloque, BloqueGrafico, Columna, ConjuntoDatos, Diapositiva, FormaGrafico, IdPeriodo, Presentacion, Serie,
+  Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, FormaGrafico, IdPeriodo, Presentacion, Serie,
 } from '../tipos';
 import type { ConfigGrafico, Operacion } from './operaciones';
 import { SERIES_POR_FORMA } from './validar';
@@ -50,7 +50,7 @@ export function diapositivaNueva(tipo: Diapositiva['tipo'], enUso: Set<string>):
   return { id, tipo, titulo: 'Título de la diapositiva', disposicion: 'una', bloques: [] };
 }
 
-export type TipoNuevo = 'grafico' | 'tabla' | 'texto' | 'cifras';
+export type TipoNuevo = 'grafico' | 'tabla' | 'texto' | 'cifras' | 'tarjetas';
 
 /** Conjunto con columnas y tres filas de ejemplo, según lo que pide la forma. */
 export function conjuntoEjemplo(id: string, forma: FormaGrafico | 'tabla'): ConjuntoDatos {
@@ -86,6 +86,7 @@ export function bloqueNuevo(tipo: TipoNuevo, enUso: Set<string>, conjunto?: Conj
   const id = nuevoId('b', enUso);
   if (tipo === 'texto') return { id, tipo, contenido: { porPeriodo: false, valor: 'Escribe aquí el texto.' } };
   if (tipo === 'cifras') return { id, tipo, cifras: { porPeriodo: false, valor: [{ etiqueta: 'Indicador', valor: '0' }] } };
+  if (tipo === 'tarjetas') return { id, tipo, tarjetas: { porPeriodo: false, valor: [{ titulo: 'Título', texto: 'Escribe aquí el texto.' }] } };
   if (!conjunto) throw new Error('Un gráfico o una tabla necesita un conjunto de datos.');
   if (tipo === 'tabla') return { id, tipo, datos: conjunto.id };
   const eje = conjunto.columnas.find((c) => !esNumerica(c)) ?? conjunto.columnas[0];
@@ -142,6 +143,7 @@ export function configPara(forma: FormaGrafico, actual: ConfigGrafico, conjunto:
   if (actual.apilado && (forma === 'barras' || forma === 'area')) config.apilado = true;
   if (actual.etiquetas && ['barras', 'barrasHorizontales', 'combinado', 'cascada', 'circular', 'dispersion'].includes(forma)) config.etiquetas = true;
   if (actual.resaltar && ['barras', 'barrasHorizontales', 'dispersion'].includes(forma) && columna(actual.resaltar.columna)) config.resaltar = actual.resaltar;
+  if (actual.detalleEje && (forma === 'barras' || forma === 'combinado') && columna(actual.detalleEje)) config.detalleEje = actual.detalleEje;
   if (forma === 'cascada') config.total = actual.forma === 'cascada' ? Boolean(actual.total) : true;
   if (forma === 'dispersion') {
     const nombres = columna(actual.nombres)?.tipo === 'texto' ? actual.nombres : conjunto.columnas.find((c) => !esNumerica(c))?.clave;
@@ -185,7 +187,22 @@ export function copiaDeDiapositiva(p: Presentacion, d: Diapositiva, enUso: Set<s
     conjuntos.push(...r.conjuntos);
     return r.bloque;
   });
-  return { diapositiva: { ...structuredClone(d), id: nuevoId('d', enUso), bloques }, conjuntos };
+  // Las cifras que salen de datos copiados en esta misma diapositiva apuntan a la copia.
+  const remitir = (c: Cifra): Cifra => {
+    const nuevo = c.desde && copiados.get(c.desde.conjunto);
+    return nuevo && c.desde ? { ...c, desde: { ...c.desde, conjunto: nuevo.id } } : c;
+  };
+  const conCopias = bloques.map((b): Bloque => {
+    if (b.tipo !== 'cifras') return b;
+    const { cifras } = b;
+    return {
+      ...b,
+      cifras: cifras.porPeriodo
+        ? { ...cifras, valores: Object.fromEntries(Object.entries(cifras.valores ?? {}).map(([m, v]) => [m, v.map(remitir)])) }
+        : { ...cifras, valor: cifras.valor?.map(remitir) },
+    };
+  });
+  return { diapositiva: { ...structuredClone(d), id: nuevoId('d', enUso), bloques: conCopias }, conjuntos };
 }
 
 // ---------------------------------------------------------------------------

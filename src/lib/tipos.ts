@@ -29,6 +29,10 @@ export interface Columna {
   decimales?: number;
   /** Texto que acompaña al valor, por ejemplo "millones". */
   unidad?: string;
+  /** En tablas: encabezado agrupado que va sobre esta columna ("Vivienda VIS"). */
+  grupo?: string;
+  /** En tablas: "+" delante de los positivos, en verde; los negativos en rojo. */
+  signo?: boolean;
 }
 
 export type Fila = Record<string, string | number | null>;
@@ -89,6 +93,8 @@ export interface Serie {
   color?: string;
   /** Solo en el gráfico combinado: si la serie va en barras o en línea. */
   tipo?: 'barras' | 'lineas';
+  /** Línea punteada (en líneas, área y las líneas del combinado). */
+  punteada?: boolean;
 }
 
 export interface Resaltado {
@@ -108,8 +114,16 @@ export type FormaGrafico =
   | 'lineas' | 'barras' | 'barrasHorizontales' | 'area'
   | 'combinado' | 'circular' | 'dispersion' | 'radar' | 'cascada';
 
-export interface BloqueGrafico {
+/** Lo que comparten todos los bloques. */
+interface BaseBloque {
   id: string;
+  /** Encabezado chico arriba del bloque. Admite {mes}. */
+  titulo?: string;
+  /** Texto chico debajo del bloque (fuentes, aclaraciones). Admite {mes}. */
+  nota?: string;
+}
+
+export interface BloqueGrafico extends BaseBloque {
   tipo: 'grafico';
   datos: string;
   forma: FormaGrafico;
@@ -124,37 +138,81 @@ export interface BloqueGrafico {
   total?: boolean;
   /** Dispersión: columna de texto con el nombre de cada punto. */
   nombres?: string;
+  /** Columna que se escribe debajo de cada categoría del eje ("TPP 18,29%"). */
+  detalleEje?: string;
 }
 
-export interface BloqueTabla {
-  id: string;
+/**
+ * Columna que la tabla calcula y muestra justo después de `columna`:
+ * - variacion: el valor del mes menos el del mes anterior que tenga datos,
+ *   para la misma fila (misma sección y mismo primer texto).
+ * - posicion: 1, 2, 3... dentro de la sección; 'asc' (lo normal) = el menor es 1.
+ */
+export interface ColumnaCalculada {
+  tipo: 'variacion' | 'posicion';
+  columna: string;
+  orden?: 'asc' | 'desc';
+}
+
+export interface BloqueTabla extends BaseBloque {
   tipo: 'tabla';
   datos: string;
   /** Columnas a mostrar, en orden. Si falta, se muestran todas. */
   columnas?: string[];
   resaltar?: Resaltado;
+  /** Columna de texto que agrupa las filas: se muestra como fila de título de cada grupo. */
+  secciones?: string;
+  calculadas?: ColumnaCalculada[];
 }
 
-export interface BloqueTexto {
-  id: string;
+export interface BloqueTexto extends BaseBloque {
   tipo: 'texto';
-  /** Párrafos separados por línea en blanco; las líneas que empiezan con "- " son viñetas. */
+  /**
+   * Párrafos separados por línea en blanco; las líneas que empiezan con "- "
+   * son viñetas y las que empiezan con "# ", letra grande. **así** es negrita.
+   */
   contenido: PorPeriodo<string>;
+}
+
+/** Qué fila de un conjunto: la primera, la última o la que tenga ese valor en esa columna. */
+export type SelectorFila = 'primera' | 'ultima' | { columna: string; valor: string };
+
+/** De dónde sale el valor de una cifra cuando no se escribe a mano. */
+export interface FuenteCifra {
+  conjunto: string;
+  columna: string;
+  fila: SelectorFila;
+  /** Columna de la misma fila que va como detalle (por ejemplo, el mes). */
+  detalle?: string;
+  /** El detalle muestra la diferencia contra esta otra fila, seguida del detalle escrito. */
+  comparar?: SelectorFila;
 }
 
 export interface Cifra {
   etiqueta: string;
+  /** Lo que se muestra; con `desde`, lo que se muestra si los datos no lo tienen. */
   valor: string;
   detalle?: string;
+  desde?: FuenteCifra;
 }
 
-export interface BloqueCifras {
-  id: string;
+export interface BloqueCifras extends BaseBloque {
   tipo: 'cifras';
   cifras: PorPeriodo<Cifra[]>;
 }
 
-export type Bloque = BloqueGrafico | BloqueTabla | BloqueTexto | BloqueCifras;
+export interface Tarjeta {
+  titulo: string;
+  texto: string;
+}
+
+/** Recuadros con título y texto, lado a lado (o uno debajo del otro si no caben). */
+export interface BloqueTarjetas extends BaseBloque {
+  tipo: 'tarjetas';
+  tarjetas: PorPeriodo<Tarjeta[]>;
+}
+
+export type Bloque = BloqueGrafico | BloqueTabla | BloqueTexto | BloqueCifras | BloqueTarjetas;
 
 /**
  * Cómo se reparten los bloques en la diapositiva:
@@ -162,8 +220,9 @@ export type Bloque = BloqueGrafico | BloqueTabla | BloqueTexto | BloqueCifras;
  * - columnas: todos los bloques lado a lado.
  * - filas: uno debajo del otro; el último ocupa el espacio restante.
  * - principal-lateral: el primero a dos tercios, los demás apilados a la derecha.
+ * - cuadricula: dos columnas; los bloques se reparten en filas del mismo alto.
  */
-export type Disposicion = 'una' | 'columnas' | 'filas' | 'principal-lateral';
+export type Disposicion = 'una' | 'columnas' | 'filas' | 'principal-lateral' | 'cuadricula';
 
 export interface Diapositiva {
   id: string;

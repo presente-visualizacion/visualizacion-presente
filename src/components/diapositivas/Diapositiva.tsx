@@ -77,11 +77,24 @@ function Contenido({ presentacion, diapositiva, periodo, numero }: Props) {
     );
   } else if (disposicion === 'principal-lateral') {
     cuerpo = (
-      <div className="grid h-full grid-cols-[2fr_1fr] gap-[32px]">
+      // Un costado solo de cifras queda angosto, para que el principal tenga más espacio.
+      <div
+        className="grid h-full gap-[32px]"
+        style={{ gridTemplateColumns: bloques.length > 1 && bloques.slice(1).every((b) => b.tipo === 'cifras') ? 'minmax(0, 1fr) 300px' : 'minmax(0, 2fr) minmax(0, 1fr)' }}
+      >
         <div className="min-h-0 min-w-0">{bloques[0] && vista(0)}</div>
         <div className="flex min-h-0 min-w-0 flex-col gap-[24px]">
           {bloques.slice(1).map((b, i) => <div key={b.id} className="min-h-0 flex-1">{vista(i + 1)}</div>)}
         </div>
+      </div>
+    );
+  } else if (disposicion === 'cuadricula') {
+    // Cada bloque en un recuadro, de a dos por fila.
+    cuerpo = (
+      <div className="grid h-full grid-cols-2 gap-[22px]" style={{ gridTemplateRows: `repeat(${Math.max(1, Math.ceil(bloques.length / 2))}, minmax(0, 1fr))` }}>
+        {bloques.map((b, i) => (
+          <div key={b.id} className="min-h-0 min-w-0 rounded-[14px] border border-linea px-[24px] py-[18px]">{vista(i)}</div>
+        ))}
       </div>
     );
   } else {

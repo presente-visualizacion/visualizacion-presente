@@ -68,8 +68,11 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
 - [x] **Etapa 3. Excel.** Cargar cualquier archivo, elegir hoja y columnas,
   vista previa, asignar mes, recordar la configuración por conjunto de datos.
   Programada el 2026-11-17 (ver "Diseño de la etapa 3").
-- [ ] **Etapa 4. Migración.** Las 25 diapositivas originales con todos sus
-  meses. Bloques que falten para las diapositivas especiales.
+- [x] **Etapa 4. Migración.** Las 25 diapositivas originales con todos sus
+  meses. Bloques que falten para las diapositivas especiales. Programada el
+  2026-11-17 (ver "Diseño de la etapa 4"). **Falta un paso de la usuaria:**
+  importar la presentación en el sitio publicado ("Lo que hace la usuaria",
+  en el diseño de la etapa 4).
 - [ ] **Etapa 5. Cierre.** Crear y duplicar presentaciones, PDF, respaldo en
   Excel, historial de versiones, comparar con el mes anterior.
 
@@ -124,7 +127,8 @@ cada mensaje.
   que más cuesta corregir si queda mal. Ya está hecha.
 - **Etapa 2B**: hecha.
 - **Etapa 3**: hecha.
-- **Etapas 4 y 5**: siguen el diseño ya hecho. Opus es suficiente.
+- **Etapa 4**: hecha.
+- **Etapa 5**: sigue el diseño ya hecho. Opus es suficiente.
 - Al terminar cada etapa se sube a GitHub, así que si el uso se acaba a mitad,
   lo terminado no se pierde.
 
@@ -140,6 +144,8 @@ src/
   lib/
     tipos.ts              modelo de datos (leer primero)
     excel/                lectura de Excel y CSV, interpretación, operaciones de carga
+    migracion/            conversión de la presentación original (etapa 4)
+    tablas.ts             lo que muestra una tabla: secciones, grupos, calculadas
     tema.ts               colores de Presente
     periodos.ts           meses: nombres, agrupación, {mes} en textos
     formato.ts            números en formato colombiano
@@ -153,14 +159,15 @@ src/
   components/
     visor/                Visor, BarraMeses, ListaDiapositivas, Lienzo
     diapositivas/         portada, contenido, cierre
-    bloques/              gráfico, tabla, texto, cifras (Grafico.tsx: series;
-                          GraficosEspeciales.tsx: circular, dispersión, cascada)
+    bloques/              gráfico, tabla, texto, cifras, tarjetas (Grafico.tsx:
+                          series; GraficosEspeciales.tsx: circular, dispersión, cascada)
     editor/               guardado en el navegador, panel (pestañas Diapositiva
                           y Presentación), editores de gráfico, tabla, datos y
                           columnas, ventana de carga desde Excel (CargarExcel)
   datos/semilla/          presentación de muestra (generada, no editar a mano)
 pruebas/                  pruebas automáticas (npm run prueba)
 scripts/crear-semilla.mjs genera la muestra con datos inventados
+scripts/migrar-original.mjs prueba el importador con el respaldo (salida en referencia/)
 referencia/               (ignorada por git) copia local de los datos reales
 .datos-locales/           (ignorada por git) base de datos local de desarrollo
 AGENTS.md                 lo escribe `next dev`: manda a leer la documentación
@@ -180,8 +187,11 @@ de diapositivas y un diccionario de conjuntos de datos.
 - Los textos y las cifras usan `PorPeriodo<T>` con la misma idea.
 - Una **diapositiva** es `portada`, `contenido` o `cierre`. Las de contenido
   tienen título, subtítulo, una disposición (`una`, `columnas`, `filas`,
-  `principal-lateral`) y bloques.
-- Un **bloque** es `grafico`, `tabla`, `texto` o `cifras`. Un gráfico tiene
+  `principal-lateral`, `cuadricula`) y bloques.
+- Un **bloque** es `grafico`, `tabla`, `texto`, `cifras` o `tarjetas`, y
+  puede llevar un título arriba y una nota debajo. Las cifras pueden salir de
+  los datos; las tablas pueden agrupar filas en secciones, agrupar columnas y
+  calcular la variación contra el mes anterior y la posición (etapa 4). Un gráfico tiene
   una `forma`: `lineas`, `barras`, `barrasHorizontales`, `area`, `combinado`,
   `circular`, `dispersion`, `radar` o `cascada` (qué usa cada una está en
   "Diseño de la etapa 2B"); y opciones: apilado, etiquetas, resaltar una
@@ -1128,6 +1138,230 @@ ventana) contra la base local, además de las pruebas automáticas
 - **Porcentajes sin formato.** Un `0,145` sin formato de porcentaje en Excel
   se carga como `0,145`. La vista previa lo deja ver antes de cargar.
 
+## Diseño de la etapa 4: migración de la presentación original
+
+Diseñada y programada el 2026-11-17. Si se cambia algo en el código, se
+corrige aquí.
+
+### Qué entra
+
+- Las **25 diapositivas de la versión 2 original** (`/presentation/v2`), en el
+  orden de `slideOrder` del JSON, con sus títulos de `slideTitles` y todos sus
+  meses, armadas con bloques editables del formato nuevo.
+- Los bloques y opciones que faltaban para que se vean como las originales
+  (lista abajo). Todos son genéricos: sirven para cualquier presentación.
+- Un **importador** dentro de la herramienta: en el inicio, "Importar la
+  presentación anterior" lee el JSON de la original (el archivo `InfoComite`
+  o lo que devuelve `/api/presentation/shared` del sitio original), muestra
+  qué va a crear y crea la presentación en la base. Así los datos reales van
+  directo del archivo de la usuaria a la base privada: no pasan por el
+  repositorio ni por el entorno de Claude en producción.
+
+No entra: lo que la original tenía en datos pero ya no mostraba en la v2
+(gráficos de consumo por tramo y de vivienda UVR, propuestas de tasas de
+CDAT y de crédito, FSG, cancelaciones anticipadas). Se pueden armar después
+con los bloques de esta etapa si se piden.
+
+### Decisiones
+
+| Tema | Decisión | Por qué |
+|---|---|---|
+| Aspecto | Mismo contenido, orden, tipo de gráfico y distribución de cada diapositiva; colores y letra del formato nuevo (fondo blanco, colores de Presente). | Lo acordado en "Diseño". La original es oscura. |
+| Meses | Diciembre 2025 a octubre 2026 (los 11 que tiene el benchmarking). Se abre en el último. | El sufijo vacío de la original es diciembre (ver `MONTH_TO_SUFFIX`). |
+| Series de tiempo | Iguales en todos los meses (TES, tasas de referencia, cartera, pasivos, etc.). | En la original son una sola serie que va creciendo. |
+| Benchmarking (VIS, No VIS, Libre Inversión, CDATs, Créditos, Resumen) | Propios de cada mes, con los meses que trae el JSON. Un mes sin datos muestra el aviso de siempre. | Así estaban en la original (selector de mes en cada diapositiva). |
+| Textos (análisis macro, propuesta de cambio de tasas, Davivienda) | Propios de cada mes, solo en octubre 2026. "Nuevo mes" los copia. | Son del mes en que se escribieron; la original no guardaba los anteriores. |
+| Dos unidades en un gráfico | "TPP Captación y Saldos" mezcla saldos ($) y tasas (%) con dos ejes. Pasa a **dos gráficos lado a lado** (saldos y TPP). | Se acordó un solo eje por gráfico. |
+| Variación y posición | En las tablas de Créditos y CDATs, "Var" se **calcula** contra el mes anterior que tenga datos (como la original). La posición de Créditos se calcula (menor tasa = 1, como la original); la de CDATs viene en los datos. | Si se calculan, al cargar el mes nuevo se actualizan solas. |
+| Cifras de los costados | "Entidades", "Monto total", "Presente", "Último", etc. **salen de los datos** (primera fila, última fila o la fila de PRESENTE). | Al cargar un Excel nuevo se actualizan solas, como en la original. |
+| Diferencia REPO − Inflación | Columna de datos calculada al importar. | No hay columnas calculadas; se puede volver a cargar desde Excel. |
+| Resumen de benchmarking | Monto y "$ Desembolsos Presente" quedan como texto ("$101.110 mil M"); tasas y variación pasan a número. | Los montos vienen escritos con unidades mezcladas ("mil M", "bill."). |
+| Dónde se convierte | `src/lib/migracion/original.ts`, en el navegador; el servidor valida con `validarPresentacion` antes de crear. | El mismo código sirve para la prueba local con el respaldo. |
+
+### Bloques y opciones nuevas
+
+En `tipos.ts` (todo opcional, así las presentaciones existentes siguen
+valiendo):
+
+```ts
+// Todos los bloques
+titulo?: string;      // encabezado chico arriba del bloque ("Créditos de libranza — Davivienda")
+nota?: string;        // texto chico debajo ("* Tasas efectivas anuales ...")
+
+// Disposición nueva
+'cuadricula'          // dos columnas; los bloques se reparten en filas iguales
+
+// Serie
+punteada?: boolean;   // línea punteada (usura, total, TES 10 años)
+
+// BloqueGrafico
+detalleEje?: string;  // columna que se escribe debajo de cada categoría ("TPP 18,29%")
+// resaltar con varias series: las barras de las demás categorías quedan atenuadas
+
+// Columna (del conjunto)
+grupo?: string;       // encabezado agrupado en tablas ("Vivienda VIS" sobre Tasa, Var, Pos.)
+signo?: boolean;      // en tablas: "+" delante y verde si es positivo, rojo si es negativo
+
+// BloqueTabla
+secciones?: string;   // columna de texto que agrupa las filas: una fila de título por grupo
+calculadas?: { tipo: 'variacion' | 'posicion'; columna: string; orden?: 'asc' | 'desc' }[];
+//   variacion: valor del mes menos el del mes anterior con datos, para la misma fila
+//              (misma sección y mismo primer texto). Va justo después de su columna.
+//   posicion:  1, 2, 3... dentro de la sección; 'asc' = el menor es 1.
+
+// Cifra
+desde?: {
+  conjunto: string; columna: string;
+  fila: 'primera' | 'ultima' | { columna: string; valor: string };
+  detalle?: string;                    // columna de la misma fila que va como detalle (el mes)
+  comparar?: 'primera' | 'ultima' | { columna: string; valor: string };
+  //   detalle = diferencia contra esa fila ("+6,22 pp") seguida del detalle escrito
+};
+
+// Bloque nuevo
+interface BloqueTarjetas { id; tipo: 'tarjetas'; tarjetas: PorPeriodo<{ titulo: string; texto: string }[]> }
+```
+
+Texto: además de párrafos y viñetas, `**negrita**` y las líneas que empiezan
+con `# ` salen en letra grande (la cifra destacada del ahorro de DaviPlata).
+
+Operaciones nuevas:
+
+```ts
+| { op: 'bloque.marco'; bloque: string; titulo: string; nota: string }   // '' quita
+| { op: 'tarjetas.valor'; bloque: string; periodo: IdPeriodo | null; valor: Tarjeta[] | null }
+```
+
+- `grafico.config` y `tabla.config` no tocan `titulo` ni `nota` (los conserva
+  el bloque); así no se pisan con `bloque.marco`.
+- `porPeriodo` acepta también bloques de tarjetas.
+- Las columnas que usan `secciones`, `calculadas`, `detalleEje` y las cifras
+  con `desde` cuentan como usadas: no se pueden quitar por debajo, y un
+  conjunto que usa una cifra no se puede quitar.
+- Topes: título y nota de bloque, 200 caracteres; 8 tarjetas por bloque,
+  título 80 y texto 600; 12 columnas calculadas por tabla.
+
+Tablas densas: con más de 10 columnas visibles la letra y los márgenes se
+achican; el alto mínimo de fila baja a 22 px. Si aun así no caben (CDATs de
+octubre tiene 30 entidades), la tabla se desplaza, como en la original.
+
+### Correspondencia
+
+| # | Original (`slideOrder`) | Formato nuevo |
+|---|---|---|
+| 1 | cover | Portada: "Comité de Precios" / "{mes}" |
+| 2 | macroeconomic | Texto (4 párrafos, con negritas) |
+| 3 | historicalRates | Líneas: TES 1, 5 y 10 años (10 punteada) |
+| 4 | referenceRates | Líneas: DTF, IBR, IPC, REPO |
+| 5 | inflationRepo | Líneas: REPO, inflación, diferencia (punteada) |
+| 6 | deficitFiscal | Líneas: total por año (los meses quedan en los datos) |
+| 7 | portfolioBalance | Filas: cifra "Total" (último mes) + líneas (total punteada) |
+| 8 | portfolioStockRates | Líneas: consumo, usura (p.), rotativos, total (p.), vivienda |
+| 9 | monthlyDisbursements | Líneas: consumo, tarjeta, vivienda |
+| 10 | disbursementRates | Líneas: consumo, tarjeta, usura (p.), TPP (p.), vivienda |
+| 11 | benchmarkingSummary | Tabla por mes, variación con color |
+| 12 | benchmarkingCredits | Tabla por mes: secciones (bancos, cooperativas), grupos, Var y posición calculadas, PRESENTE resaltado |
+| 13–15 | benchmarkingLibreInversion, NoVis, Vis | Principal y lateral: barras (# y $ desembolsos, PRESENTE resaltado, TPP bajo cada entidad) + cifras (entidades, monto, desembolsos, tasa promedio, Presente contra el promedio) |
+| 16 | totalLiabilities | Líneas |
+| 17 | tppCaptacion | Columnas: líneas de saldos + líneas de TPP |
+| 18–19 | ingresosMensuales, tppIngresosAhorro | Filas: 3 cifras del último mes + líneas |
+| 20 | benchmarkingCDATs | Tabla por mes (secciones, 6 plazos con tasa, Var y posición calculadas) |
+| 21 | daviviendaDaviplata | Cuadrícula: tabla libranza, texto DaviPlata ahorro, tabla crédito digital (con nota), tarjetas digitales |
+| 22–23 | servicioCredito, tppLibreInversion | Filas: cifras del último mes + líneas |
+| 24 | cierre | Cierre: "¡Gracias!" / "Comité de Precios" |
+| 25 | rateChangeProposal | Filas: texto + tarjetas ("Se propone lo siguiente:") |
+
+Lo que no se pasa igual: el tramo de 2026 en otro color del "Margen de
+intermediación" (queda una sola línea) y los colores propios de cada serie
+(se usan los del tema, en su orden).
+
+Textos de la original que no vienen en el archivo de datos sino escritos en
+su código, y que tienen cifras: la nota al pie de "Benchmarking CDATs" (tasas
+E.A. y el monto al que aplican) y la cifra que acompaña el nombre de la
+serie "Servicio del crédito". No se copian al importador porque el repositorio es
+público; se escriben una vez en el editor (nota del bloque y nombre de la
+columna).
+
+Las variaciones vacías del resumen de benchmarking (los meses nuevos las
+traen vacías) se completan al importar como tasa promedio menos tasa
+Presente, que es lo que traen los meses anteriores.
+
+### Importador
+
+- Ruta `POST /api/presentaciones` con `{ presentacion }`: exige permiso de
+  edición (`puedeEditar`), valida, busca un id libre (`comite-de-precios`,
+  `comite-de-precios-2`, ...) y crea. Responde `{ id }`. Tope del envío: 2 MB.
+- Inicio: si se puede editar, enlace "Importar la presentación anterior" →
+  ventana: elegir el archivo `.json`, resumen (diapositivas, meses, conjuntos y
+  avisos de lo que no se encontró), "Crear presentación" → abre la nueva.
+- `scripts/migrar-original.mjs` hace lo mismo sin pantalla, para probar con el
+  respaldo: lee el JSON que se le indique, escribe el resultado en
+  `referencia/` (ignorada) y, con `--crear`, lo guarda en la base local.
+
+### Archivos
+
+```
+src/lib/migracion/original.ts        conversión del JSON original
+src/app/api/presentaciones/route.ts  crear
+src/components/inicio/Importar.tsx   ventana del importador
+src/lib/tipos.ts, edicion/*          (cambian) opciones, bloque y operaciones nuevas
+src/components/bloques/*             (cambian) dibujo de lo nuevo
+src/components/editor/*              (cambian) edición de lo nuevo
+pruebas/migracion.prueba.ts          conversión con un JSON inventado de la misma forma
+```
+
+### Orden de trabajo
+
+- [x] **4.1 Modelo**: tipos, operaciones, validación y pruebas de lo nuevo.
+- [x] **4.2 Dibujo**: bloques, tablas, cifras y gráficos.
+- [x] **4.3 Edición**: panel para lo nuevo.
+- [x] **4.4 Importador**: conversión, ruta, ventana, script y pruebas.
+- [x] **4.5 Cierre**: comparar lado a lado con la original, README y este plan.
+
+### Cómo se comprobó
+
+El 2026-11-17, con el respaldo de datos reales en `referencia/` (sin
+subirlo):
+
+- La original se levantó en local con el JSON de respaldo y se fotografió
+  cada diapositiva; la nueva se comparó una por una en Chrome (escritorio y
+  celular), en octubre y en meses sin algunos datos (mayo, diciembre).
+- `node scripts/migrar-original.mjs referencia/InfoComite.json` da 25
+  diapositivas, 11 meses y 22 conjuntos, válidos y sin avisos.
+- En el navegador: importar desde el inicio (y un archivo que no es la
+  exportación, que se rechaza), editar una tarjeta, el título de un bloque,
+  quitar y deshacer una columna calculada y poner una línea punteada; todo
+  se guarda y sigue al recargar.
+- `npm run tipos`, `npm run prueba` (152 pruebas; `pruebas/migracion.prueba.ts`
+  usa un JSON inventado con la misma forma) y `npm run build` sin errores.
+
+### Detalles de dibujo
+
+- Texto y tarjetas se achican solos (hasta el 60 %) si no caben en su caja,
+  sin barra de desplazamiento; solo al mínimo aparece la barra.
+- Tablas: densas (letra y márgenes menores) si tienen más de 10 columnas o
+  poco alto para sus filas. Los textos con forma de número ("$101.110 mil M")
+  van a la derecha y sin partir.
+- Principal y lateral: si el costado es solo de cifras, mide 300 px; las
+  cifras se apilan cuando no caben una al lado de la otra.
+- Barras con categoría resaltada y varias series: franja de fondo y nombre en
+  negrita (con una serie, la barra en el color principal como antes). Con
+  detalle bajo el eje, las etiquetas van en hasta 3 renglones y la letra se
+  ajusta al espacio de cada categoría.
+
+### Lo que hace la usuaria
+
+1. Poner la clave de edición antes de importar (los datos son reales y la
+   edición está abierta): ver "Acceso" en el diseño de la 2A.
+2. En el sitio publicado, en el inicio: "Importar la presentación anterior" →
+   elegir `InfoComite.json` (o descargar de nuevo
+   `https://presentacion-comite-2026.vercel.app/api/presentation/shared` y
+   guardarlo como `.json`) → "Crear presentación".
+3. Escribir la nota al pie de "Benchmarking CDATs" y, si se quiere, la
+   cifra del nombre de la serie "Servicio del crédito" (ver arriba).
+4. Cuando la nueva esté bien, la presentación de muestra puede quedarse o
+   borrarse (borrar presentaciones llega en la etapa 5).
+
 ## Cómo trabajar
 
 ```
@@ -1161,22 +1395,7 @@ Cada vez que se sube código a la rama `main`, Vercel publica solo.
 
 ## Notas para la migración (etapa 4)
 
-- La migración se hace con los datos reales del respaldo, pero el resultado
-  **no se sube**: el script de migración lee la carpeta que se le indique y
-  escribe en la base de datos (o en un archivo dentro de `referencia/`, que
-  está ignorada). En el repositorio solo queda el script.
-- Datos originales: `referencia/presentacion-original/src/data/`. El archivo
-  `_indice.json` dice qué archivo corresponde a cada bloque. Los archivos con
-  sufijo de mes (`_enero` ... `_septiembre`) son de 2026.
-- Orden y títulos originales: `slide_order.json` y `slide_titles.json`.
-- Cómo se ve cada diapositiva original:
-  `referencia/presentacion-original/src/components/presentation/`.
-- `scripts/crear-semilla.mjs` arma cinco diapositivas en el formato nuevo (con
-  datos inventados) y sirve de ejemplo de la forma que debe producir la
-  migración.
-- Varias diapositivas originales tienen filtro por plazo o por tipo (consumo
-  hasta 1 año, de 1 a 3, etc.). Decidir si cada una pasa a ser una diapositiva
-  o si se agrega un filtro dentro del bloque.
-- Las tablas de propuesta de tasas y la diapositiva de Davivienda/DaviPlata
-  necesitan revisar si alcanzan con `tabla` y `cifras` o si piden un bloque
-  nuevo (por ejemplo, tabla con encabezados agrupados).
+Hecha: ver "Diseño de la etapa 4". El importador vive en
+`src/lib/migracion/original.ts` y en el inicio ("Importar la presentación
+anterior"); `scripts/migrar-original.mjs` lo corre sin pantalla contra el
+respaldo de `referencia/` y deja el resultado en `referencia/salida/`.

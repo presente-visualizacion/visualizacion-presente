@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import { Importar } from '@/components/inicio/Importar';
 import { Logo } from '@/components/Logo';
+import { puedeEditar } from '@/lib/acceso';
 import { obtenerAlmacen } from '@/lib/almacen';
 import { nombrePeriodo } from '@/lib/periodos';
 
@@ -9,7 +11,9 @@ export const dynamic = 'force-dynamic';
 const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'UTC' });
 
 export default async function Inicio() {
-  const presentaciones = await (await obtenerAlmacen()).listar();
+  const almacen = await obtenerAlmacen();
+  const presentaciones = await almacen.listar();
+  const editable = !almacen.soloLectura && (await puedeEditar());
 
   return (
     <div className="min-h-full bg-white">
@@ -20,7 +24,10 @@ export default async function Inicio() {
           <span className="text-lg font-semibold">Visualización Presente</span>
         </div>
 
-        <h1 className="mt-12 text-4xl font-bold tracking-tight sm:text-5xl">Presentaciones</h1>
+        <div className="mt-12 flex flex-wrap items-end justify-between gap-4">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Presentaciones</h1>
+          {editable && <Importar />}
+        </div>
 
         <ul className="mt-8 divide-y divide-linea border-y border-linea">
           {presentaciones.map((p) => {

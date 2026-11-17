@@ -5,7 +5,7 @@
 // presentación (meses y colores). Ver "Pantalla de edición" en PLAN.md (2A y 2B).
 
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ChartColumn, Copy, FileSpreadsheet, Hash, Plus, Table2, Trash2, Type, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChartColumn, Copy, FileSpreadsheet, Hash, LayoutGrid, Plus, Table2, Trash2, Type, X } from 'lucide-react';
 import { conjuntoDe, filasDe } from '@/lib/datos';
 import type { Operacion } from '@/lib/edicion/operaciones';
 import { diapositivaNueva, idsEnUso, opsDuplicarBloque, opsDuplicarDiapositiva, opsQuitarBloque, opsQuitarDiapositiva } from '@/lib/edicion/plantillas';
@@ -17,6 +17,7 @@ import { AgregarBloque } from './AgregarBloque';
 import { EditorCifras } from './EditorCifras';
 import { EditorGrafico, FORMAS_INFO } from './EditorGrafico';
 import { EditorTabla } from './EditorTabla';
+import { EditorTarjetas } from './EditorTarjetas';
 import { EditorTexto } from './EditorTexto';
 import { PanelPresentacion } from './PanelPresentacion';
 import { BotonConfirmar, BotonIcono, Campo, CLASE_BOTON, CLASE_BOTON_PRINCIPAL, Opcion } from './piezas';
@@ -37,8 +38,8 @@ interface Props {
   className?: string;
 }
 
-const NOMBRES: Record<Bloque['tipo'], string> = { grafico: 'Gráfico', tabla: 'Tabla', texto: 'Texto', cifras: 'Cifras' };
-const ICONOS = { grafico: ChartColumn, tabla: Table2, texto: Type, cifras: Hash };
+const NOMBRES: Record<Bloque['tipo'], string> = { grafico: 'Gráfico', tabla: 'Tabla', texto: 'Texto', cifras: 'Cifras', tarjetas: 'Tarjetas' };
+const ICONOS = { grafico: ChartColumn, tabla: Table2, texto: Type, cifras: Hash, tarjetas: LayoutGrid };
 const TIPOS_DIAPOSITIVA: { valor: Diapositiva['tipo']; nombre: string }[] = [
   { valor: 'portada', nombre: 'Portada' },
   { valor: 'contenido', nombre: 'Contenido (gráficos, tablas, textos)' },
@@ -219,13 +220,14 @@ const DISPOSICIONES: { valor: Disposicion; nombre: string; dibujo: React.ReactNo
   { valor: 'columnas', nombre: 'Columnas', dibujo: <><rect x="3" y="3" width="14" height="18" rx="2" /><rect x="19" y="3" width="14" height="18" rx="2" /></> },
   { valor: 'filas', nombre: 'Filas', dibujo: <><rect x="3" y="3" width="30" height="6" rx="2" /><rect x="3" y="11" width="30" height="10" rx="2" /></> },
   { valor: 'principal-lateral', nombre: 'Principal y lateral', dibujo: <><rect x="3" y="3" width="19" height="18" rx="2" /><rect x="24" y="3" width="9" height="8" rx="2" /><rect x="24" y="13" width="9" height="8" rx="2" /></> },
+  { valor: 'cuadricula', nombre: 'Cuadrícula', dibujo: <><rect x="3" y="3" width="14" height="8" rx="2" /><rect x="19" y="3" width="14" height="8" rx="2" /><rect x="3" y="13" width="14" height="8" rx="2" /><rect x="19" y="13" width="14" height="8" rx="2" /></> },
 ];
 
 function SelectorDisposicion({ valor, bloques, onCambiar }: { valor: Disposicion; bloques: number; onCambiar: (d: Disposicion) => void }) {
   return (
     <div>
       <p className="mb-1 text-sm font-semibold text-tinta">Disposición de los bloques</p>
-      <div role="radiogroup" aria-label="Disposición de los bloques" className="grid grid-cols-4 gap-1.5">
+      <div role="radiogroup" aria-label="Disposición de los bloques" className="grid grid-cols-5 gap-1.5">
         {DISPOSICIONES.map((d) => (
           <button
             key={d.valor}
@@ -283,8 +285,10 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
         />
       </div>
       {oculto && <p className="text-[13px] text-tinta-suave">No se ve en la diapositiva con la disposición "Un bloque".</p>}
+      <MarcoBloque bloque={bloque} cambiar={cambiar} />
       {bloque.tipo === 'texto' && <EditorTexto key={`${bloque.id}|${periodo}`} presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {bloque.tipo === 'cifras' && <EditorCifras presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
+      {bloque.tipo === 'tarjetas' && <EditorTarjetas presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {(bloque.tipo === 'grafico' || bloque.tipo === 'tabla') && (
         <ResumenDatos
           presentacion={presentacion}
@@ -297,6 +301,26 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
       {bloque.tipo === 'grafico' && <EditorGrafico presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {bloque.tipo === 'tabla' && <EditorTabla presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
     </section>
+  );
+}
+
+/** Título (arriba) y nota (debajo) del bloque: se abren con un clic para no ocupar espacio. */
+function MarcoBloque({ bloque, cambiar }: { bloque: Bloque; cambiar: Props['cambiar'] }) {
+  const [abierto, setAbierto] = useState(Boolean(bloque.titulo || bloque.nota));
+  const poner = (titulo: string, nota: string, campo: string) =>
+    cambiar({ op: 'bloque.marco', bloque: bloque.id, titulo, nota }, `marco|${bloque.id}|${campo}`);
+  if (!abierto) {
+    return (
+      <button type="button" onClick={() => setAbierto(true)} className="text-[13px] font-semibold text-primario underline-offset-2 hover:underline">
+        + Título o nota del bloque
+      </button>
+    );
+  }
+  return (
+    <div className="grid gap-2">
+      <Campo etiqueta="Título del bloque" valor={bloque.titulo ?? ''} maximo={TOPES.titulo} marcador="Opcional: va arriba, en mayúsculas" onCambiar={(v) => poner(v, bloque.nota ?? '', 'titulo')} />
+      <Campo etiqueta="Nota" valor={bloque.nota ?? ''} maximo={TOPES.titulo} marcador="Opcional: va debajo, en letra chica (fuentes, aclaraciones)" onCambiar={(v) => poner(bloque.titulo ?? '', v, 'nota')} />
+    </div>
   );
 }
 

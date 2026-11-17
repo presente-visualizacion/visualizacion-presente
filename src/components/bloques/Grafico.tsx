@@ -1,15 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, LabelList, Line, LineChart,
-  PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import type { Columna, Fila } from '@/lib/tipos';
 import {
-  anchoTexto, BLANCO, ejeCategorias, ejeValores, LINEA, marcaEje, reducirMovimiento, SUAVE, TINTA,
+  anchoTexto, BLANCO, ejeCategorias, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, reducirMovimiento, SUAVE, TINTA,
   type PropsGrafico, type SerieLista,
 } from './graficoComun';
 import { Cascada, Circular, Dispersion } from './GraficosEspeciales';
@@ -28,13 +28,25 @@ export default function Grafico(props: Props) {
 /** Gráficos de una o más series sobre un eje de categorías. */
 function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   const [ocultas, setOcultas] = useState<Set<string>>(new Set());
+  // Ancho del gráfico, para saber cuánto espacio tiene cada categoría del eje.
+  const caja = useRef<HTMLDivElement>(null);
+  const [ancho, setAncho] = useState(0);
+  useLayoutEffect(() => {
+    const el = caja.current;
+    if (!el) return;
+    const medir = () => setAncho(el.clientWidth);
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, []);
 
   // El color sigue a la serie, no a su posición visible: ocultar una serie no
   // cambia el color de las demás.
   const series: SerieLista[] = useMemo(
     () => bloque.series.map((s, i) => {
       const columna = columnaDe(conjunto, s.clave);
-      return { clave: s.clave, nombre: columna?.nombre ?? s.clave, color: s.color ?? tema.series[i % tema.series.length], columna, tipo: s.tipo };
+      return { clave: s.clave, nombre: columna?.nombre ?? s.clave, color: s.color ?? tema.series[i % tema.series.length], columna, tipo: s.tipo, punteada: s.punteada };
     }),
     [bloque.series, conjunto, tema.series],
   );
@@ -87,6 +99,39 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
     : 24;
 
 
+  // Barras con detalle bajo cada categoría o con una categoría resaltada: el
+  // eje se dibuja a mano (dos renglones, el detalle y la resaltada en negrita).
+  const columnaDetalleEje = bloque.detalleEje ? columnaDe(conjunto, bloque.detalleEje) : undefined;
+  const ejeAMano = (bloque.forma === 'barras' || bloque.forma === 'combinado') && (Boolean(columnaDetalleEje) || Boolean(bloque.resaltar));
+  const esResaltada = (f: Fila | undefined) => Boolean(bloque.resaltar && f && String(f[bloque.resaltar.columna]) === bloque.resaltar.valor);
+  const ejeCategoriasBarras = ejeAMano
+    ? {
+        ...ejeCategorias,
+        interval: 0,
+        height: columnaDetalleEje ? 74 : 58,
+        tick: (t: any) => {
+          const fila: Fila | undefined = filas[t.index] ?? filas.find((f) => String(f[bloque.ejeX]) === String(t.payload?.value));
+          const porCategoria = ((ancho || 800) - anchoValores - 16) / Math.max(1, filas.length);
+          const letra = porCategoria < 66 ? 11.5 : porCategoria < 90 ? 12.5 : 14;
+          const destacada = esResaltada(fila);
+          const renglones = partirTexto(String(t.payload?.value ?? ''), letra, Math.max(44, porCategoria - 6), porCategoria < 90 ? 3 : 2);
+          return (
+            <g transform={`translate(${t.x},${t.y})`}>
+              <text textAnchor="middle" fontSize={letra} fill={destacada ? tema.primario : TINTA} fontWeight={destacada ? 700 : 400}>
+                {renglones.map((r, i) => <tspan key={i} x={0} dy={i === 0 ? letra + 1 : letra + 2}>{r}</tspan>)}
+                {renglones.length === 1 && <tspan x={0} dy={letra + 2}>{' '}</tspan>}
+                {columnaDetalleEje && fila && (
+                  <tspan x={0} dy={letra + 5} fontSize={letra - 1} fontWeight={destacada ? 700 : 400} fill={destacada ? tema.primario : SUAVE}>
+                    {`${columnaDetalleEje.nombre} ${formatear(fila[columnaDetalleEje.clave], columnaDetalleEje)}`}
+                  </tspan>
+                )}
+              </text>
+            </g>
+          );
+        },
+      }
+    : { ...ejeCategorias, minTickGap: 24 };
+
   const globo = (
     <Tooltip
       cursor={deTiempo ? { stroke: '#CFC6CB', strokeWidth: 1 } : { fill: '#F5EFF2' }}
@@ -123,8 +168,12 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
     grafico = (
       <BarChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
         <CartesianGrid vertical={false} stroke={LINEA} />
-        <XAxis dataKey={bloque.ejeX} minTickGap={24} {...ejeCategorias} />
+        <XAxis dataKey={bloque.ejeX} {...ejeCategoriasBarras} />
         <YAxis width={anchoValores} domain={[0, 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        {/* Con varias series, la categoría resaltada lleva una franja de fondo. */}
+        {bloque.resaltar && series.length > 1 && filas.filter(esResaltada).map((f, i) => (
+          <ReferenceArea key={i} x1={String(f[bloque.ejeX])} x2={String(f[bloque.ejeX])} fill="#FCEEF4" fillOpacity={1} strokeOpacity={0} />
+        ))}
         {globo}
         {visibles.map((s) => (
           <Bar
@@ -136,7 +185,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
             maxBarSize={28} isAnimationActive={animar} animationDuration={450}
           >
             {bloque.resaltar && series.length === 1 && filas.map((f, i) => (
-              <Cell key={i} fill={String(f[bloque.resaltar!.columna]) === bloque.resaltar!.valor ? tema.primario : tema.neutro} />
+              <Cell key={i} fill={esResaltada(f) ? tema.primario : tema.neutro} />
             ))}
             {bloque.etiquetas && !apilado && (
               <LabelList dataKey={s.clave} position="top" offset={8} fontSize={15} fontWeight={600} fill={TINTA} formatter={(v: any) => formatear(v, s.columna)} />
@@ -150,12 +199,13 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
     grafico = (
       <ComposedChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
         <CartesianGrid vertical={false} stroke={LINEA} />
-        <XAxis dataKey={bloque.ejeX} minTickGap={24} {...ejeCategorias} />
+        <XAxis dataKey={bloque.ejeX} {...ejeCategoriasBarras} />
         <YAxis width={anchoValores} domain={[minimo < 0 ? 'auto' : 0, 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
         {globo}
         {visibles.map((s) => (s.tipo === 'lineas' ? (
           <Line
             key={s.clave} dataKey={s.clave} name={s.nombre} type="monotone" stroke={s.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+            strokeDasharray={s.punteada ? PUNTEADA : undefined}
             dot={false} activeDot={{ r: 5, stroke: BLANCO, strokeWidth: 2 }} isAnimationActive={animar} animationDuration={450}
           />
         ) : (
@@ -192,6 +242,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
         {visibles.map((s) => (
           <Area
             key={s.clave} dataKey={s.clave} name={s.nombre} type="monotone" stroke={s.color} strokeWidth={2.5} fill={s.color} fillOpacity={0.1}
+            strokeDasharray={s.punteada ? PUNTEADA : undefined}
             dot={false} activeDot={{ r: 5, stroke: BLANCO, strokeWidth: 2 }} isAnimationActive={animar} animationDuration={450}
           />
         ))}
@@ -207,6 +258,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
         {visibles.map((s) => (
           <Line
             key={s.clave} dataKey={s.clave} name={s.nombre} type="monotone" stroke={s.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+            strokeDasharray={s.punteada ? PUNTEADA : undefined}
             dot={false} activeDot={{ r: 5, stroke: BLANCO, strokeWidth: 2 }} isAnimationActive={animar} animationDuration={450}
           />
         ))}
@@ -215,7 +267,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div ref={caja} className="flex h-full min-h-0 flex-col">
       {series.length > 1 && (
         <ul className="mb-[14px] flex flex-wrap gap-x-[8px] gap-y-[6px]">
           {series.map((s) => {
@@ -232,7 +284,11 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
                   <span
                     aria-hidden
                     className={comoLinea(s) ? 'h-[4px] w-[18px] rounded-full' : 'h-[12px] w-[12px] rounded-[3px]'}
-                    style={oculta ? { boxShadow: `inset 0 0 0 1.5px ${s.color}` } : { background: s.color }}
+                    style={oculta
+                      ? { boxShadow: `inset 0 0 0 1.5px ${s.color}` }
+                      : comoLinea(s) && s.punteada
+                        ? { background: `repeating-linear-gradient(to right, ${s.color} 0 6px, transparent 6px 9px)` }
+                        : { background: s.color }}
                   />
                   <span>{s.nombre}</span>
                   {deTiempo && !oculta && ultima && (

@@ -48,6 +48,8 @@ export function EditorColumnas({ presentacion, conjunto, cambiar }: Props) {
             <th className="w-36 px-1 font-normal">Tipo</th>
             <th className="w-24 px-1 font-normal">Decimales</th>
             <th className="w-36 px-1 font-normal">Unidad</th>
+            <th className="w-36 px-1 font-normal" title="Encabezado agrupado en las tablas">Grupo en tablas</th>
+            <th className="w-16 px-1 text-center font-normal" title="En tablas: + y verde si es positivo, rojo si es negativo">+/−</th>
             <th className="w-28" aria-label="Acciones" />
           </tr>
         </thead>
@@ -104,6 +106,29 @@ export function EditorColumnas({ presentacion, conjunto, cambiar }: Props) {
                       placeholder="Ej.: millones"
                       onChange={(e) => cambiar({ op: 'datos.columna', conjunto: conjunto.id, clave: c.clave, unidad: e.target.value })}
                       className={`${CLASE_CAMPO} h-9 py-0`}
+                    />
+                  )}
+                </td>
+                <td className="px-1">
+                  <input
+                    aria-label={`Grupo de ${c.nombre} en las tablas`}
+                    value={c.grupo ?? ''}
+                    maxLength={80}
+                    placeholder="Ninguno"
+                    title="Las columnas seguidas con el mismo grupo comparten un encabezado arriba"
+                    onChange={(e) => cambiar({ op: 'datos.columna', conjunto: conjunto.id, clave: c.clave, grupo: e.target.value })}
+                    className={`${CLASE_CAMPO} h-9 py-0`}
+                  />
+                </td>
+                <td className="px-1 text-center">
+                  {c.tipo !== 'texto' && (
+                    <input
+                      type="checkbox"
+                      aria-label={`Mostrar ${c.nombre} con signo y color`}
+                      title="En tablas: + y verde si es positivo, rojo si es negativo"
+                      checked={Boolean(c.signo)}
+                      onChange={(e) => cambiar({ op: 'datos.columna', conjunto: conjunto.id, clave: c.clave, signo: e.target.checked })}
+                      className="h-4 w-4 accent-primario"
                     />
                   )}
                 </td>

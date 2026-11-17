@@ -14,12 +14,12 @@ npm run dev
 
 Abre http://localhost:3000.
 
-## Qué hay hoy (etapas 1, 2A, 2B y 3)
+## Qué hay hoy (etapas 1 a 4)
 
 - Lista de presentaciones y visor.
 - Barra de meses: al elegir un mes cambia toda la presentación.
 - Diapositivas de portada, contenido y cierre, con gráficos interactivos,
-  tablas, textos y cifras. Nueve tipos de gráfico: líneas, barras, barras
+  tablas, textos, cifras y tarjetas. Nueve tipos de gráfico: líneas, barras, barras
   horizontales, área, combinado (barras y línea), circular, dispersión, radar y
   cascada.
 - Modo presentación en pantalla completa, navegación con teclado y versión
@@ -35,12 +35,19 @@ Abre http://localhost:3000.
   un mes nuevo). Se elige la hoja, los encabezados y las columnas, con vista
   previa. La herramienta recuerda de dónde salió cada columna y el mes
   siguiente lo propone sola. El archivo se lee en el navegador y no se sube.
+- **Importar la presentación anterior** del Comité (etapa 4): desde el
+  inicio se elige el archivo JSON de la original y se crea una presentación
+  con sus 25 diapositivas y sus meses, todo editable. Para eso hay bloques y
+  opciones nuevas: título y nota en cada bloque, cuadrícula, tarjetas, cifras
+  que salen de los datos, tablas con secciones, encabezados agrupados,
+  variación contra el mes anterior y posición calculadas, líneas punteadas y
+  detalle bajo cada barra.
 - Base de datos (Postgres de Neon conectado desde Vercel). Sin base conectada,
   el sitio publicado muestra la presentación de ejemplo en solo lectura.
 - Una presentación de muestra del Comité de Precios con datos inventados.
 
-Todavía no están las 25 diapositivas originales (etapa 4) ni se puede crear
-presentaciones nuevas, descargar en PDF o ver el historial (etapa 5).
+Todavía no se puede crear presentaciones nuevas desde cero, descargar en PDF
+o ver el historial (etapa 5).
 
 ## Pruebas
 

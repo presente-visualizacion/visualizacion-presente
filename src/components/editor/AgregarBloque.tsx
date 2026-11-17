@@ -5,7 +5,7 @@
 // existe).
 
 import { useState } from 'react';
-import { ChartColumn, Hash, Plus, Table2, Type } from 'lucide-react';
+import { ChartColumn, Hash, LayoutGrid, Plus, Table2, Type } from 'lucide-react';
 import type { Operacion } from '@/lib/edicion/operaciones';
 import { opsAgregarBloque, type TipoNuevo } from '@/lib/edicion/plantillas';
 import { TOPES } from '@/lib/edicion/validar';
@@ -17,6 +17,7 @@ const TIPOS: { tipo: TipoNuevo; nombre: string; icono: typeof Type }[] = [
   { tipo: 'tabla', nombre: 'Tabla', icono: Table2 },
   { tipo: 'texto', nombre: 'Texto', icono: Type },
   { tipo: 'cifras', nombre: 'Cifras', icono: Hash },
+  { tipo: 'tarjetas', nombre: 'Tarjetas', icono: LayoutGrid },
 ];
 
 interface Props {
@@ -65,13 +66,13 @@ export function AgregarBloque({ presentacion, diapositiva, cambiar, onDatosNuevo
   return (
     <div className="space-y-3 rounded-lg border border-linea-fuerte p-3">
       <p className="text-sm font-semibold text-tinta">¿Qué quieres agregar?</p>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-5 gap-1.5">
         {TIPOS.map(({ tipo: t, nombre, icono: Icono }) => (
           <button
             key={t}
             type="button"
             aria-pressed={tipo === t}
-            onClick={() => (t === 'texto' || t === 'cifras' ? agregar(t, 'nuevo') : setTipo(t))}
+            onClick={() => (t === 'texto' || t === 'cifras' || t === 'tarjetas' ? agregar(t, 'nuevo') : setTipo(t))}
             className={`flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[13px] ${tipo === t ? 'border-primario bg-tinte font-semibold text-tinta' : 'border-linea-fuerte text-tinta-suave hover:bg-fondo-app hover:text-tinta'}`}
           >
             <Icono size={20} aria-hidden /> {nombre}

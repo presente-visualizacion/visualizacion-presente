@@ -21,6 +21,30 @@ export interface SerieLista {
   columna?: Columna;
   /** Solo en el combinado. */
   tipo?: 'barras' | 'lineas';
+  punteada?: boolean;
+}
+
+/** Trazo de una línea punteada. */
+export const PUNTEADA = '7 6';
+
+/** Parte una etiqueta en a lo sumo `lineas` renglones que quepan en `ancho` px. */
+export function partirTexto(texto: string, tamano: number, ancho: number, lineas = 2): string[] {
+  const palabras = texto.split(/\s+/).filter(Boolean);
+  const renglones: string[] = [];
+  let actual = '';
+  for (const palabra of palabras) {
+    const prueba = actual ? `${actual} ${palabra}` : palabra;
+    if (actual && anchoTexto(prueba, tamano) > ancho) {
+      renglones.push(actual);
+      actual = palabra;
+    } else {
+      actual = prueba;
+    }
+  }
+  if (actual) renglones.push(actual);
+  if (renglones.length <= lineas) return renglones;
+  const resto = renglones.slice(lineas - 1).join(' ');
+  return [...renglones.slice(0, lineas - 1), resto.length > 18 ? `${resto.slice(0, 17)}…` : resto];
 }
 
 export function reducirMovimiento(): boolean {
