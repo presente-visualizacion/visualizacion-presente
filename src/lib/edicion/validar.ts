@@ -13,6 +13,7 @@ import type {
 } from '../tipos';
 import { cifrasDe, columnasDeFuente, type ConfigGrafico, type ConfigTabla, type Operacion } from './operaciones';
 import { CLAVES_FUENTE } from '../fuentes';
+import { migrarPresentacion } from '../rejilla';
 
 // Mensajes de error en español.
 z.config(z.locales.es());
@@ -180,8 +181,9 @@ const camposTabla = {
     orden: z.enum(['asc', 'desc']).optional(),
   })).max(TOPES.calculadasPorTabla).optional(),
 };
-export const COLUMNAS_LIBRE = 12;
-export const FILAS_LIBRE = 8;
+// Cuadrícula fina (2026-11-19); antes 12 x 8. Ver src/lib/rejilla.ts.
+export const COLUMNAS_LIBRE = 48;
+export const FILAS_LIBRE = 32;
 export const FONDOS = ['tinte', 'recuadro', 'oscuro'] as const;
 const fondo = z.enum(FONDOS);
 const ubicacion = z.strictObject({
@@ -227,6 +229,7 @@ const diapositiva = z.strictObject({
   disposicion: disposicion.optional(),
   fondo: color.optional(),
   oculta: z.boolean().optional(),
+  rejilla: z.literal('fina').optional(),
   bloques: z.array(bloque).max(TOPES.bloquesPorDiapositiva),
 }) satisfies z.ZodType<Diapositiva>;
 
@@ -468,7 +471,8 @@ export function validarPresentacion(dato: unknown): Validacion<Presentacion> {
   const errores = revisarReferencias(forma.data);
   if (errores.length) return { ok: false, errores };
   if (pesoJson(forma.data) > TOPES.presentacion) return { ok: false, errores: ['La presentación pasa del tamaño máximo.'] };
-  return { ok: true, valor: forma.data };
+  // Lo de antes de la cuadrícula fina se pasa a ella (ver rejilla.ts).
+  return { ok: true, valor: migrarPresentacion(forma.data) };
 }
 
 /** Forma y topes de una lista de operaciones (lo que llega en un guardado). */

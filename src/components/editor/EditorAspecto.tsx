@@ -107,7 +107,7 @@ export function EditorAspecto({ diapositiva, bloque, indice, cambiar, fuentePres
             </label>
           </div>
           <p className="mt-1 text-[13px] leading-snug text-tinta-suave">
-            La diapositiva es una cuadrícula de 12 columnas y hasta 8 filas. Toca una casilla para llevar el bloque ahí; el ancho y el alto se cuentan en casillas.
+            Lo más cómodo es arrastrar el bloque sobre la diapositiva. Aquí también puedes tocar el dibujo para llevarlo ahí o ajustar los números: la diapositiva tiene 48 columnas y 32 filas.
           </p>
         </div>
       )}
@@ -115,34 +115,32 @@ export function EditorAspecto({ diapositiva, bloque, indice, cambiar, fuentePres
   );
 }
 
-/** Dibujo chico de la cuadrícula con todos los bloques numerados. */
+/** Dibujo chico de la cuadrícula con todos los bloques numerados. Tocar lleva el bloque ahí. */
 function Minimapa({ lugares, actual, onElegir }: { lugares: Ubicacion[]; actual: number; onElegir: (columna: number, fila: number) => void }) {
-  const casillas: React.ReactNode[] = [];
-  for (let fila = 1; fila <= FILAS_LIBRE; fila++) {
-    for (let columna = 1; columna <= COLUMNAS_LIBRE; columna++) {
-      casillas.push(
-        <button
-          key={`${fila}-${columna}`}
-          type="button"
-          aria-label={`Llevar el bloque a la columna ${columna}, fila ${fila}`}
-          onClick={() => onElegir(columna, fila)}
-          className="rounded-[2px] bg-fondo-app hover:bg-linea-fuerte"
-          style={{ gridColumn: columna, gridRow: fila }}
-        />,
-      );
-    }
-  }
+  const elegir = (e: React.MouseEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const columna = Math.min(COLUMNAS_LIBRE, Math.max(1, Math.floor(((e.clientX - r.left) / r.width) * COLUMNAS_LIBRE) + 1));
+    const fila = Math.min(FILAS_LIBRE, Math.max(1, Math.floor(((e.clientY - r.top) / r.height) * FILAS_LIBRE) + 1));
+    onElegir(columna, fila);
+  };
   return (
     <div
-      className="relative grid aspect-[16/9] w-full gap-[2px] rounded-lg border border-linea-fuerte bg-white p-[3px]"
-      style={{ gridTemplateColumns: `repeat(${COLUMNAS_LIBRE}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${FILAS_LIBRE}, minmax(0, 1fr))` }}
+      aria-hidden
+      onClick={elegir}
+      title="Toca donde quieres que empiece el bloque"
+      className="relative grid aspect-[16/9] w-full cursor-crosshair rounded-lg border border-linea-fuerte bg-white"
+      style={{
+        gridTemplateColumns: `repeat(${COLUMNAS_LIBRE}, minmax(0, 1fr))`,
+        gridTemplateRows: `repeat(${FILAS_LIBRE}, minmax(0, 1fr))`,
+        backgroundImage: 'linear-gradient(to right, #EFEAED 1px, transparent 1px), linear-gradient(to bottom, #EFEAED 1px, transparent 1px)',
+        backgroundSize: `calc(100% / ${COLUMNAS_LIBRE / 4}) calc(100% / ${FILAS_LIBRE / 4})`,
+      }}
     >
-      {casillas}
       {lugares.map((u, i) => (
         <div
           key={i}
           aria-hidden
-          className={`pointer-events-none flex items-center justify-center rounded-[4px] border text-[12px] font-bold ${
+          className={`pointer-events-none m-[1px] flex items-center justify-center rounded-[4px] border text-[12px] font-bold ${
             i === actual ? 'z-10 border-primario bg-primario/80 text-white' : 'border-tinta-suave/40 bg-tinta-suave/15 text-tinta-suave'
           }`}
           style={{ gridColumn: `${u.columna} / span ${u.ancho}`, gridRow: `${u.fila} / span ${u.alto}` }}

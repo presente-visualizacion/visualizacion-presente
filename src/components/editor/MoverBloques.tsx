@@ -3,7 +3,7 @@
 // Mover y agrandar bloques arrastrando sobre la diapositiva (al editar).
 // Cada bloque tiene un marco: se arrastra para moverlo y se tira de los bordes
 // o las esquinas para cambiar su tamaño. Todo se acomoda a la cuadrícula libre
-// de 12 columnas x 8 filas; si la diapositiva no era libre, pasa a serlo con
+// fina de 48 columnas x 32 filas; si la diapositiva no era libre, pasa a serlo con
 // todo donde estaba. Ver "Mover bloques en la diapositiva" en PLAN.md.
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
@@ -11,10 +11,9 @@ import { ChartColumn, Hash, LayoutGrid, Pencil, Table2, Trash2, Type } from 'luc
 import { COLUMNAS_LIBRE, FILAS_LIBRE, ubicacionArrastrada, type Bordes } from '@/lib/disposicion';
 import type { Operacion } from '@/lib/edicion/operaciones';
 import { lugaresLibres, opsQuitarBloque, opsUbicarBloque } from '@/lib/edicion/plantillas';
+import { MEDIO_X, MEDIO_Y } from '@/components/diapositivas/Diapositiva';
 import type { Bloque, Diapositiva, Presentacion, Ubicacion } from '@/lib/tipos';
 
-const ESPACIO_X = 28;
-const ESPACIO_Y = 14;
 const NOMBRES: Record<Bloque['tipo'], string> = { grafico: 'Gráfico', tabla: 'Tabla', texto: 'Texto', cifras: 'Cifras', tarjetas: 'Tarjetas' };
 export const ICONOS_BLOQUE = { grafico: ChartColumn, tabla: Table2, texto: Type, cifras: Hash, tarjetas: LayoutGrid };
 
@@ -86,13 +85,14 @@ export function MoverBloques({ presentacion, diapositiva, seleccionado, onSelecc
 
   if (!cuerpo) return <div ref={raiz} className="pointer-events-none absolute inset-0" />;
 
-  const celdaX = (cuerpo.w - (COLUMNAS_LIBRE - 1) * ESPACIO_X) / COLUMNAS_LIBRE;
-  const celdaY = (cuerpo.h - (FILAS_LIBRE - 1) * ESPACIO_Y) / FILAS_LIBRE;
+  // La cuadrícula se estira medio espacio por fuera del cuerpo (ver Diapositiva.tsx).
+  const pasoX = (cuerpo.w + 2 * MEDIO_X) / COLUMNAS_LIBRE;
+  const pasoY = (cuerpo.h + 2 * MEDIO_Y) / FILAS_LIBRE;
   const cajaDe = (u: Ubicacion): Caja => ({
-    x: cuerpo.x + (u.columna - 1) * (celdaX + ESPACIO_X),
-    y: cuerpo.y + (u.fila - 1) * (celdaY + ESPACIO_Y),
-    w: u.ancho * celdaX + (u.ancho - 1) * ESPACIO_X,
-    h: u.alto * celdaY + (u.alto - 1) * ESPACIO_Y,
+    x: cuerpo.x + (u.columna - 1) * pasoX,
+    y: cuerpo.y + (u.fila - 1) * pasoY,
+    w: u.ancho * pasoX - 2 * MEDIO_X,
+    h: u.alto * pasoY - 2 * MEDIO_Y,
   });
   const escala = () => (raiz.current?.getBoundingClientRect().width ?? 1280) / 1280;
 
@@ -110,7 +110,7 @@ export function MoverBloques({ presentacion, diapositiva, seleccionado, onSelecc
     const k = escala();
     const dx = (e.clientX - arrastre.x0) / k;
     const dy = (e.clientY - arrastre.y0) / k;
-    const ahora = ubicacionArrastrada(arrastre.desde, Math.round(dx / (celdaX + ESPACIO_X)), Math.round(dy / (celdaY + ESPACIO_Y)), arrastre.bordes);
+    const ahora = ubicacionArrastrada(arrastre.desde, Math.round(dx / pasoX), Math.round(dy / pasoY), arrastre.bordes);
     setArrastre({ ...arrastre, ahora, movio: arrastre.movio || Math.hypot(dx, dy) > 4 });
   };
   const soltar = () => {
@@ -146,12 +146,23 @@ export function MoverBloques({ presentacion, diapositiva, seleccionado, onSelecc
     >
       {/* La cuadrícula, mientras se arrastra. */}
       {arrastre && (
-        <div className="pointer-events-none absolute" style={{ left: cuerpo.x, top: cuerpo.y, width: cuerpo.w, height: cuerpo.h }}>
-          {Array.from({ length: COLUMNAS_LIBRE * FILAS_LIBRE }, (_, i) => {
-            const c = cajaDe({ columna: (i % COLUMNAS_LIBRE) + 1, fila: Math.floor(i / COLUMNAS_LIBRE) + 1, ancho: 1, alto: 1 });
-            return <div key={i} className="absolute rounded-[3px] bg-primario/[0.05] ring-1 ring-primario/15" style={{ left: c.x - cuerpo.x, top: c.y - cuerpo.y, width: c.w, height: c.h }} />;
-          })}
-        </div>
+        <div
+          className="pointer-events-none absolute"
+          style={{
+            left: cuerpo.x - MEDIO_X,
+            top: cuerpo.y - MEDIO_Y,
+            width: cuerpo.w + 2 * MEDIO_X,
+            height: cuerpo.h + 2 * MEDIO_Y,
+            // Líneas finas en cada casilla y más marcadas cada 4.
+            backgroundImage: [
+              'linear-gradient(to right, rgba(212,20,90,0.22) 1px, transparent 1px)',
+              'linear-gradient(to bottom, rgba(212,20,90,0.22) 1px, transparent 1px)',
+              'linear-gradient(to right, rgba(212,20,90,0.08) 1px, transparent 1px)',
+              'linear-gradient(to bottom, rgba(212,20,90,0.08) 1px, transparent 1px)',
+            ].join(','),
+            backgroundSize: `${pasoX * 4}px ${pasoY * 4}px, ${pasoX * 4}px ${pasoY * 4}px, ${pasoX}px ${pasoY}px, ${pasoX}px ${pasoY}px`,
+          }}
+        />
       )}
 
       {diapositiva.bloques.map((b, i) => {
@@ -219,9 +230,6 @@ export function MoverBloques({ presentacion, diapositiva, seleccionado, onSelecc
           className="pointer-events-none absolute rounded-[10px] border-2 border-dashed border-primario bg-primario/10"
           style={{ left: fantasma.x, top: fantasma.y, width: fantasma.w, height: fantasma.h }}
         >
-          <span className="absolute bottom-2 right-2 rounded-full bg-primario px-2 py-0.5 text-[12px] font-semibold text-white">
-            {arrastre.ahora.ancho} x {arrastre.ahora.alto}
-          </span>
         </div>
       )}
     </div>

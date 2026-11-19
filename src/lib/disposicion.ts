@@ -1,10 +1,19 @@
 // La disposición "libre": cada bloque ocupa un rectángulo de una cuadrícula de
-// 12 columnas y hasta 8 filas. Ver "Disposición libre" en PLAN.md.
+// 48 columnas y 32 filas (la "fina", desde el 2026-11-19; antes 12 x 8, ver
+// rejilla.ts). Ver "Disposición libre" y "Cuadrícula fina" en PLAN.md.
 
 import { COLUMNAS_LIBRE, FILAS_LIBRE } from './edicion/validar';
 import type { Bloque, Disposicion, Ubicacion } from './tipos';
 
 export { COLUMNAS_LIBRE, FILAS_LIBRE };
+
+/** Una casilla de la cuadrícula vieja de 12 x 8, en casillas finas: las medidas de abajo se piensan en esas. */
+const C = COLUMNAS_LIBRE / 12;
+const F = FILAS_LIBRE / 8;
+
+/** Lo mínimo que puede medir un bloque, en casillas finas. */
+export const MIN_ANCHO = 3;
+export const MIN_ALTO = 3;
 
 /** Reparte `total` en `partes` enteros que suman `total` (los primeros, uno más). */
 function repartir(total: number, partes: number): number[] {
@@ -20,6 +29,7 @@ function apilados(n: number, columna: number, ancho: number, desde = 1): Ubicaci
   if (n > disponibles) {
     // No caben: cada uno en una fila; los que sobran comparten la última.
     return Array.from({ length: n }, (_, i) => ({ columna, ancho, fila: Math.min(desde + i, FILAS_LIBRE), alto: 1 }));
+
   }
   let fila = desde;
   return repartir(disponibles, n).map((alto) => {
@@ -39,7 +49,7 @@ export function ubicacionesEfectivas(bloques: Bloque[]): Ubicacion[] {
   return bloques.map((b) => {
     if (b.ubicacion) return b.ubicacion;
     const fila = Math.min(libre, FILAS_LIBRE);
-    const alto = Math.max(1, Math.min(2, FILAS_LIBRE - fila + 1));
+    const alto = Math.max(1, Math.min(2 * F, FILAS_LIBRE - fila + 1));
     libre = fila + alto;
     return { columna: 1, ancho: COLUMNAS_LIBRE, fila, alto };
   });
@@ -71,7 +81,7 @@ export function ubicacionesDesde(disposicion: Disposicion, bloques: Bloque[]): U
     }
     case 'principal-lateral': {
       if (n === 1) return [{ columna: 1, ancho: COLUMNAS_LIBRE, fila: 1, alto: FILAS_LIBRE }];
-      return [{ columna: 1, ancho: 8, fila: 1, alto: FILAS_LIBRE }, ...apilados(n - 1, 9, 4)];
+      return [{ columna: 1, ancho: 8 * C, fila: 1, alto: FILAS_LIBRE }, ...apilados(n - 1, 8 * C + 1, 4 * C)];
     }
     case 'cuadricula': {
       const filas = Math.ceil(n / 2);
@@ -79,7 +89,7 @@ export function ubicacionesDesde(disposicion: Disposicion, bloques: Bloque[]): U
       const inicio = altos.map((_, i) => 1 + altos.slice(0, i).reduce((a, b) => a + b, 0));
       return bloques.map((_, i) => {
         const f = Math.floor(i / 2);
-        return { columna: i % 2 === 0 ? 1 : 7, ancho: 6, fila: Math.min(inicio[f] ?? FILAS_LIBRE, FILAS_LIBRE), alto: altos[f] ?? 1 };
+        return { columna: i % 2 === 0 ? 1 : 6 * C + 1, ancho: 6 * C, fila: Math.min(inicio[f] ?? FILAS_LIBRE, FILAS_LIBRE), alto: altos[f] ?? 1 };
       });
     }
     default:
@@ -95,8 +105,8 @@ export function ajustarUbicacion(u: Ubicacion): Ubicacion {
   return {
     columna,
     fila,
-    ancho: Math.min(Math.max(1, Math.round(u.ancho)), COLUMNAS_LIBRE - columna + 1),
-    alto: Math.min(Math.max(1, Math.round(u.alto)), FILAS_LIBRE - fila + 1),
+    ancho: Math.min(Math.max(MIN_ANCHO, Math.round(u.ancho)), COLUMNAS_LIBRE - columna + 1),
+    alto: Math.min(Math.max(MIN_ALTO, Math.round(u.alto)), FILAS_LIBRE - fila + 1),
   };
 }
 
@@ -105,8 +115,8 @@ export function ubicacionNueva(bloques: Bloque[]): Ubicacion {
   const usadas = ubicacionesEfectivas(bloques);
   const libre = lugarLibre(usadas);
   if (libre) return libre;
-  const fila = Math.min(usadas.length ? Math.max(...usadas.map((u) => u.fila + u.alto)) : 1, FILAS_LIBRE);
-  return { columna: 1, ancho: COLUMNAS_LIBRE, fila, alto: Math.max(1, Math.min(2, FILAS_LIBRE - fila + 1)) };
+  // Sin lugar libre: abajo de todo, encima de lo que haya, para moverlo.
+  return { columna: 1, ancho: COLUMNAS_LIBRE, fila: FILAS_LIBRE - 2 * F + 1, alto: 2 * F };
 }
 
 function seCruzan(a: Ubicacion, b: Ubicacion): boolean {
@@ -118,7 +128,8 @@ function seCruzan(a: Ubicacion, b: Ubicacion): boolean {
  * menor tamaño y de arriba hacia abajo. null si no queda lugar.
  */
 export function lugarLibre(ocupados: Ubicacion[]): Ubicacion | null {
-  const tamanos: [number, number][] = [[6, 3], [6, 2], [4, 3], [4, 2], [3, 2], [12, 1], [6, 1], [3, 1], [2, 1]];
+  // En casillas viejas (12 x 8), de mayor a menor; se buscan en pasos finos.
+  const tamanos = ([[6, 3], [6, 2], [4, 3], [4, 2], [3, 2], [12, 1], [6, 1], [3, 1], [2, 1]] as const).map(([a, h]) => [a * C, h * F] as const);
   for (const [ancho, alto] of tamanos) {
     for (let fila = 1; fila + alto - 1 <= FILAS_LIBRE; fila++) {
       for (let columna = 1; columna + ancho - 1 <= COLUMNAS_LIBRE; columna++) {
@@ -138,13 +149,13 @@ export function lugarLibre(ocupados: Ubicacion[]): Ubicacion | null {
 export function hacerLugar(ocupados: { id: string; ubicacion: Ubicacion }[]): { ubicacion: Ubicacion; cambios: { id: string; ubicacion: Ubicacion }[] } {
   const libre = lugarLibre(ocupados.map((o) => o.ubicacion));
   if (libre) return { ubicacion: libre, cambios: [] };
-  const alto = 2;
+  const alto = 2 * F;
   const tope = FILAS_LIBRE - alto;
   const cambios: { id: string; ubicacion: Ubicacion }[] = [];
   for (const o of ocupados) {
     const u = o.ubicacion;
     if (u.fila + u.alto - 1 <= tope) continue;
-    if (u.fila > tope) return { ubicacion: { columna: 4, ancho: 6, fila: 3, alto: 3 }, cambios: [] };
+    if (u.fila > tope) return { ubicacion: { columna: 3 * C + 1, ancho: 6 * C, fila: 2 * F + 1, alto: 3 * F }, cambios: [] };
     cambios.push({ id: o.id, ubicacion: { ...u, alto: tope - u.fila + 1 } });
   }
   return { ubicacion: { columna: 1, ancho: COLUMNAS_LIBRE, fila: tope + 1, alto }, cambios };
@@ -165,14 +176,17 @@ export function ubicacionArrastrada(u: Ubicacion, dc: number, df: number, bordes
     };
   }
   let { columna, ancho, fila, alto } = u;
-  if (bordes.der) ancho = limitar(u.ancho + dc, 1, COLUMNAS_LIBRE - u.columna + 1);
+  // No más chico que el mínimo (salvo que ya lo fuera).
+  const minAncho = Math.min(MIN_ANCHO, u.ancho);
+  const minAlto = Math.min(MIN_ALTO, u.alto);
+  if (bordes.der) ancho = limitar(u.ancho + dc, minAncho, COLUMNAS_LIBRE - u.columna + 1);
   if (bordes.izq) {
-    columna = limitar(u.columna + dc, 1, u.columna + u.ancho - 1);
+    columna = limitar(u.columna + dc, 1, u.columna + u.ancho - minAncho);
     ancho = u.ancho - (columna - u.columna);
   }
-  if (bordes.aba) alto = limitar(u.alto + df, 1, FILAS_LIBRE - u.fila + 1);
+  if (bordes.aba) alto = limitar(u.alto + df, minAlto, FILAS_LIBRE - u.fila + 1);
   if (bordes.arr) {
-    fila = limitar(u.fila + df, 1, u.fila + u.alto - 1);
+    fila = limitar(u.fila + df, 1, u.fila + u.alto - minAlto);
     alto = u.alto - (fila - u.fila);
   }
   return { columna, ancho, fila, alto };

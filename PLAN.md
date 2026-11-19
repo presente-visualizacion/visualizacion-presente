@@ -91,6 +91,8 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
   o arrastrando al presentar, PDF descargado directo con hojas que crecen y
   detalle fijo en los gráficos.
 
+- [x] **Cuadrícula fina** (2026-11-19, ver "Cuadrícula fina"): 48 x 32 en
+  vez de 12 x 8, con paso automático de lo existente.
 - [x] **Ajustes del 2026-11-18** (ver "Ajustes del 2026-11-18"): plantilla
   de la Ley de Rescate, papelera de presentaciones con "Deshacer", ocultar
   diapositivas al presentar, mover y agrandar bloques arrastrando, barra
@@ -1804,6 +1806,41 @@ diapositivas 11 y 20 (CDATs) en hoja más larga, unos 6 MB, unos 20 segundos.
 - `next dev` con Turbopack se recargaba en bucle en este entorno después de
   instalar paquetes; `npx next dev --webpack` no. La compilación de Vercel no
   se ve afectada.
+
+## Cuadrícula fina (2026-11-19)
+
+La usuaria pidió casillas más chicas: con 12 x 8 los bloques saltaban de a
+mucho, quedaban muy grandes o muy chicos y sobraba espacio.
+
+- La disposición libre usa ahora **48 columnas x 32 filas** (cuatro veces
+  más fina en cada sentido). Un paso es ~25 px a lo ancho y ~15 px a lo alto
+  (antes ~98 y ~58).
+- Sin huecos entre casillas: cada bloque deja medio espacio a cada lado
+  (`MEDIO_X` 14 px, `MEDIO_Y` 7 px, en Diapositiva.tsx) y la cuadrícula se
+  estira ese medio espacio por fuera del cuerpo. Así los bordes siguen
+  alineados con el título y entre vecinos quedan 28 x 14 px, como antes.
+- Tamaño mínimo de un bloque al arrastrar: 3 x 3 casillas finas.
+- Mientras se arrastra se ven líneas finas en cada casilla y más marcadas
+  cada 4. El minimapa del panel es un solo dibujo (tocar lleva el bloque
+  ahí); los números van de 1 a 48 y de 1 a 32.
+- **Paso de lo que ya existía** (`src/lib/rejilla.ts`): las diapositivas con
+  ubicaciones y sin `rejilla: 'fina'` son de la cuadrícula vieja; cada
+  casilla vieja pasa a 4 x 4 finas, así todo queda donde estaba. Se hace al
+  leer de la base (`bd.ts`), en `validarPresentacion` (importar, crear,
+  restaurar), al aplicar `diapositiva.poner` y `guardada.poner` (pegar una
+  copia vieja del portapapeles, volver a poner una guardada) y en la muestra.
+  Al guardar el primer cambio, la base queda con la fina.
+- `bloque.aspecto` y `bloque.poner` con ubicación marcan la diapositiva como
+  fina (`marcadaFina`) antes de poner la ubicación nueva. Las diapositivas
+  sin ubicaciones no se marcan (no hay nada que pasar).
+- Las medidas de `disposicion.ts` (al pasar a libre, lugar libre, hacer
+  lugar) se piensan en casillas viejas y se multiplican (`C`, `F`).
+- Plantillas: la de la Ley de Rescate sigue escrita en 12 x 8 y se pasa al
+  crearla; la de Paraguay va escrita en la fina (`rejilla: 'fina'`) para que
+  las condiciones quepan.
+- Una pestaña abierta desde antes del cambio puede mandar una ubicación
+  vieja; hay que recargarla (se recarga sola al volver a ella si alguien
+  guardó).
 
 ## Cómo trabajar
 

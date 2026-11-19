@@ -15,6 +15,7 @@
 // Este archivo no depende de React ni de la base de datos.
 
 import { interpretarNumero, numeroEditable } from '../formato';
+import { marcadaFina, migrarDiapositiva } from '../rejilla';
 import type {
   Bloque, BloqueGrafico, BloqueTabla, Cifra, Columna, ConjuntoDatos, Diapositiva, DiapositivaGuardada, Disposicion, Fila, IdPeriodo,
   FondoBloque, OrigenExcel, PorPeriodo, Presentacion, SelectorFila, Tarjeta, Tema, TipoColumna, Ubicacion,
@@ -310,6 +311,11 @@ function datoDeBloque(bloque: Bloque): PorPeriodo<string> | PorPeriodo<Cifra[]> 
 }
 
 /** Título y nota del bloque, para conservarlos al cambiar su configuración. */
+/** Marca como de cuadrícula fina las diapositivas que cumplen `cual`. */
+function marcarFina(p: Presentacion, cual: (d: Diapositiva) => boolean): Presentacion {
+  return { ...p, diapositivas: p.diapositivas.map((d) => (cual(d) && d.rejilla !== 'fina' ? marcadaFina(d) : d)) };
+}
+
 function marcoDe(b: Bloque): Pick<Bloque, 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto' | 'fuente'> {
   return {
     ...(b.fuente ? { fuente: b.fuente } : {}),
@@ -381,12 +387,16 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
         ...(op.nota ? { nota: op.nota } : {}),
       }) as Bloque);
 
-    case 'bloque.aspecto':
-      return conBloque(p, op.bloque, ({ fondo: _fondo, ubicacion: _ubicacion, ...b }) => ({
+    case 'bloque.aspecto': {
+      // Las ubicaciones que llegan son de la cuadrícula fina (ver rejilla.ts):
+      // primero se pasa la diapositiva, después se pone la nueva.
+      const q = op.ubicacion ? marcarFina(p, (d) => d.bloques.some((b) => b.id === op.bloque)) : p;
+      return conBloque(q, op.bloque, ({ fondo: _fondo, ubicacion: _ubicacion, ...b }) => ({
         ...b,
         ...(op.fondo ? { fondo: op.fondo } : {}),
         ...(op.ubicacion ? { ubicacion: { ...op.ubicacion } } : {}),
       }) as Bloque);
+    }
 
     case 'bloque.colores':
       return conBloque(p, op.bloque, ({ colorFondo: _f, colorTexto: _t, ...b }) => ({
@@ -406,7 +416,8 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
 
     case 'guardada.poner': {
       const resto = (p.guardadas ?? []).filter((g) => g.diapositiva.id !== op.guardada.diapositiva.id);
-      return { ...p, guardadas: [structuredClone(op.guardada), ...resto] };
+      const g = structuredClone(op.guardada);
+      return { ...p, guardadas: [{ ...g, diapositiva: migrarDiapositiva(g.diapositiva) }, ...resto] };
     }
 
     case 'guardada.quitar': {
@@ -453,7 +464,8 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
     }
 
     case 'diapositiva.poner':
-      return { ...p, diapositivas: ponerDespues(p.diapositivas, op.diapositiva, op.despues) };
+      // Una diapositiva copiada antes de la cuadrícula fina llega con la vieja.
+      return { ...p, diapositivas: ponerDespues(p.diapositivas, migrarDiapositiva(op.diapositiva), op.despues) };
 
     case 'diapositiva.quitar': {
       if (!p.diapositivas.some((d) => d.id === op.diapositiva)) throw new OperacionNoAplicable(`No existe la diapositiva "${op.diapositiva}".`);
@@ -478,7 +490,11 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
       // Los ids de bloque son únicos en toda la presentación: si ya estaba en
       // otra diapositiva, sale de allá.
       const diapositivas = p.diapositivas.map((d) => {
-        if (d.id === op.diapositiva) return { ...d, bloques: ponerDespues(d.bloques, op.bloque, op.despues) };
+        if (d.id === op.diapositiva) {
+          const conBloqueNuevo = { ...d, bloques: ponerDespues(d.bloques, op.bloque, op.despues) };
+          const fina = marcadaFina(d);
+          return op.bloque.ubicacion ? { ...fina, bloques: ponerDespues(fina.bloques, op.bloque, op.despues) } : conBloqueNuevo;
+        }
         return d.bloques.some((b) => b.id === op.bloque.id) ? { ...d, bloques: d.bloques.filter((b) => b.id !== op.bloque.id) } : d;
       });
       return { ...p, diapositivas };

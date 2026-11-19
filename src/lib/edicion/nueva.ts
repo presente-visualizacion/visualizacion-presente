@@ -5,6 +5,7 @@
 import type { IdPeriodo, Presentacion, Tema } from '../tipos';
 import { diapositivaNueva } from './plantillas';
 import { TOPES } from './validar';
+import { migrarPresentacion } from '../rejilla';
 
 /** Id para el enlace (/p/[id]) a partir del nombre: "Comité Diciembre" → "comite-diciembre". */
 export function idDesdeNombre(nombre: string): string {
@@ -75,7 +76,9 @@ export function presentacionParaguay({ nombre, periodo, tema, ahora = new Date()
   const [portada, , cierre] = base.diapositivas;
   const clientes = 'c-paraguay-clientes';
   const car = 'c-paraguay-car';
-  return {
+  // La diapositiva ya va en la cuadrícula fina (rejilla: 'fina'); migrarPresentacion
+  // no la toca.
+  return migrarPresentacion({
     ...base,
     datos: {
       [clientes]: {
@@ -118,6 +121,8 @@ export function presentacionParaguay({ nombre, periodo, tema, ahora = new Date()
         titulo: 'Paraguay: la intervención de Ueno Bank',
         subtitulo: 'El BCP intervino el 3 de noviembre de 2026 al banco con más clientes del país',
         disposicion: 'libre',
+        // Ubicaciones ya en la cuadrícula fina de 48 x 32.
+        rejilla: 'fina',
         bloques: [
           {
             id: 'b-paraguay-clientes',
@@ -128,7 +133,7 @@ export function presentacionParaguay({ nombre, periodo, tema, ahora = new Date()
             ejeX: 'fecha',
             series: [{ clave: 'clientes' }],
             etiquetas: true,
-            ubicacion: { columna: 1, ancho: 6, fila: 1, alto: 2 },
+            ubicacion: { columna: 1, ancho: 24, fila: 1, alto: 11 },
           },
           {
             id: 'b-paraguay-depositos',
@@ -140,7 +145,7 @@ export function presentacionParaguay({ nombre, periodo, tema, ahora = new Date()
                 { etiqueta: 'Públicos en Gs. 2025', valor: '+130 %' },
               ],
             },
-            ubicacion: { columna: 1, ancho: 6, fila: 3, alto: 1 },
+            ubicacion: { columna: 1, ancho: 24, fila: 12, alto: 4 },
           },
           {
             id: 'b-paraguay-condiciones',
@@ -151,7 +156,7 @@ export function presentacionParaguay({ nombre, periodo, tema, ahora = new Date()
               porPeriodo: false,
               valor: '- Reintegros de hasta 40 % en compras con tarjeta\n- Apertura digital de cuentas y atención 24 h\n- Descuentos y promociones con comercios',
             },
-            ubicacion: { columna: 1, ancho: 6, fila: 4, alto: 2 },
+            ubicacion: { columna: 1, ancho: 24, fila: 16, alto: 9 },
           },
           {
             id: 'b-paraguay-car',
@@ -165,7 +170,7 @@ export function presentacionParaguay({ nombre, periodo, tema, ahora = new Date()
             etiquetas: true,
             resaltar: { columna: 'corte', valor: 'BCP nov-26' },
             referencias: [{ valor: 12, etiqueta: 'Mínimo 12 %' }],
-            ubicacion: { columna: 7, ancho: 6, fila: 1, alto: 5 },
+            ubicacion: { columna: 25, ancho: 24, fila: 1, alto: 24 },
           },
           {
             id: 'b-paraguay-conclusion',
@@ -178,13 +183,13 @@ export function presentacionParaguay({ nombre, periodo, tema, ahora = new Date()
                 'El BCP detectó préstamos a empresas vinculadas y ajustes contables por más de **Gs. 1,6 billones**: el CAR quedó en **5,56 %**. ' +
                 'Hay **2,9 M de clientes** sin acceso a sus cuentas y **US$ 800–850 M** de fondos públicos congelados.',
             },
-            ubicacion: { columna: 1, ancho: 12, fila: 6, alto: 3 },
+            ubicacion: { columna: 1, ancho: 48, fila: 25, alto: 8 },
           },
         ],
       },
       cierre,
     ],
-  };
+  });
 }
 
 // Plantilla "Ley de Rescate Económico" (Colombia, PL 477 de 2026).
@@ -205,7 +210,9 @@ export function presentacionLeyRescate({ nombre, periodo, tema, ahora = new Date
   const base = presentacionEnBlanco({ nombre, periodo, tema, ahora });
   const [portada, , cierre] = base.diapositivas;
   const iva = 'c-ley-rescate-iva';
-  return {
+  // Las ubicaciones están escritas en la cuadrícula de 12 x 8; migrarPresentacion
+  // las pasa a la fina de 48 x 32 (ver rejilla.ts).
+  return migrarPresentacion({
     ...base,
     datos: {
       [iva]: {
@@ -309,5 +316,5 @@ export function presentacionLeyRescate({ nombre, periodo, tema, ahora = new Date
       },
       cierre,
     ],
-  };
+  });
 }

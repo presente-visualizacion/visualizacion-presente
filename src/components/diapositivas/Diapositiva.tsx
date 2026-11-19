@@ -5,6 +5,10 @@ import { FuenteActual } from '@/components/bloques/graficoComun';
 import { fuenteCss } from '@/lib/fuentes';
 import { Logo } from '@/components/Logo';
 import { COLUMNAS_LIBRE, FILAS_LIBRE, ubicacionesEfectivas } from '@/lib/disposicion';
+
+/** Medio espacio entre bloques de la disposición libre (ver MoverBloques). */
+export const MEDIO_X = 14;
+export const MEDIO_Y = 7;
 import { conMes, nombrePeriodo } from '@/lib/periodos';
 import type { Diapositiva as TipoDiapositiva, IdPeriodo, Presentacion } from '@/lib/tipos';
 
@@ -108,18 +112,28 @@ function Contenido({ presentacion, diapositiva, periodo, numero }: Props) {
       </div>
     );
   } else if (disposicion === 'libre') {
-    // Cada bloque en su rectángulo de una cuadrícula fija de 12 x 8: lo que
-    // se ve es lo que se arrastra en el editor (ver "Mover bloques" en PLAN.md).
+    // Cada bloque en su rectángulo de una cuadrícula fina de 48 x 32 (lo que
+    // se ve es lo que se arrastra en el editor; ver "Cuadrícula fina" en
+    // PLAN.md). Sin huecos entre casillas: cada bloque deja medio espacio a
+    // cada lado (14 px a los lados, 7 arriba y abajo) y la cuadrícula se
+    // estira ese medio espacio por fuera, así los bordes siguen alineados con
+    // el título y entre dos bloques vecinos quedan 28 x 14 px.
     const lugares = ubicacionesEfectivas(bloques);
     cuerpo = (
       <div
-        className="grid h-full gap-x-[28px] gap-y-[14px]"
-        style={{ gridTemplateColumns: `repeat(${COLUMNAS_LIBRE}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${FILAS_LIBRE}, minmax(0, 1fr))` }}
+        className="grid"
+        style={{
+          margin: `-${MEDIO_Y}px -${MEDIO_X}px`,
+          width: `calc(100% + ${2 * MEDIO_X}px)`,
+          height: `calc(100% + ${2 * MEDIO_Y}px)`,
+          gridTemplateColumns: `repeat(${COLUMNAS_LIBRE}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${FILAS_LIBRE}, minmax(0, 1fr))`,
+        }}
       >
         {bloques.map((b, i) => {
           const u = lugares[i];
           return (
-            <div key={b.id} className="min-h-0 min-w-0" style={{ gridColumn: `${u.columna} / span ${u.ancho}`, gridRow: `${u.fila} / span ${u.alto}` }}>
+            <div key={b.id} className="min-h-0 min-w-0" style={{ gridColumn: `${u.columna} / span ${u.ancho}`, gridRow: `${u.fila} / span ${u.alto}`, padding: `${MEDIO_Y}px ${MEDIO_X}px` }}>
               {vista(i)}
             </div>
           );

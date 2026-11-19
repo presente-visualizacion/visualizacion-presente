@@ -67,24 +67,26 @@ describe('ocultar diapositivas y tipos de letra', () => {
 
 describe('mover e insertar bloques en la diapositiva', () => {
   it('arrastrar respeta los bordes de la cuadrícula', () => {
-    const u = { columna: 3, ancho: 4, fila: 2, alto: 3 };
-    expect(ubicacionArrastrada(u, 20, 20, null)).toEqual({ columna: 9, ancho: 4, fila: 6, alto: 3 });
-    expect(ubicacionArrastrada(u, -9, -9, null)).toEqual({ columna: 1, ancho: 4, fila: 1, alto: 3 });
-    // Tirar del borde derecho y de abajo.
-    expect(ubicacionArrastrada(u, 2, 1, { izq: false, der: true, arr: false, aba: true })).toEqual({ columna: 3, ancho: 6, fila: 2, alto: 4 });
-    // Del izquierdo: no puede quedar en cero.
-    expect(ubicacionArrastrada(u, 10, 0, { izq: true, der: false, arr: false, aba: false })).toEqual({ columna: 6, ancho: 1, fila: 2, alto: 3 });
-    expect(ubicacionArrastrada(u, -5, -5, { izq: true, der: false, arr: true, aba: false })).toEqual({ columna: 1, ancho: 6, fila: 1, alto: 4 });
+    const u = { columna: 9, ancho: 16, fila: 5, alto: 12 };
+    expect(ubicacionArrastrada(u, 80, 80, null)).toEqual({ columna: 33, ancho: 16, fila: 21, alto: 12 });
+    expect(ubicacionArrastrada(u, -30, -30, null)).toEqual({ columna: 1, ancho: 16, fila: 1, alto: 12 });
+    // Tirar del borde derecho y de abajo, de a una casilla fina.
+    expect(ubicacionArrastrada(u, 1, 1, { izq: false, der: true, arr: false, aba: true })).toEqual({ columna: 9, ancho: 17, fila: 5, alto: 13 });
+    // Del izquierdo: no queda más chico que el mínimo (3).
+    expect(ubicacionArrastrada(u, 40, 0, { izq: true, der: false, arr: false, aba: false })).toEqual({ columna: 22, ancho: 3, fila: 5, alto: 12 });
+    expect(ubicacionArrastrada(u, -20, -20, { izq: true, der: false, arr: true, aba: false })).toEqual({ columna: 1, ancho: 24, fila: 1, alto: 16 });
+    // Hacia abajo, tampoco menos de 3 filas.
+    expect(ubicacionArrastrada(u, 0, -40, { izq: false, der: false, arr: false, aba: true }).alto).toBe(3);
   });
 
   it('busca un lugar libre y, si no hay, hace lugar abajo', () => {
-    expect(lugarLibre([])).toEqual({ columna: 1, ancho: 6, fila: 1, alto: 3 });
-    expect(lugarLibre([{ columna: 1, ancho: 12, fila: 1, alto: 8 }])).toBeNull();
-    const r = hacerLugar([{ id: 'a', ubicacion: { columna: 1, ancho: 6, fila: 1, alto: 8 } }, { id: 'b', ubicacion: { columna: 7, ancho: 6, fila: 1, alto: 8 } }]);
-    expect(r.ubicacion).toEqual({ columna: 1, ancho: 12, fila: 7, alto: 2 });
+    expect(lugarLibre([])).toEqual({ columna: 1, ancho: 24, fila: 1, alto: 12 });
+    expect(lugarLibre([{ columna: 1, ancho: 48, fila: 1, alto: 32 }])).toBeNull();
+    const r = hacerLugar([{ id: 'a', ubicacion: { columna: 1, ancho: 24, fila: 1, alto: 32 } }, { id: 'b', ubicacion: { columna: 25, ancho: 24, fila: 1, alto: 32 } }]);
+    expect(r.ubicacion).toEqual({ columna: 1, ancho: 48, fila: 25, alto: 8 });
     expect(r.cambios).toEqual([
-      { id: 'a', ubicacion: { columna: 1, ancho: 6, fila: 1, alto: 6 } },
-      { id: 'b', ubicacion: { columna: 7, ancho: 6, fila: 1, alto: 6 } },
+      { id: 'a', ubicacion: { columna: 1, ancho: 24, fila: 1, alto: 24 } },
+      { id: 'b', ubicacion: { columna: 25, ancho: 24, fila: 1, alto: 24 } },
     ]);
   });
 
@@ -92,12 +94,13 @@ describe('mover e insertar bloques en la diapositiva', () => {
     const p0 = muestra();
     const d = p0.diapositivas.find((x) => (x.disposicion ?? 'una') !== 'libre' && x.bloques.length >= 2)!;
     const antes = lugaresLibres(d);
-    const ops = opsUbicarBloque(d, d.bloques[0].id, { columna: 2, ancho: 3, fila: 2, alto: 2 });
+    const ops = opsUbicarBloque(d, d.bloques[0].id, { columna: 5, ancho: 13, fila: 5, alto: 7 });
     expect(validarOperaciones(ops).ok).toBe(true);
     const p1 = aplicarTodas(p0, ops);
     const d1 = p1.diapositivas.find((x) => x.id === d.id)!;
     expect(d1.disposicion).toBe('libre');
-    expect(d1.bloques[0].ubicacion).toEqual({ columna: 2, ancho: 3, fila: 2, alto: 2 });
+    expect(d1.bloques[0].ubicacion).toEqual({ columna: 5, ancho: 13, fila: 5, alto: 7 });
+    expect(d1.rejilla).toBe('fina');
     expect(d1.bloques[1].ubicacion).toEqual(antes[1]);
     expect(validarPresentacion(p1).ok).toBe(true);
   });
@@ -115,5 +118,34 @@ describe('mover e insertar bloques en la diapositiva', () => {
     expect(validarPresentacion(p1).ok).toBe(true);
     const g = opsInsertarBloque(p1, d.id, 'grafico')!;
     expect(validarPresentacion(aplicarTodas(p1, g.ops)).ok).toBe(true);
+  });
+});
+
+describe('paso a la cuadrícula fina', () => {
+  it('lo de 12 x 8 pasa a 48 x 32 en el mismo lugar, una sola vez', async () => {
+    const { migrarPresentacion, ubicacionFina } = await import('@/lib/rejilla');
+    const p0 = muestra();
+    const vieja = { ...p0.diapositivas[1], disposicion: 'libre' as const, bloques: p0.diapositivas[1].bloques.map((b, i) => ({ ...b, ubicacion: { columna: 1 + i * 6, ancho: 6, fila: 2, alto: 7 } })) };
+    const p = { ...p0, diapositivas: [p0.diapositivas[0], vieja, ...p0.diapositivas.slice(2)] };
+    const v = validarPresentacion(p);
+    if (!v.ok) throw new Error(v.errores.join(' '));
+    const d = v.valor.diapositivas[1];
+    expect(d.rejilla).toBe('fina');
+    expect(d.bloques[0].ubicacion).toEqual({ columna: 1, ancho: 24, fila: 5, alto: 28 });
+    expect(d.bloques[1].ubicacion).toEqual(ubicacionFina({ columna: 7, ancho: 6, fila: 2, alto: 7 }));
+    // Las que no tienen ubicaciones quedan igual.
+    expect(v.valor.diapositivas[0]).toEqual(p0.diapositivas[0]);
+    // Una segunda vez no cambia nada.
+    expect(migrarPresentacion(v.valor)).toBe(v.valor);
+  });
+
+  it('pegar una diapositiva vieja (copiada antes del cambio) la pasa a la fina', () => {
+    const p0 = muestra();
+    const vieja = { ...structuredClone(p0.diapositivas[1]), id: 'pegada', disposicion: 'libre' as const };
+    vieja.bloques = vieja.bloques.map((b, i) => ({ ...b, id: `${b.id}-p`, ubicacion: { columna: 1, ancho: 12, fila: 1 + i * 4, alto: 4 } }));
+    const p1 = aplicar(p0, { op: 'diapositiva.poner', diapositiva: vieja, despues: null });
+    const d = p1.diapositivas.find((x) => x.id === 'pegada')!;
+    expect(d.rejilla).toBe('fina');
+    expect(d.bloques[0].ubicacion).toEqual({ columna: 1, ancho: 48, fila: 1, alto: 16 });
   });
 });

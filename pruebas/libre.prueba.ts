@@ -10,6 +10,7 @@ import { copiarDiapositiva, leerCopia, opsPegarDiapositiva } from '@/lib/edicion
 import { validarOperaciones, validarPresentacion } from '@/lib/edicion/validar';
 import type { Bloque, BloqueGrafico, BloqueTexto, Presentacion } from '@/lib/tipos';
 import { muestra } from './muestra';
+import { ubicacionFina } from '@/lib/rejilla';
 
 const todas = (p: Presentacion, ops: Operacion[]) => ops.reduce(aplicar, p);
 const bloqueDe = (p: Presentacion, id: string) => p.diapositivas.flatMap((d) => d.bloques).find((b) => b.id === id) as Bloque;
@@ -29,11 +30,11 @@ describe('plantilla de Paraguay', () => {
 });
 
 describe('disposición libre', () => {
-  it('valida la ubicación dentro de la cuadrícula de 12 x 8', () => {
+  it('valida la ubicación dentro de la cuadrícula fina de 48 x 32', () => {
     const op = (ubicacion: unknown) => validarOperaciones([{ op: 'bloque.aspecto', bloque: 'b-x', fondo: null, ubicacion }]);
-    expect(op({ columna: 1, ancho: 12, fila: 1, alto: 8 }).ok).toBe(true);
-    expect(op({ columna: 7, ancho: 7, fila: 1, alto: 1 }).ok).toBe(false);
-    expect(op({ columna: 1, ancho: 1, fila: 8, alto: 2 }).ok).toBe(false);
+    expect(op({ columna: 1, ancho: 48, fila: 1, alto: 32 }).ok).toBe(true);
+    expect(op({ columna: 25, ancho: 25, fila: 1, alto: 1 }).ok).toBe(false);
+    expect(op({ columna: 1, ancho: 1, fila: 32, alto: 2 }).ok).toBe(false);
     expect(op({ columna: 0, ancho: 1, fila: 1, alto: 1 }).ok).toBe(false);
     expect(op(null).ok).toBe(true);
     expect(validarOperaciones([{ op: 'bloque.aspecto', bloque: 'b-x', fondo: 'neon', ubicacion: null }]).ok).toBe(false);
@@ -60,15 +61,16 @@ describe('disposición libre', () => {
   });
 
   it('al pasar a libre, cada bloque recibe el lugar que ya tenía', () => {
+    // Escrito en casillas de la cuadrícula vieja de 12 x 8: lo mismo, en la fina.
     expect(ubicacionesDesde('columnas', [{} as Bloque, {} as Bloque, {} as Bloque])).toEqual([
       { columna: 1, ancho: 4, fila: 1, alto: 8 }, { columna: 5, ancho: 4, fila: 1, alto: 8 }, { columna: 9, ancho: 4, fila: 1, alto: 8 },
-    ]);
+    ].map(ubicacionFina));
     expect(ubicacionesDesde('principal-lateral', [{} as Bloque, {} as Bloque, {} as Bloque])).toEqual([
       { columna: 1, ancho: 8, fila: 1, alto: 8 }, { columna: 9, ancho: 4, fila: 1, alto: 4 }, { columna: 9, ancho: 4, fila: 5, alto: 4 },
-    ]);
+    ].map(ubicacionFina));
     expect(ubicacionesDesde('cuadricula', Array(3).fill({}) as Bloque[])).toEqual([
       { columna: 1, ancho: 6, fila: 1, alto: 4 }, { columna: 7, ancho: 6, fila: 1, alto: 4 }, { columna: 1, ancho: 6, fila: 5, alto: 4 },
-    ]);
+    ].map(ubicacionFina));
     const p = muestra();
     const d = p.diapositivas.find((x) => x.bloques.length > 1)!;
     const q = todas(p, opsCambiarDisposicion(d, 'libre'));
@@ -79,12 +81,13 @@ describe('disposición libre', () => {
   });
 
   it('sin ubicación, los bloques van debajo de los demás; un bloque nuevo va al primer lugar libre', () => {
-    const fijo = { ubicacion: { columna: 1, ancho: 12, fila: 1, alto: 3 } } as Bloque;
-    expect(ubicacionesEfectivas([fijo, {} as Bloque])[1]).toEqual({ columna: 1, ancho: 12, fila: 4, alto: 2 });
-    expect(ubicacionNueva([fijo])).toEqual({ columna: 1, ancho: 6, fila: 4, alto: 3 });
+    const fijo = { ubicacion: ubicacionFina({ columna: 1, ancho: 12, fila: 1, alto: 3 }) } as Bloque;
+    expect(ubicacionesEfectivas([fijo, {} as Bloque])[1]).toEqual(ubicacionFina({ columna: 1, ancho: 12, fila: 4, alto: 2 }));
+    expect(ubicacionNueva([fijo])).toEqual(ubicacionFina({ columna: 1, ancho: 6, fila: 4, alto: 3 }));
     const p = paraguay();
     const r = opsAgregarBloque(p, 'd-paraguay', 'texto')!;
-    expect(r.bloque.ubicacion).toEqual({ columna: 1, ancho: 12, fila: 8, alto: 1 });
+    // Paraguay no tiene lugar libre: va abajo, encima, para moverlo.
+    expect(r.bloque.ubicacion).toEqual(ubicacionFina({ columna: 1, ancho: 12, fila: 7, alto: 2 }));
     expect(validarPresentacion(todas(p, r.ops)).ok).toBe(true);
   });
 });

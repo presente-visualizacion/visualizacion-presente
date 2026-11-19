@@ -2,6 +2,7 @@ import type { Presentacion } from '../tipos';
 import type { Almacen } from './index';
 import { resumir } from './resumen';
 import comite from '@/datos/semilla/comite-precios.json';
+import { migrarPresentacion } from '../rejilla';
 
 /** Presentación de muestra, con datos inventados. */
 export const presentacionMuestra = comite as unknown as Presentacion;
@@ -16,7 +17,7 @@ export const almacenMuestra: Almacen = {
   },
   async obtener(id) {
     const presentacion = presentaciones.find((p) => p.id === id);
-    return presentacion ? { presentacion, revision: 1 } : null;
+    return presentacion ? { presentacion: migrarPresentacion(presentacion), revision: 1 } : null;
   },
   async revision(id) {
     return presentaciones.some((p) => p.id === id) ? 1 : null;

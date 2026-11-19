@@ -9,6 +9,7 @@
 import { aplicarVarias, type Operacion } from '../edicion/operaciones';
 import { validarPresentacion } from '../edicion/validar';
 import type { Presentacion, ResumenPresentacion } from '../tipos';
+import { migrarPresentacion } from '../rejilla';
 import type { Almacen, Guardada, ResultadoGuardado, ResumenVersion } from './index';
 import { prepararEsquema } from './esquema';
 import type { Motor } from './motor';
@@ -157,7 +158,7 @@ export function almacenBd(obtenerMotor: () => Promise<Motor>, opciones: Opciones
       );
       if (!fila) return null;
       // La fila manda sobre lo que diga el JSON.
-      return { presentacion: { ...json<Presentacion>(fila.contenido), id, actualizado: fila.actualizado }, revision: Number(fila.revision) };
+      return { presentacion: { ...migrarPresentacion(json<Presentacion>(fila.contenido)), id, actualizado: fila.actualizado }, revision: Number(fila.revision) };
     },
 
     async revision(id) {
@@ -183,7 +184,7 @@ export function almacenBd(obtenerMotor: () => Promise<Motor>, opciones: Opciones
 
         const revisionLeida = Number(fila.revision);
         const ajenos = revisionLeida !== revisionBase;
-        const actual: Presentacion = { ...json<Presentacion>(fila.contenido), id, actualizado: fila.actualizado };
+        const actual: Presentacion = { ...migrarPresentacion(json<Presentacion>(fila.contenido)), id, actualizado: fila.actualizado };
         const { presentacion, omitidas } = aplicarVarias(actual, ops);
 
         // Nada que guardar: todas las operaciones apuntaban a algo que ya no está.
@@ -230,7 +231,7 @@ export function almacenBd(obtenerMotor: () => Promise<Motor>, opciones: Opciones
         [id, version],
       );
       if (!fila) return null;
-      return { ...resumenVersion(fila), presentacion: { ...json<Presentacion>(fila.contenido), id, actualizado: fila.creado } };
+      return { ...resumenVersion(fila), presentacion: { ...migrarPresentacion(json<Presentacion>(fila.contenido)), id, actualizado: fila.creado } };
     },
 
     async guardarVersion(id, nota) {
@@ -253,7 +254,7 @@ export function almacenBd(obtenerMotor: () => Promise<Motor>, opciones: Opciones
         [id, version],
       );
       if (!copia) return { ok: false, motivo: 'no-existe' };
-      const validacion = validarPresentacion({ ...json<Presentacion>(copia.contenido), id });
+      const validacion = validarPresentacion({ ...migrarPresentacion(json<Presentacion>(copia.contenido)), id });
       if (!validacion.ok) return { ok: false, motivo: 'invalido', detalle: validacion.errores.slice(0, 5).join(' ') };
 
       // En una sola sentencia: deja el estado actual en el historial y pone

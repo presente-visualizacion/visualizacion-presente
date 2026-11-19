@@ -289,6 +289,11 @@ export interface Diapositiva {
   fondo?: string;
   /** Oculta: se salta al presentar y en el PDF, pero sigue en la presentación. */
   oculta?: boolean;
+  /**
+   * 'fina': las ubicaciones de sus bloques son de la cuadrícula de 48 x 32.
+   * Sin esto y con ubicaciones, son de la vieja de 12 x 8 (ver src/lib/rejilla.ts).
+   */
+  rejilla?: 'fina';
   bloques: Bloque[];
 }
 
