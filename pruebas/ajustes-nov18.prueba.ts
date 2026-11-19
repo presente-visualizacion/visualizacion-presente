@@ -21,7 +21,7 @@ describe('plantilla de la Ley de Rescate', () => {
     expect(validarPresentacion(p).ok).toBe(true);
     const d = p.diapositivas[1];
     expect(d.disposicion).toBe('libre');
-    expect(d.bloques.map((b) => b.tipo)).toEqual(['texto', 'cifras', 'grafico', 'texto', 'texto', 'texto']);
+    expect(d.bloques.map((b) => b.tipo)).toEqual(['texto', 'cifras', 'grafico', 'texto', 'texto']);
     // Nada se pisa.
     const u = lugaresLibres(d);
     for (let i = 0; i < u.length; i++) for (let j = i + 1; j < u.length; j++) {
