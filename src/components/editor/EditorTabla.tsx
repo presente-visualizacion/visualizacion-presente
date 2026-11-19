@@ -4,7 +4,7 @@
 // resalta. Cada cambio es una operación `tabla.config`.
 
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import type { ConfigTabla, Operacion } from '@/lib/edicion/operaciones';
+import { configTablaDe, type ConfigTabla, type Operacion } from '@/lib/edicion/operaciones';
 import type { BloqueTabla, ColumnaCalculada, IdPeriodo, Presentacion } from '@/lib/tipos';
 import { SelectorResaltado } from './EditorGrafico';
 import { BotonIcono, Opcion, Subtitulo } from './piezas';
@@ -19,7 +19,7 @@ interface Props {
 export function EditorTabla({ presentacion, bloque, periodo, cambiar }: Props) {
   const conjunto = presentacion.datos[bloque.datos];
   if (!conjunto) return null;
-  const { id: _id, tipo: _tipo, titulo: _titulo, nota: _nota, ...actual } = bloque;
+  const actual = configTablaDe(bloque);
   const poner = (cambios: Partial<ConfigTabla>) => {
     const valor: ConfigTabla = { ...actual, ...cambios };
     if (!valor.resaltar) delete valor.resaltar;

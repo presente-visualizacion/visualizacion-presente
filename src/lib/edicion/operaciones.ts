@@ -316,6 +316,18 @@ function marcarFina(p: Presentacion, cual: (d: Diapositiva) => boolean): Present
   return { ...p, diapositivas: p.diapositivas.map((d) => (cual(d) && d.rejilla !== 'fina' ? marcadaFina(d) : d)) };
 }
 
+/** La configuración de un gráfico sin su marco (lo que va en `grafico.config`). */
+export function configGraficoDe(b: BloqueGrafico): ConfigGrafico {
+  const { id: _id, tipo: _tipo, titulo: _t, nota: _n, fondo: _fo, ubicacion: _u, colorFondo: _cf, colorTexto: _ct, fuente: _f, ...config } = b;
+  return config;
+}
+
+/** La configuración de una tabla sin su marco (lo que va en `tabla.config`). */
+export function configTablaDe(b: BloqueTabla): ConfigTabla {
+  const { id: _id, tipo: _tipo, titulo: _t, nota: _n, fondo: _fo, ubicacion: _u, colorFondo: _cf, colorTexto: _ct, fuente: _f, ...config } = b;
+  return config;
+}
+
 function marcoDe(b: Bloque): Pick<Bloque, 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto' | 'fuente'> {
   return {
     ...(b.fuente ? { fuente: b.fuente } : {}),
@@ -796,15 +808,13 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
     case 'grafico.config': {
       const b = bloqueDe(p, op.bloque);
       if (b?.tipo !== 'grafico') return [];
-      const { id: _id, tipo: _tipo, titulo: _titulo, nota: _nota, ...valor } = b;
-      return [{ op: op.op, bloque: op.bloque, valor }];
+      return [{ op: op.op, bloque: op.bloque, valor: configGraficoDe(b) }];
     }
 
     case 'tabla.config': {
       const b = bloqueDe(p, op.bloque);
       if (b?.tipo !== 'tabla') return [];
-      const { id: _id, tipo: _tipo, titulo: _titulo, nota: _nota, ...valor } = b;
-      return [{ op: op.op, bloque: op.bloque, valor }];
+      return [{ op: op.op, bloque: op.bloque, valor: configTablaDe(b) }];
     }
 
     case 'conjunto.poner': {

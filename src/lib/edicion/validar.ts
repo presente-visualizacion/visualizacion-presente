@@ -206,8 +206,15 @@ const marco = {
   titulo: z.string().max(TOPES.titulo).optional(),
   nota: z.string().max(TOPES.nota).optional(),
 };
-const configGrafico = z.strictObject(camposGrafico) satisfies z.ZodType<ConfigGrafico>;
-const configTabla = z.strictObject(camposTabla) satisfies z.ZodType<ConfigTabla>;
+// La configuración no lleva el marco del bloque (título, nota, fondo, lugar,
+// colores, letra): eso lo conserva `aplicar`. Si llega (pestañas abiertas con
+// una versión anterior lo mandaban), se ignora en vez de descartar el cambio.
+const sinMarco = <T extends Record<string, unknown>>(v: T) => {
+  const { fuente: _f, fondo: _fo, colorFondo: _cf, colorTexto: _ct, ubicacion: _u, titulo: _t, nota: _n, ...resto } = v;
+  return resto;
+};
+const configGrafico = z.strictObject({ ...camposGrafico, ...marco }).transform(sinMarco) satisfies z.ZodType<ConfigGrafico, unknown>;
+const configTabla = z.strictObject({ ...camposTabla, ...marco }).transform(sinMarco) satisfies z.ZodType<ConfigTabla, unknown>;
 
 const bloque = z.discriminatedUnion('tipo', [
   z.strictObject({ id, tipo: z.literal('grafico'), ...marco, ...camposGrafico }),

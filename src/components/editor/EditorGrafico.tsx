@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { columnaDe, filasDe } from '@/lib/datos';
 import { interpretarNumero, numeroEditable } from '@/lib/formato';
-import type { ConfigGrafico, Operacion } from '@/lib/edicion/operaciones';
+import { configGraficoDe, type ConfigGrafico, type Operacion } from '@/lib/edicion/operaciones';
 import { CON_DETALLE_FIJO, CON_RANGO_EJE, CON_REFERENCIAS, configPara, esNumerica, motivoNoDisponible } from '@/lib/edicion/plantillas';
 import { FORMAS, SERIES_POR_FORMA } from '@/lib/edicion/validar';
 import type { BloqueGrafico, Columna, ConjuntoDatos, FormaGrafico, IdPeriodo, Presentacion, RangoEje, Referencia, Resaltado, Serie } from '@/lib/tipos';
@@ -61,7 +61,7 @@ interface Props {
 export function EditorGrafico({ presentacion, bloque, periodo, cambiar }: Props) {
   const conjunto = presentacion.datos[bloque.datos];
   if (!conjunto) return null;
-  const { id: _id, tipo: _tipo, titulo: _titulo, nota: _nota, ...actual } = bloque;
+  const actual = configGraficoDe(bloque);
   const { forma } = bloque;
   const poner = (cambios: Partial<ConfigGrafico>) => cambiar({ op: 'grafico.config', bloque: bloque.id, valor: limpio({ ...actual, ...cambios }) });
   const unaSerie = SERIES_POR_FORMA[forma][1] === 1;
