@@ -83,7 +83,12 @@ export function Impresion({ presentacion, periodoInicial, soloInicial, auto }: P
   const nodos = useRef(new Map<string, HTMLDivElement>());
   const yaDescargado = useRef(false);
 
-  const indices = solo === null ? presentacion.diapositivas.map((_, i) => i) : [solo];
+  const [conOcultas, setConOcultas] = useState(false);
+  const ocultas = presentacion.diapositivas.filter((d) => d.oculta).length;
+  // Las ocultas no van, salvo que se pidan (o se pida justo una de ellas).
+  const visibles = presentacion.diapositivas.flatMap((d, i) => (d.oculta ? [] : [i]));
+  const indices = solo !== null ? [solo] : conOcultas ? presentacion.diapositivas.map((_, i) => i) : visibles;
+  const numeroDe = (i: number) => (presentacion.diapositivas[i].oculta ? 0 : visibles.indexOf(i) + 1);
   const titulo = `${sinFormato(presentacion.nombre)} - ${nombrePeriodo(periodo)}`;
   const tamanoDe = (id: string) => tamanos[id] ?? BASE;
 
@@ -142,7 +147,7 @@ export function Impresion({ presentacion, periodoInicial, soloInicial, auto }: P
     };
     void preparar();
     return () => { cancelado = true; };
-  }, [periodo, solo]);
+  }, [periodo, solo, conOcultas]);
 
   const descargar = useCallback(async () => {
     setError(null);
@@ -257,12 +262,18 @@ export function Impresion({ presentacion, periodoInicial, soloInicial, auto }: P
                   onChange={(e) => setSolo(e.target.value === 'todas' ? null : Number(e.target.value))}
                   className="h-9 max-w-60 rounded-lg border border-linea-fuerte bg-white px-2"
                 >
-                  <option value="todas">Todas ({presentacion.diapositivas.length})</option>
+                  <option value="todas">Todas ({conOcultas ? presentacion.diapositivas.length : visibles.length})</option>
                   {presentacion.diapositivas.map((d, i) => (
-                    <option key={d.id} value={i}>Solo la {i + 1}: {sinFormato(d.titulo.replaceAll('{mes}', nombrePeriodo(periodo))).slice(0, 40)}</option>
+                    <option key={d.id} value={i}>Solo la {i + 1}{d.oculta ? ' (oculta)' : ''}: {sinFormato(d.titulo.replaceAll('{mes}', nombrePeriodo(periodo))).slice(0, 40)}</option>
                   ))}
                 </select>
               </label>
+              {ocultas > 0 && solo === null && (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={conOcultas} onChange={(e) => setConOcultas(e.target.checked)} className="h-4 w-4 accent-primario" />
+                  Incluir las ocultas ({ocultas})
+                </label>
+              )}
               <label className="flex items-center gap-2">
                 Si una no cabe
                 <select value={ajuste} onChange={(e) => setAjuste(e.target.value as Ajuste)} className="h-9 rounded-lg border border-linea-fuerte bg-white px-2">
@@ -315,7 +326,7 @@ export function Impresion({ presentacion, periodoInicial, soloInicial, auto }: P
                         transformOrigin: 'top left',
                       }}
                     >
-                      <Diapositiva presentacion={presentacion} diapositiva={d} periodo={periodo} numero={i + 1} />
+                      <Diapositiva presentacion={presentacion} diapositiva={d} periodo={periodo} numero={numeroDe(i)} />
                     </div>
                   </div>
                   {crecida && (

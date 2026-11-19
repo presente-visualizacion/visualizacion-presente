@@ -11,12 +11,14 @@ export const dynamic = 'force-dynamic';
 
 const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'UTC' });
 
-export default async function Inicio() {
+export default async function Inicio({ searchParams }: { searchParams: Promise<{ eliminada?: string }> }) {
+  const { eliminada } = await searchParams;
   const almacen = await obtenerAlmacen();
   const presentaciones = await almacen.listar();
   const editable = !almacen.soloLectura && (await puedeEditar());
   const eliminadas = editable ? await almacen.listarEliminadas() : [];
   const breves = presentaciones.map((p) => ({ id: p.id, nombre: p.nombre }));
+  const recienEliminada = eliminada ? eliminadas.find((p) => p.id === eliminada) : undefined;
 
   return (
     <div className="min-h-full bg-white">
@@ -33,6 +35,15 @@ export default async function Inicio() {
             </form>
           )}
         </div>
+
+        {recienEliminada && (
+          <div role="status" className="mt-8 flex flex-wrap items-center gap-3 rounded-xl bg-tinte px-4 py-3 text-[15px]">
+            <p className="min-w-0 flex-1">
+              <strong className="font-semibold">{recienEliminada.nombre}</strong> pasó a la papelera (abajo). No se borró: se recupera con todo lo que tenía.
+            </p>
+            <RecuperarPresentacion presentacion={{ id: recienEliminada.id, nombre: recienEliminada.nombre }} etiqueta="Deshacer" />
+          </div>
+        )}
 
         <div className="mt-12 flex flex-wrap items-end justify-between gap-4">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Presentaciones</h1>
@@ -80,10 +91,15 @@ export default async function Inicio() {
           </p>
         )}
 
+        {editable && eliminadas.length === 0 && (
+          <p className="mt-12 rounded-xl border border-dashed border-linea px-4 py-3 text-[14px] text-tinta-suave">
+            Papelera vacía. Si alguien elimina una presentación, queda aquí y se puede recuperar; nada se borra para siempre.
+          </p>
+        )}
         {eliminadas.length > 0 && (
-          <details className="mt-12 rounded-xl border border-linea">
+          <details id="papelera" open={Boolean(recienEliminada)} className="mt-12 rounded-xl border border-linea">
             <summary className="cursor-pointer select-none px-4 py-3 text-[15px] font-semibold text-tinta-suave hover:text-tinta">
-              Papelera ({eliminadas.length})
+              Papelera ({eliminadas.length}) · se pueden recuperar con todo lo que tenían
             </summary>
             <ul className="divide-y divide-linea border-t border-linea">
               {eliminadas.map((p) => (

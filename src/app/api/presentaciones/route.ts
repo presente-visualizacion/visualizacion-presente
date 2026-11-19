@@ -12,7 +12,7 @@
 
 import { puedeEditar } from '@/lib/acceso';
 import { obtenerAlmacen } from '@/lib/almacen';
-import { copiaDePresentacion, nombreLimpio, PLANTILLAS, presentacionEnBlanco, presentacionParaguay } from '@/lib/edicion/nueva';
+import { copiaDePresentacion, nombreLimpio, PLANTILLAS, presentacionEnBlanco, presentacionLeyRescate, presentacionParaguay } from '@/lib/edicion/nueva';
 import { validarPresentacion } from '@/lib/edicion/validar';
 import { presentacionMuestra } from '@/lib/almacen/muestra';
 
@@ -54,9 +54,12 @@ export async function POST(request: Request) {
     // El tema (colores y letra) es el de Presente, el mismo de la muestra.
     const plantilla = pedido.nueva.plantilla;
     if (plantilla !== undefined && !(typeof plantilla === 'string' && Object.hasOwn(PLANTILLAS, plantilla))) return error(400, 'No existe esa plantilla.');
+    const tema = presentacionMuestra.tema;
     propuesta = plantilla === 'paraguay'
-      ? presentacionParaguay({ nombre, periodo, tema: presentacionMuestra.tema })
-      : presentacionEnBlanco({ nombre, periodo, tema: presentacionMuestra.tema });
+      ? presentacionParaguay({ nombre, periodo, tema })
+      : plantilla === 'ley-rescate'
+        ? presentacionLeyRescate({ nombre, periodo, tema })
+        : presentacionEnBlanco({ nombre, periodo, tema });
   } else if (pedido.copiaDe !== undefined) {
     const nombre = nombreLimpio(pedido.nombre);
     if (!nombre) return error(400, 'Escribe un nombre para la copia (hasta 120 letras).');

@@ -12,6 +12,7 @@ import type {
   Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, DiapositivaGuardada, Fila, OrigenExcel, Presentacion, SelectorFila, Tarjeta, Tema,
 } from '../tipos';
 import { cifrasDe, columnasDeFuente, type ConfigGrafico, type ConfigTabla, type Operacion } from './operaciones';
+import { CLAVES_FUENTE } from '../fuentes';
 
 // Mensajes de error en español.
 z.config(z.locales.es());
@@ -57,6 +58,7 @@ const tema = z.strictObject({
   neutro: color,
   // Ruta del propio sitio o dirección https; nada de `javascript:` ni `data:`.
   logo: z.string().max(300).regex(/^(\/(?!\/)|https:\/\/)/, 'debe ser una ruta del sitio o una dirección https'),
+  fuente: z.enum(CLAVES_FUENTE).optional(),
 }) satisfies z.ZodType<Tema>;
 
 const columna = z.strictObject({
@@ -189,7 +191,10 @@ const ubicacion = z.strictObject({
   message: `El bloque se sale de la cuadrícula (${COLUMNAS_LIBRE} columnas y ${FILAS_LIBRE} filas).`,
 });
 
+const fuente = z.enum(CLAVES_FUENTE);
+
 const marco = {
+  fuente: fuente.optional(),
   fondo: fondo.optional(),
   colorFondo: color.optional(),
   colorTexto: color.optional(),
@@ -219,6 +224,7 @@ const diapositiva = z.strictObject({
   subtitulo: z.string().max(TOPES.titulo).optional(),
   disposicion: disposicion.optional(),
   fondo: color.optional(),
+  oculta: z.boolean().optional(),
   bloques: z.array(bloque).max(TOPES.bloquesPorDiapositiva),
 }) satisfies z.ZodType<Diapositiva>;
 
@@ -257,6 +263,8 @@ const operacion = z.discriminatedUnion('op', [
   z.strictObject({ op: z.literal('bloque.aspecto'), bloque: id, fondo: fondo.nullable(), ubicacion: ubicacion.nullable() }),
   z.strictObject({ op: z.literal('bloque.colores'), bloque: id, fondo: color.nullable(), texto: color.nullable() }),
   z.strictObject({ op: z.literal('diapositiva.fondo'), diapositiva: id, valor: color.nullable() }),
+  z.strictObject({ op: z.literal('diapositiva.oculta'), diapositiva: id, valor: z.boolean() }),
+  z.strictObject({ op: z.literal('bloque.letra'), bloque: id, valor: fuente.nullable() }),
   z.strictObject({ op: z.literal('guardada.poner'), guardada }),
   z.strictObject({ op: z.literal('guardada.quitar'), diapositiva: id }),
   z.strictObject({

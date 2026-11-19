@@ -8,6 +8,7 @@
 import { COLUMNAS_LIBRE, FILAS_LIBRE, ajustarUbicacion, ubicacionesEfectivas } from '@/lib/disposicion';
 import type { Operacion } from '@/lib/edicion/operaciones';
 import { ElegirColor, FONDOS_SUGERIDOS, LETRAS_SUGERIDAS } from './Colores';
+import { ElegirFuente } from './ElegirFuente';
 import type { Bloque, Diapositiva, FondoBloque, Ubicacion } from '@/lib/tipos';
 
 const FONDOS: { valor: FondoBloque | ''; nombre: string; soloTexto?: boolean }[] = [
@@ -20,7 +21,8 @@ const FONDOS: { valor: FondoBloque | ''; nombre: string; soloTexto?: boolean }[]
 const CLASE_SELECT =
   'h-9 w-full rounded-lg border border-linea-fuerte bg-white px-2 text-[14px] text-tinta hover:border-tinta-suave focus:border-primario focus:outline-none focus:ring-2 focus:ring-primario/25';
 
-export function EditorAspecto({ diapositiva, bloque, indice, cambiar }: {
+export function EditorAspecto({ diapositiva, bloque, indice, cambiar, fuentePresentacion }: {
+  fuentePresentacion?: string;
   diapositiva: Diapositiva;
   bloque: Bloque;
   indice: number;
@@ -51,6 +53,12 @@ export function EditorAspecto({ diapositiva, bloque, indice, cambiar }: {
         </select>
       </label>
 
+      <ElegirFuente
+        etiqueta="Tipo de letra"
+        valor={bloque.fuente ?? null}
+        heredada={fuentePresentacion ?? 'figtree'}
+        onCambiar={(valor) => cambiar({ op: 'bloque.letra', bloque: bloque.id, valor })}
+      />
       <ElegirColor
         etiqueta="Color de fondo"
         valor={bloque.colorFondo ?? null}

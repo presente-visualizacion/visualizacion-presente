@@ -91,6 +91,11 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
   o arrastrando al presentar, PDF descargado directo con hojas que crecen y
   detalle fijo en los gráficos.
 
+- [x] **Ajustes del 2026-11-18** (ver "Ajustes del 2026-11-18"): plantilla
+  de la Ley de Rescate, papelera de presentaciones con "Deshacer", ocultar
+  diapositivas al presentar, mover y agrandar bloques arrastrando, barra
+  "Insertar", y tipos de letra (Figtree por defecto).
+
 Al terminar cada etapa: compilar, revisar en navegador (escritorio y móvil),
 revisar que no se cuelen datos reales, subir a GitHub y marcarla aquí.
 
@@ -1706,6 +1711,85 @@ Pedidas por la usuaria el mismo día, después de probar la etapa 5.
 
 Se comprobó con la presentación real en la copia local: 25 hojas, las
 diapositivas 11 y 20 (CDATs) en hoja más larga, unos 6 MB, unos 20 segundos.
+
+## Ajustes del 2026-11-18
+
+### Plantilla de la Ley de Rescate
+
+- "Nueva presentación" → "Partir de: Colombia: Ley de Rescate Económico"
+  (`presentacionLeyRescate` en `nueva.ts`, clave `ley-rescate`): portada, la
+  diapositiva y cierre. Pasada a bloques desde el prototipo de la usuaria
+  (`ley-rescate-slide-v2.html`): franja de cifras (filas 1-2), gráfico de
+  barras del IVA de pólizas y seguros en cada versión del proyecto (Hoy,
+  texto radicado, tras ajustes del 18-nov; seguro agropecuario tras ajustes
+  vacío, "por confirmar"), texto de Fasecolda y fuentes, recuadro rosado
+  "Cómo reaccionó el mercado" y recuadro oscuro "Qué implica para las
+  entidades financieras". Disposición libre.
+- Datos públicos de prensa y fuentes oficiales citadas en la diapositiva;
+  no son datos de Presente.
+- Se pasa al comité con Copiar y Pegar, como la de Paraguay.
+
+### Papelera de presentaciones
+
+- Ya existía (eliminar marca `eliminado`; nada se borra para siempre). Ahora:
+  al eliminar, el inicio muestra un aviso con **Deshacer**; la papelera se
+  abre sola en ese momento; y si está vacía se dice que existe.
+
+### Ocultar diapositivas
+
+- `Diapositiva.oculta`, operación `diapositiva.oculta`. Una oculta sigue en
+  la presentación y se ve y edita normal (tachada en la lista, con un aviso
+  "Oculta al presentar · Mostrar" bajo la diapositiva).
+- Al presentar se salta (rueda, flechas, deslizar); si se empieza parado en
+  una oculta, va a la siguiente que se vea. El contador y el número del pie
+  cuentan solo las que se ven.
+- El PDF no las incluye, salvo "Incluir las ocultas" o pedir justo esa.
+- Botones: el ojo al pasar el mouse por cada diapositiva de la lista (al
+  editar) y el ojo de la fila de acciones del panel.
+
+### Mover bloques en la diapositiva
+
+- Al editar una diapositiva de contenido, cada bloque tiene un marco
+  (`MoverBloques.tsx`): se arrastra para moverlo y se tira de los bordes o
+  esquinas para cambiar su tamaño. Mientras se arrastra se ve la cuadrícula y
+  dónde va a quedar. Con el bloque elegido: "Editar" (lleva a su tarjeta del
+  panel) y quitar. Con el teclado: flechas mueven, Mayúscula + flechas
+  cambian el tamaño.
+- Se acomoda a la cuadrícula libre de 12 x 8. Si la diapositiva no era libre
+  pasa a serlo con todo donde estaba (`opsUbicarBloque`, `lugaresLibres`).
+- **La cuadrícula libre ahora tiene siempre 8 filas** (antes, las filas
+  usadas). Así lo que se ve es lo que se arrastra. La plantilla de Paraguay
+  pasó a usar las 8; una copia vieja de ella puede tener la última fila vacía.
+- Barra **Insertar** sobre la diapositiva: cuadro de texto, gráfico, tabla,
+  cifras, tarjetas (`opsInsertarBloque`): va al primer lugar libre
+  (`lugarLibre`, de 6x3 hacia abajo); si no hay, achica lo que llega hasta
+  abajo para dejar las 2 últimas filas (`hacerLugar`). "Agregar bloque" del
+  panel también usa el primer lugar libre.
+- Los bloques llevan `data-vp-bloque` y el cuerpo `data-vp-cuerpo`: con eso
+  se miden los marcos.
+
+### Tipos de letra
+
+- La de siempre es **Figtree** (la de toda la herramienta y del prototipo de
+  la usuaria): queda por defecto. `src/lib/fuentes.ts`: Figtree, Inter,
+  Montserrat, Poppins, Lato, Open Sans, Roboto, Nunito, Raleway, DM Sans,
+  Manrope, Source Serif, Merriweather, Lora, Playfair Display (paquetes
+  @fontsource, instalados con la aplicación; el navegador baja solo la que
+  se usa) y Arial, Calibri y Georgia del computador.
+- `Tema.fuente` (Presentación → "Tipo de letra de las diapositivas") y
+  `Bloque.fuente` (en el bloque, operación `bloque.letra`). Los textos se
+  vuelven a ajustar al cambiar o terminar de cargar la letra, y los ejes de
+  los gráficos se miden con ella (`FuenteActual`, `usarFuenteMedida`).
+
+### Otros
+
+- Cifras: el número se achica para caber en una línea y en el alto de su
+  caja (antes se salía en franjas bajas).
+- Gráficos de barras con valores en la punta: margen arriba para que el
+  valor más alto no se corte.
+- `next dev` con Turbopack se recargaba en bucle en este entorno después de
+  instalar paquetes; `npx next dev --webpack` no. La compilación de Vercel no
+  se ve afectada.
 
 ## Cómo trabajar
 

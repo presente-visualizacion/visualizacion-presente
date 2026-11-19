@@ -24,7 +24,7 @@ import type {
  * El título y la nota van por `bloque.marco`, y el fondo y la ubicación por
  * `bloque.aspecto`; no por la configuración del gráfico o la tabla.
  */
-type Marco = 'id' | 'tipo' | 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto';
+type Marco = 'id' | 'tipo' | 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto' | 'fuente';
 export type ConfigGrafico = Omit<BloqueGrafico, Marco>;
 export type ConfigTabla = Omit<BloqueTabla, Marco>;
 
@@ -47,6 +47,10 @@ export type Operacion =
   | { op: 'bloque.colores'; bloque: string; fondo: string | null; texto: string | null }
   /** Color de fondo de la diapositiva; null la deja en blanco. */
   | { op: 'diapositiva.fondo'; diapositiva: string; valor: string | null }
+  /** Ocultar la diapositiva al presentar y en el PDF (sin quitarla). */
+  | { op: 'diapositiva.oculta'; diapositiva: string; valor: boolean }
+  /** Tipo de letra propio del bloque; null usa el de la presentación. */
+  | { op: 'bloque.letra'; bloque: string; valor: string | null }
   /** Guarda (o reemplaza) una diapositiva quitada, arriba de la lista. */
   | { op: 'guardada.poner'; guardada: DiapositivaGuardada }
   /** La saca de la lista de guardadas (al volver a ponerla o al borrarla para siempre). */
@@ -306,8 +310,9 @@ function datoDeBloque(bloque: Bloque): PorPeriodo<string> | PorPeriodo<Cifra[]> 
 }
 
 /** Título y nota del bloque, para conservarlos al cambiar su configuración. */
-function marcoDe(b: Bloque): Pick<Bloque, 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto'> {
+function marcoDe(b: Bloque): Pick<Bloque, 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto' | 'fuente'> {
   return {
+    ...(b.fuente ? { fuente: b.fuente } : {}),
     ...(b.colorFondo ? { colorFondo: b.colorFondo } : {}),
     ...(b.colorTexto ? { colorTexto: b.colorTexto } : {}),
     ...(b.titulo ? { titulo: b.titulo } : {}),
@@ -392,6 +397,12 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
 
     case 'diapositiva.fondo':
       return conDiapositiva(p, op.diapositiva, ({ fondo: _fondo, ...d }) => (op.valor ? { ...d, fondo: op.valor } : d));
+
+    case 'diapositiva.oculta':
+      return conDiapositiva(p, op.diapositiva, ({ oculta: _oculta, ...d }) => (op.valor ? { ...d, oculta: true } : d));
+
+    case 'bloque.letra':
+      return conBloque(p, op.bloque, ({ fuente: _fuente, ...b }) => (op.valor ? { ...b, fuente: op.valor } : b) as Bloque);
 
     case 'guardada.poner': {
       const resto = (p.guardadas ?? []).filter((g) => g.diapositiva.id !== op.guardada.diapositiva.id);
@@ -653,6 +664,16 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
       return d ? [{ op: op.op, diapositiva: d.id, valor: d.fondo ?? null }] : [];
     }
 
+    case 'diapositiva.oculta': {
+      const d = p.diapositivas.find((x) => x.id === op.diapositiva);
+      return d ? [{ op: op.op, diapositiva: d.id, valor: Boolean(d.oculta) }] : [];
+    }
+
+    case 'bloque.letra': {
+      const b = bloqueDe(p, op.bloque);
+      return b ? [{ op: op.op, bloque: b.id, valor: b.fuente ?? null }] : [];
+    }
+
     case 'guardada.poner': {
       const antes = p.guardadas?.find((g) => g.diapositiva.id === op.guardada.diapositiva.id);
       return antes ? [{ op: op.op, guardada: antes }] : [{ op: 'guardada.quitar', diapositiva: op.guardada.diapositiva.id }];
@@ -851,8 +872,10 @@ export function claveDe(op: Operacion): string | null {
     case 'bloque.marco':
     case 'bloque.aspecto':
     case 'bloque.colores':
+    case 'bloque.letra':
       return `${op.op}|${op.bloque}`;
     case 'diapositiva.fondo':
+    case 'diapositiva.oculta':
       return `${op.op}|${op.diapositiva}`;
     case 'guardada.poner':
     case 'guardada.quitar':

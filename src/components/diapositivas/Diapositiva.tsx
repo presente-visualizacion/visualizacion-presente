@@ -1,8 +1,10 @@
 'use client';
 
 import { ConNegritas, esOscuro, VistaBloque } from '@/components/bloques/Bloques';
+import { FuenteActual } from '@/components/bloques/graficoComun';
+import { fuenteCss } from '@/lib/fuentes';
 import { Logo } from '@/components/Logo';
-import { filasUsadas, ubicacionesEfectivas } from '@/lib/disposicion';
+import { COLUMNAS_LIBRE, FILAS_LIBRE, ubicacionesEfectivas } from '@/lib/disposicion';
 import { conMes, nombrePeriodo } from '@/lib/periodos';
 import type { Diapositiva as TipoDiapositiva, IdPeriodo, Presentacion } from '@/lib/tipos';
 
@@ -20,10 +22,14 @@ interface Props {
 }
 
 export function Diapositiva(props: Props) {
-  const { diapositiva } = props;
-  if (diapositiva.tipo === 'portada') return <Portada {...props} />;
-  if (diapositiva.tipo === 'cierre') return <Cierre {...props} />;
-  return <Contenido {...props} />;
+  const { diapositiva, presentacion } = props;
+  const css = fuenteCss(presentacion.tema.fuente);
+  const vista = diapositiva.tipo === 'portada' ? <Portada {...props} /> : diapositiva.tipo === 'cierre' ? <Cierre {...props} /> : <Contenido {...props} />;
+  return (
+    <FuenteActual.Provider value={css}>
+      <div className="h-full w-full" style={{ fontFamily: css }}>{vista}</div>
+    </FuenteActual.Provider>
+  );
 }
 
 function PanelMarca({ logo }: { logo: string }) {
@@ -102,12 +108,13 @@ function Contenido({ presentacion, diapositiva, periodo, numero }: Props) {
       </div>
     );
   } else if (disposicion === 'libre') {
-    // Cada bloque en su rectángulo de una cuadrícula de 12 columnas.
+    // Cada bloque en su rectángulo de una cuadrícula fija de 12 x 8: lo que
+    // se ve es lo que se arrastra en el editor (ver "Mover bloques" en PLAN.md).
     const lugares = ubicacionesEfectivas(bloques);
     cuerpo = (
       <div
         className="grid h-full gap-x-[28px] gap-y-[14px]"
-        style={{ gridTemplateColumns: 'repeat(12, minmax(0, 1fr))', gridTemplateRows: `repeat(${filasUsadas(lugares)}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: `repeat(${COLUMNAS_LIBRE}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${FILAS_LIBRE}, minmax(0, 1fr))` }}
       >
         {bloques.map((b, i) => {
           const u = lugares[i];
@@ -142,11 +149,11 @@ function Contenido({ presentacion, diapositiva, periodo, numero }: Props) {
           {diapositiva.subtitulo && <p className="mt-[5px] text-[19px] text-tinta-suave"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
         </div>
       </header>
-      <div className="mt-[28px] min-h-0 flex-1">{cuerpo}</div>
+      <div data-vp-cuerpo className="mt-[28px] min-h-0 flex-1">{cuerpo}</div>
       <footer className="mt-[18px] flex shrink-0 items-center gap-[20px] text-[15px] text-tinta-suave">
         <Logo alto={26} src={presentacion.tema.logo} />
         <span className="ml-auto">{nombrePeriodo(periodo)}</span>
-        <span className="min-w-[24px] text-right font-semibold text-tinta">{numero}</span>
+        <span className="min-w-[24px] text-right font-semibold text-tinta">{numero > 0 ? numero : ''}</span>
       </footer>
     </div>
   );

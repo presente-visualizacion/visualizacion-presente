@@ -11,6 +11,7 @@ import { nombrePeriodo } from '@/lib/periodos';
 import { TEMA_PRESENTE } from '@/lib/tema';
 import type { IdPeriodo, Presentacion, Tema } from '@/lib/tipos';
 import { BotonConfirmar, Campo, CLASE_BOTON, CLASE_BOTON_PRINCIPAL, Subtitulo } from './piezas';
+import { ElegirFuente } from './ElegirFuente';
 
 interface Props {
   presentacion: Presentacion;
@@ -76,6 +77,18 @@ export function PanelPresentacion({ presentacion, periodo, cambiar, onPeriodo }:
             onConfirmar={quitarMes}
           />
         </div>
+      </section>
+
+      <section className="border-t border-linea pt-5">
+        <ElegirFuente
+          etiqueta="Tipo de letra de las diapositivas"
+          valor={tema.fuente && tema.fuente !== 'figtree' ? tema.fuente : null}
+          onCambiar={(fuente) => {
+            const { fuente: _f, ...resto } = tema;
+            cambiar({ op: 'tema', valor: fuente ? { ...resto, fuente } : resto });
+          }}
+          nota="Figtree es la de siempre. Cada bloque puede tener la suya (en el bloque, Aspecto)."
+        />
       </section>
 
       <section aria-labelledby="panel-colores" className="space-y-3 border-t border-linea pt-5">

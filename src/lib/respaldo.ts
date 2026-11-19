@@ -79,7 +79,7 @@ export function hojasDeRespaldo(p: Presentacion, ahora = new Date()): HojaNueva[
     ['N.°', 'Tipo', 'Título', 'Subtítulo', 'Bloque', 'Título del bloque', 'Hoja de datos'],
   ];
   p.diapositivas.forEach((d, i) => {
-    const base: CeldaNueva[] = [i + 1, NOMBRES_DIAPOSITIVA[d.tipo], sinFormato(d.titulo), sinFormato(d.subtitulo ?? '')];
+    const base: CeldaNueva[] = [i + 1, d.oculta ? `${NOMBRES_DIAPOSITIVA[d.tipo]} (oculta)` : NOMBRES_DIAPOSITIVA[d.tipo], sinFormato(d.titulo), sinFormato(d.subtitulo ?? '')];
     if (!d.bloques.length) {
       contenido.push(base);
       return;

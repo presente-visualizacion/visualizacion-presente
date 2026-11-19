@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Columns2, History, Maximize, Pencil, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Columns2, EyeOff, History, Maximize, Pencil, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
 import { Diapositiva } from '@/components/diapositivas/Diapositiva';
 import { EstadoGuardado } from '@/components/editor/EstadoGuardado';
 import { usarEdicion } from '@/components/editor/usarEdicion';
@@ -12,10 +12,12 @@ import type { DestinoExcel } from '@/lib/excel/cargar';
 import { Logo } from '@/components/Logo';
 import { mesAnterior, nombrePeriodo } from '@/lib/periodos';
 import { variablesTema } from '@/lib/tema';
-import type { IdPeriodo, Presentacion } from '@/lib/tipos';
+import type { Bloque, IdPeriodo, Presentacion } from '@/lib/tipos';
 import { BarraMeses } from './BarraMeses';
 import { Lienzo } from './Lienzo';
 import { MenuMas } from './MenuMas';
+import { BarraInsertar, MoverBloques } from '@/components/editor/MoverBloques';
+import { opsInsertarBloque } from '@/lib/edicion/plantillas';
 import { ListaDiapositivas } from './ListaDiapositivas';
 
 // El panel y el editor de datos solo se descargan al entrar a editar.
@@ -78,9 +80,40 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toque = useRef<{ x: number; y: number } | null>(null);
 
+  // Al presentar se saltan las ocultas; al ver o editar se pasa por todas.
+  const visibles = diapositivas.flatMap((d, i) => (d.oculta ? [] : [i]));
+  const numeroDe = (i: number) => (diapositivas[i]?.oculta ? 0 : visibles.indexOf(i) + 1);
+  const saltarOcultas = presentando;
   const ir = useCallback((destino: number) => setIndice(Math.min(Math.max(destino, 0), total - 1)), [total]);
-  const anterior = useCallback(() => setIndice((i) => Math.max(i - 1, 0)), []);
-  const siguiente = useCallback(() => setIndice((i) => Math.min(i + 1, total - 1)), [total]);
+  const anterior = useCallback(() => setIndice((i) => {
+    const actual = Math.min(i, total - 1);
+    if (!saltarOcultas) return Math.max(actual - 1, 0);
+    for (let j = actual - 1; j >= 0; j--) if (!diapositivas[j].oculta) return j;
+    return actual;
+  }), [total, saltarOcultas, diapositivas]);
+  const siguiente = useCallback(() => setIndice((i) => {
+    const actual = Math.min(i, total - 1);
+    if (!saltarOcultas) return Math.min(actual + 1, total - 1);
+    for (let j = actual + 1; j < total; j++) if (!diapositivas[j].oculta) return j;
+    return actual;
+  }), [total, saltarOcultas, diapositivas]);
+  // Si se empieza a presentar parado en una oculta, se va a la siguiente que se vea.
+  useEffect(() => {
+    if (!presentando || !diapositivas[indice]?.oculta || !visibles.length) return;
+    setIndice(visibles.find((j) => j > indice) ?? visibles[visibles.length - 1]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presentando]);
+  /** Bloque elegido en la diapositiva, para moverlo (ver MoverBloques). */
+  const [bloqueElegido, setBloqueElegido] = useState<string | null>(null);
+  useEffect(() => setBloqueElegido(null), [indice, editando]);
+  const insertar = (tipo: Bloque['tipo']) => {
+    const r = opsInsertarBloque(presentacion, diapositivas[indice].id, tipo);
+    if (!r) return;
+    cambiar(r.ops);
+    setBloqueElegido(r.bloque.id);
+    setTimeout(() => document.getElementById(`editor-bloque-${r.bloque.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+  };
+  const ocultar = useCallback((id: string, oculta: boolean) => cambiar({ op: 'diapositiva.oculta', diapositiva: id, valor: oculta }), [cambiar]);
 
   // El enlace siempre refleja la diapositiva y el mes, para poder compartirlo.
   useEffect(() => {
@@ -133,6 +166,8 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
       }
       // Con el editor de datos abierto, las teclas son de la cuadrícula.
       if (datosAbiertos) return;
+      // Las flechas sobre un bloque elegido en la diapositiva lo mueven (MoverBloques).
+      if (e.defaultPrevented) return;
       if (e.metaKey || e.ctrlKey || e.altKey || destino?.closest('input, textarea, select, [contenteditable="true"]')) return;
       // Espacio y Enter sobre un botón deben accionar el botón, no pasar de diapositiva.
       const enBoton = Boolean(destino?.closest('button, a'));
@@ -221,13 +256,13 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
 
   const diapositiva = (
     <div key={diapositivas[indice].id} className="aparecer h-full w-full">
-      <Diapositiva presentacion={presentacion} diapositiva={diapositivas[indice]} periodo={periodo} numero={indice + 1} />
+      <Diapositiva presentacion={presentacion} diapositiva={diapositivas[indice]} periodo={periodo} numero={numeroDe(indice)} />
     </div>
   );
 
   const otraDiapositiva = (mes: IdPeriodo) => (
     <div key={`${diapositivas[indice].id}-${mes}`} className="aparecer h-full w-full">
-      <Diapositiva presentacion={presentacion} diapositiva={diapositivas[indice]} periodo={mes} numero={indice + 1} />
+      <Diapositiva presentacion={presentacion} diapositiva={diapositivas[indice]} periodo={mes} numero={numeroDe(indice)} />
     </div>
   );
 
@@ -289,7 +324,7 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
         >
           <div className="flex items-center gap-1 rounded-full bg-tinta/92 p-1.5 text-white shadow-lg">
             <BotonRedondo etiqueta="Diapositiva anterior" onClick={anterior} inactivo={indice === 0} oscuro><ChevronLeft size={20} /></BotonRedondo>
-            <span className="min-w-16 text-center text-sm">{indice + 1} de {total}</span>
+            <span className="min-w-16 text-center text-sm">{diapositivas[indice]?.oculta ? 'Oculta' : `${visibles.indexOf(indice) + 1} de ${visibles.length}`}</span>
             <BotonRedondo etiqueta="Diapositiva siguiente" onClick={siguiente} inactivo={indice === total - 1} oscuro><ChevronRight size={20} /></BotonRedondo>
             <label className="ml-1">
               <span className="sr-only">Mes</span>
@@ -372,16 +407,45 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
       <div className="flex min-h-0 flex-1">
         {/* Al editar en pantallas medianas la lista cede su sitio al panel. */}
         <aside aria-label="Diapositivas" className={`hidden w-72 shrink-0 overflow-y-auto border-r border-linea bg-white ${comparando ? '' : editando ? 'xl:block' : 'lg:block'}`}>
-          <ListaDiapositivas diapositivas={diapositivas} indice={indice} periodo={periodo} onIr={ir} />
+          <ListaDiapositivas diapositivas={diapositivas} indice={indice} periodo={periodo} onIr={ir} onOcultar={editable ? ocultar : undefined} />
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col">
+          {editando && !comparando && diapositivas[indice].tipo === 'contenido' && (
+            <div className="mx-3 mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 lg:mx-8">
+              <BarraInsertar onInsertar={insertar} />
+              <p className="text-[13px] text-tinta-suave">Arrastra un bloque para moverlo; tira de sus bordes para cambiar el tamaño.</p>
+            </div>
+          )}
           <div className="relative m-3 min-h-0 flex-1 lg:mx-8 lg:mt-7" onTouchStart={alTocar} onTouchEnd={alSoltar}>
-            {comparando ? vistaComparada(false) : <Lienzo>{diapositiva}</Lienzo>}
+            {comparando ? vistaComparada(false) : (
+              <Lienzo>
+                {editando && diapositivas[indice].tipo === 'contenido' ? (
+                  <div className="relative h-full w-full">
+                    {diapositiva}
+                    <MoverBloques
+                      presentacion={presentacion}
+                      diapositiva={diapositivas[indice]}
+                      seleccionado={bloqueElegido}
+                      onSeleccionar={setBloqueElegido}
+                      cambiar={cambiar}
+                    />
+                  </div>
+                ) : diapositiva}
+              </Lienzo>
+            )}
           </div>
           <div className="flex shrink-0 items-center justify-center gap-2 pb-3 lg:pb-5">
             <BotonRedondo etiqueta="Diapositiva anterior" onClick={anterior} inactivo={indice === 0}><ChevronLeft size={20} /></BotonRedondo>
             <span className="min-w-20 text-center text-sm text-tinta-suave">{indice + 1} de {total}</span>
+            {diapositivas[indice]?.oculta && (
+              <span className="flex items-center gap-1.5 rounded-full bg-tinte px-3 py-1 text-[13px] font-semibold text-primario">
+                <EyeOff size={14} aria-hidden /> Oculta al presentar
+                {editable && (
+                  <button type="button" onClick={() => ocultar(diapositivas[indice].id, false)} className="ml-1 underline underline-offset-2 hover:text-tinta">Mostrar</button>
+                )}
+              </span>
+            )}
             <BotonRedondo etiqueta="Diapositiva siguiente" onClick={siguiente} inactivo={indice === total - 1}><ChevronRight size={20} /></BotonRedondo>
           </div>
           <div className={editando ? 'xl:hidden' : 'lg:hidden'}>

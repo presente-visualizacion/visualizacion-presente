@@ -1,6 +1,7 @@
 // Piezas que comparten los dibujos de gráficos (Grafico.tsx y GraficosEspeciales.tsx).
 
 import { createContext, useContext } from 'react';
+import { fuenteCss } from '@/lib/fuentes';
 import { ReferenceLine } from 'recharts';
 import type { BloqueGrafico, Columna, ConjuntoDatos, Fila, RangoEje, Tema } from '@/lib/tipos';
 
@@ -93,6 +94,15 @@ export function reducirMovimiento(): boolean {
 /** true en la página para PDF: los gráficos se dibujan quietos, ya terminados. */
 export const SinAnimacion = createContext(false);
 
+/** font-family del bloque o de la presentación: con él se mide el texto de los ejes. */
+export const FuenteActual = createContext<string>(fuenteCss(undefined));
+
+let fuenteMedida = fuenteCss(undefined);
+/** Llamar al comienzo de cada gráfico: `anchoTexto` mide con su tipo de letra. */
+export function usarFuenteMedida(): void {
+  fuenteMedida = useContext(FuenteActual);
+}
+
 /** true en el PDF: debajo del gráfico va fijo lo que sale al pasar el mouse, si no se ve en el dibujo. */
 export const DetalleFijo = createContext(false);
 
@@ -109,7 +119,7 @@ export function anchoTexto(texto: string, tamano: number, peso = 400): number {
   if (typeof document === 'undefined') return estimado;
   pincel ??= document.createElement('canvas').getContext('2d');
   if (!pincel) return estimado;
-  pincel.font = `${peso} ${tamano}px "Figtree Variable", sans-serif`;
+  pincel.font = `${peso} ${tamano}px ${fuenteMedida}`;
   return pincel.measureText(texto).width * 1.06;
 }
 

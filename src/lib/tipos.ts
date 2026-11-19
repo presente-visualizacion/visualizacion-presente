@@ -18,6 +18,8 @@ export interface Tema {
   neutro: string;
   /** Logo blanco con fondo transparente (se muestra sobre el degradado). */
   logo: string;
+  /** Tipo de letra de las diapositivas (clave de src/lib/fuentes.ts). Si falta, Figtree. */
+  fuente?: string;
 }
 
 export type TipoColumna = 'texto' | 'numero' | 'porcentaje' | 'moneda';
@@ -143,6 +145,8 @@ interface BaseBloque {
   colorFondo?: string;
   /** Color de las letras del bloque (#RRGGBB). Los gráficos conservan el suyo. */
   colorTexto?: string;
+  /** Tipo de letra propio del bloque (clave de src/lib/fuentes.ts). Si falta, el de la presentación. */
+  fuente?: string;
   /** Solo se usa con la disposición "libre". */
   ubicacion?: Ubicacion;
 }
@@ -283,6 +287,8 @@ export interface Diapositiva {
   disposicion?: Disposicion;
   /** Color de fondo de la diapositiva (#RRGGBB). Si falta, blanco. */
   fondo?: string;
+  /** Oculta: se salta al presentar y en el PDF, pero sigue en la presentación. */
+  oculta?: boolean;
   bloques: Bloque[];
 }
 

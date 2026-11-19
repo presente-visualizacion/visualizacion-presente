@@ -3,9 +3,9 @@
 // de un gráfico cuando cambia de tipo. Sin React: se prueba aparte.
 
 import type {
-  Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, FormaGrafico, IdPeriodo, Presentacion, Serie,
+  Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, FormaGrafico, IdPeriodo, Presentacion, Serie, Ubicacion,
 } from '../tipos';
-import { ubicacionesDesde, ubicacionNueva } from '../disposicion';
+import { hacerLugar, ubicacionesDesde, ubicacionesEfectivas, ubicacionNueva } from '../disposicion';
 import type { ConfigGrafico, Operacion } from './operaciones';
 import { SERIES_POR_FORMA, TOPES } from './validar';
 
@@ -322,6 +322,47 @@ export function opsCambiarDisposicion(d: Diapositiva, valor: Disposicion): Opera
     d.bloques.forEach((b, i) => ops.push({ op: 'bloque.aspecto', bloque: b.id, fondo: b.fondo ?? null, ubicacion: lugares[i] }));
   }
   return ops;
+}
+
+/** Lo que ocupa cada bloque con la disposición libre (si todavía no lo es, lo que se ve ahora). */
+export function lugaresLibres(d: Diapositiva): Ubicacion[] {
+  const actual = d.disposicion ?? 'una';
+  if (actual === 'libre') return ubicacionesEfectivas(d.bloques);
+  return ubicacionesDesde(actual === 'una' && d.bloques.length > 1 ? 'filas' : actual, d.bloques);
+}
+
+/**
+ * Mover o agrandar un bloque arrastrándolo en la diapositiva. Si la
+ * diapositiva no es libre, primero pasa a libre (todo queda donde estaba).
+ */
+export function opsUbicarBloque(d: Diapositiva, bloque: string, ubicacion: Ubicacion): Operacion[] {
+  const b = d.bloques.find((x) => x.id === bloque);
+  if (!b) return [];
+  const ops = (d.disposicion ?? 'una') === 'libre' ? [] : opsCambiarDisposicion(d, 'libre');
+  ops.push({ op: 'bloque.aspecto', bloque, fondo: b.fondo ?? null, ubicacion });
+  return ops;
+}
+
+/**
+ * "Insertar" desde la diapositiva: el bloque nuevo va en un lugar libre (la
+ * diapositiva pasa a libre si no lo era). Si no hay lugar, se achica lo de
+ * abajo para dejar dos filas.
+ */
+export function opsInsertarBloque(p: Presentacion, diapositiva: string, tipo: TipoNuevo): { ops: Operacion[]; bloque: Bloque } | null {
+  const d = p.diapositivas.find((x) => x.id === diapositiva);
+  if (!d) return null;
+  const agregado = opsAgregarBloque(p, diapositiva, tipo);
+  if (!agregado) return null;
+  const lugares = lugaresLibres(d);
+  const { ubicacion, cambios } = hacerLugar(d.bloques.map((b, i) => ({ id: b.id, ubicacion: lugares[i] })));
+  const fondoDe = (id: string) => d.bloques.find((b) => b.id === id)?.fondo ?? null;
+  const ops: Operacion[] = [
+    ...((d.disposicion ?? 'una') === 'libre' ? [] : opsCambiarDisposicion(d, 'libre')),
+    ...cambios.map((c): Operacion => ({ op: 'bloque.aspecto', bloque: c.id, fondo: fondoDe(c.id), ubicacion: c.ubicacion })),
+    ...agregado.ops.filter((o) => o.op !== 'diapositiva.disposicion'),
+    { op: 'bloque.aspecto', bloque: agregado.bloque.id, fondo: null, ubicacion },
+  ];
+  return { ops, bloque: { ...agregado.bloque, ubicacion } };
 }
 
 /** En una diapositiva libre, el bloque que se agrega va debajo de todo. */

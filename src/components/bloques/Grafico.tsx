@@ -9,7 +9,7 @@ import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import type { Columna, Fila } from '@/lib/tipos';
 import {
-  anchoTexto, BLANCO, DetalleFijo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, usarAnimar, SUAVE, TINTA,
+  anchoTexto, BLANCO, DetalleFijo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, usarAnimar, usarFuenteMedida, SUAVE, TINTA,
   type PropsGrafico, type SerieLista,
 } from './graficoComun';
 import { Cascada, Circular, Dispersion } from './GraficosEspeciales';
@@ -54,6 +54,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   const columnaValor = series[0]?.columna;
   const columnaX = columnaDe(conjunto, bloque.ejeX);
   const animar = usarAnimar();
+  usarFuenteMedida();
   const horizontal = bloque.forma === 'barrasHorizontales';
   const deTiempo = bloque.forma === 'lineas' || bloque.forma === 'area';
   const comoLinea = (s: SerieLista) => deTiempo || bloque.forma === 'radar' || (bloque.forma === 'combinado' && s.tipo === 'lineas');
@@ -170,7 +171,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   } else if (bloque.forma === 'barras') {
     const cima = visibles[visibles.length - 1]?.clave;
     grafico = (
-      <BarChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
+      <BarChart data={filas} margin={{ top: bloque.etiquetas ? 26 : 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
         <CartesianGrid vertical={false} stroke={LINEA} />
         <XAxis dataKey={bloque.ejeX} {...ejeCategoriasBarras} />
         <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
@@ -202,7 +203,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   } else if (bloque.forma === 'combinado') {
     const minimo = Math.min(0, extremos.minimo);
     grafico = (
-      <ComposedChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
+      <ComposedChart data={filas} margin={{ top: bloque.etiquetas ? 26 : 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
         <CartesianGrid vertical={false} stroke={LINEA} />
         <XAxis dataKey={bloque.ejeX} {...ejeCategoriasBarras} />
         <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [minimo < 0 ? 'auto' : 0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />

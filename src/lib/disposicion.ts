@@ -103,6 +103,78 @@ export function ajustarUbicacion(u: Ubicacion): Ubicacion {
 /** Lugar para un bloque nuevo en una diapositiva libre: debajo de todo, a lo ancho, si hay filas. */
 export function ubicacionNueva(bloques: Bloque[]): Ubicacion {
   const usadas = ubicacionesEfectivas(bloques);
+  const libre = lugarLibre(usadas);
+  if (libre) return libre;
   const fila = Math.min(usadas.length ? Math.max(...usadas.map((u) => u.fila + u.alto)) : 1, FILAS_LIBRE);
   return { columna: 1, ancho: COLUMNAS_LIBRE, fila, alto: Math.max(1, Math.min(2, FILAS_LIBRE - fila + 1)) };
 }
+
+function seCruzan(a: Ubicacion, b: Ubicacion): boolean {
+  return a.columna < b.columna + b.ancho && b.columna < a.columna + a.ancho && a.fila < b.fila + b.alto && b.fila < a.fila + a.alto;
+}
+
+/**
+ * El primer rectángulo libre (sin pisar ningún bloque), probando de mayor a
+ * menor tamaño y de arriba hacia abajo. null si no queda lugar.
+ */
+export function lugarLibre(ocupados: Ubicacion[]): Ubicacion | null {
+  const tamanos: [number, number][] = [[6, 3], [6, 2], [4, 3], [4, 2], [3, 2], [12, 1], [6, 1], [3, 1], [2, 1]];
+  for (const [ancho, alto] of tamanos) {
+    for (let fila = 1; fila + alto - 1 <= FILAS_LIBRE; fila++) {
+      for (let columna = 1; columna + ancho - 1 <= COLUMNAS_LIBRE; columna++) {
+        const u = { columna, ancho, fila, alto };
+        if (!ocupados.some((o) => seCruzan(o, u))) return u;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Lugar para un bloque nuevo en una diapositiva libre. Si no hay espacio
+ * libre, achica lo que llega hasta abajo para dejar las 2 últimas filas
+ * (`cambios`); si ni así, el bloque va encima, al centro, para moverlo.
+ */
+export function hacerLugar(ocupados: { id: string; ubicacion: Ubicacion }[]): { ubicacion: Ubicacion; cambios: { id: string; ubicacion: Ubicacion }[] } {
+  const libre = lugarLibre(ocupados.map((o) => o.ubicacion));
+  if (libre) return { ubicacion: libre, cambios: [] };
+  const alto = 2;
+  const tope = FILAS_LIBRE - alto;
+  const cambios: { id: string; ubicacion: Ubicacion }[] = [];
+  for (const o of ocupados) {
+    const u = o.ubicacion;
+    if (u.fila + u.alto - 1 <= tope) continue;
+    if (u.fila > tope) return { ubicacion: { columna: 4, ancho: 6, fila: 3, alto: 3 }, cambios: [] };
+    cambios.push({ id: o.id, ubicacion: { ...u, alto: tope - u.fila + 1 } });
+  }
+  return { ubicacion: { columna: 1, ancho: COLUMNAS_LIBRE, fila: tope + 1, alto }, cambios };
+}
+
+/** Bordes de los que se tira para cambiar el tamaño (null: se mueve entero). */
+export interface Bordes { izq: boolean; der: boolean; arr: boolean; aba: boolean }
+
+const limitar = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+
+/** La ubicación después de correr `dc` columnas y `df` filas, moviendo o tirando de los bordes. */
+export function ubicacionArrastrada(u: Ubicacion, dc: number, df: number, bordes: Bordes | null): Ubicacion {
+  if (!bordes) {
+    return {
+      ...u,
+      columna: limitar(u.columna + dc, 1, COLUMNAS_LIBRE - u.ancho + 1),
+      fila: limitar(u.fila + df, 1, FILAS_LIBRE - u.alto + 1),
+    };
+  }
+  let { columna, ancho, fila, alto } = u;
+  if (bordes.der) ancho = limitar(u.ancho + dc, 1, COLUMNAS_LIBRE - u.columna + 1);
+  if (bordes.izq) {
+    columna = limitar(u.columna + dc, 1, u.columna + u.ancho - 1);
+    ancho = u.ancho - (columna - u.columna);
+  }
+  if (bordes.aba) alto = limitar(u.alto + df, 1, FILAS_LIBRE - u.fila + 1);
+  if (bordes.arr) {
+    fila = limitar(u.fila + df, 1, u.fila + u.alto - 1);
+    alto = u.alto - (fila - u.fila);
+  }
+  return { columna, ancho, fila, alto };
+}
+

@@ -1,11 +1,13 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { Fragment, useLayoutEffect, useState } from 'react';
+import { Fragment, useContext, useLayoutEffect, useState } from 'react';
 import { conjuntoDe, filasDe, resolverCifra, valorDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import { trozos } from '@/lib/formatoTexto';
 import { contraste } from '@/lib/color';
+import { fuenteCss } from '@/lib/fuentes';
+import { FuenteActual } from './graficoComun';
 import { conMes } from '@/lib/periodos';
 import { armarTabla, type ColumnaVista, type TablaArmada } from '@/lib/tablas';
 import type {
@@ -55,6 +57,8 @@ function useMedida<T extends HTMLElement>() {
 function useAjuste<T extends HTMLElement>(clave: string, base: number) {
   const [el, setEl] = useState<T | null>(null);
   const [tamano, setTamano] = useState(base);
+  // Otro tipo de letra ocupa otro espacio: se vuelve a calcular al cambiarlo.
+  const fuente = useContext(FuenteActual);
   useLayoutEffect(() => {
     if (!el) return;
     const cabe = () => el.scrollHeight <= el.clientHeight + 1;
@@ -82,12 +86,33 @@ function useAjuste<T extends HTMLElement>(clave: string, base: number) {
       ajustar();
     });
     observador.observe(el);
-    return () => observador.disconnect();
-  }, [el, clave, base]);
+    // Y cuando termina de cargar la letra (al principio se mide con otra).
+    let vivo = true;
+    const alCargar = () => vivo && ajustar();
+    document.fonts?.ready.then(alCargar);
+    document.fonts?.addEventListener('loadingdone', alCargar);
+    return () => {
+      vivo = false;
+      observador.disconnect();
+      document.fonts?.removeEventListener('loadingdone', alCargar);
+    };
+  }, [el, clave, base, fuente]);
   return [setEl, tamano, tamano <= base * 0.6 + 0.1] as const;
 }
 
 export function VistaBloque({ bloque, ...contexto }: Contexto & { bloque: Bloque }) {
+  // data-vp-bloque: lo usa el editor para dibujar el marco que mueve el bloque.
+  const interior = <VistaBloqueInterior bloque={bloque} {...contexto} />;
+  if (!bloque.fuente) return <div data-vp-bloque={bloque.id} className="h-full min-h-0 min-w-0">{interior}</div>;
+  const css = fuenteCss(bloque.fuente);
+  return (
+    <FuenteActual.Provider value={css}>
+      <div data-vp-bloque={bloque.id} className="h-full min-h-0 min-w-0" style={{ fontFamily: css }}>{interior}</div>
+    </FuenteActual.Provider>
+  );
+}
+
+function VistaBloqueInterior({ bloque, ...contexto }: Contexto & { bloque: Bloque }) {
   const contenido = (() => {
     switch (bloque.tipo) {
       case 'grafico': return <VistaGrafico bloque={bloque} {...contexto} />;
@@ -338,7 +363,16 @@ function VistaCifras({ bloque, presentacion, periodo }: Contexto & { bloque: Blo
   // debajo de la otra, como en el costado de una diapositiva.
   const vertical = ancho > 0 && ancho / cifras.length < 190;
   // En una franja baja (disposición libre) el número se achica para caber.
-  const valorGrande = vertical ? (alto > 0 && alto / cifras.length < 100 ? 30 : 36) : alto > 0 && alto < 95 ? 32 : 46;
+  const base = vertical ? (alto > 0 && alto / cifras.length < 100 ? 30 : 36) : alto > 0 && alto < 95 ? 32 : 46;
+  // Y que el número más largo quepa en una línea y en el alto: si no, se
+  // salía de su caja y pisaba el bloque de abajo.
+  const largo = Math.max(...vistas.map((v) => `${v.valor}${v.unidad ? ` ${v.unidad}` : ''}`.length), 1);
+  const anchoColumna = vertical ? ancho - 28 : ancho / cifras.length - 56;
+  const conDetalle = vistas.some((v) => v.detalle);
+  const chica = !vertical && alto > 0 && alto < 130;
+  const porAncho = anchoColumna > 0 ? anchoColumna / (largo * 0.6) : base;
+  const porAlto = !vertical && alto > 0 ? (alto - (chica ? 20 : 26) - (conDetalle ? (chica ? 22 : 28) : 0)) / 1.12 : base;
+  const valorGrande = Math.round(Math.max(20, Math.min(base, porAncho, porAlto)));
 
   return (
     <div ref={caja} className="h-full">
@@ -348,12 +382,12 @@ function VistaCifras({ bloque, presentacion, periodo }: Contexto & { bloque: Blo
       >
         {vistas.map((cifra, i) => (
           <div key={i} className={vertical ? '' : 'px-[28px] first:pl-0'}>
-            <dt className="text-[17px] text-tinta-suave">{cifra.etiqueta}</dt>
+            <dt className={`${chica ? 'text-[15px]' : 'text-[17px]'} text-tinta-suave`}>{cifra.etiqueta}</dt>
             <dd className="mt-[4px] font-bold leading-[1.1] tracking-[-0.02em] text-tinta" style={{ fontSize: valorGrande }}>
               {cifra.valor}
               {cifra.unidad && <span className="ml-[0.25em] text-[0.5em] font-semibold tracking-normal text-tinta-suave">{cifra.unidad}</span>}
             </dd>
-            {cifra.detalle && <dd className="mt-[6px] text-[16px] text-tinta-suave">{cifra.detalle}</dd>}
+            {cifra.detalle && <dd className={`${chica ? 'mt-[2px] text-[14px]' : 'mt-[6px] text-[16px]'} text-tinta-suave`}>{cifra.detalle}</dd>}
           </div>
         ))}
       </dl>

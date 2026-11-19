@@ -158,6 +158,8 @@ export function EliminarPresentacion({ presentacion }: { presentacion: Breve }) 
     try {
       await enviar(`/api/presentaciones/${encodeURIComponent(presentacion.id)}/eliminar`, {});
       setAbierto(false);
+      // El inicio muestra el aviso con "Deshacer".
+      router.push(`/?eliminada=${encodeURIComponent(presentacion.id)}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo eliminar.');
@@ -190,7 +192,7 @@ export function EliminarPresentacion({ presentacion }: { presentacion: Breve }) 
 }
 
 /** Botón "Recuperar" de cada presentación de la papelera. */
-export function RecuperarPresentacion({ presentacion }: { presentacion: Breve }) {
+export function RecuperarPresentacion({ presentacion, etiqueta = 'Recuperar' }: { presentacion: Breve; etiqueta?: string }) {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -199,6 +201,7 @@ export function RecuperarPresentacion({ presentacion }: { presentacion: Breve })
     setError(null);
     try {
       await enviar(`/api/presentaciones/${encodeURIComponent(presentacion.id)}/recuperar`, {});
+      router.replace('/');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo recuperar.');
@@ -209,7 +212,7 @@ export function RecuperarPresentacion({ presentacion }: { presentacion: Breve })
     <span className="flex items-center gap-2">
       {error && <span role="alert" className="text-[13px] text-[#8E1015]">{error}</span>}
       <button type="button" onClick={recuperar} disabled={enviando} className={CLASE_BOTON} aria-label={`Recuperar ${presentacion.nombre}`}>
-        <RotateCcw size={15} aria-hidden /> {enviando ? 'Recuperando…' : 'Recuperar'}
+        <RotateCcw size={15} aria-hidden /> {enviando ? 'Recuperando…' : etiqueta}
       </button>
     </span>
   );

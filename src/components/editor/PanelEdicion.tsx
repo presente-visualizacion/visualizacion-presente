@@ -5,7 +5,7 @@
 // presentación (meses y colores). Ver "Pantalla de edición" en PLAN.md (2A y 2B).
 
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ChartColumn, ClipboardCopy, ClipboardPaste, Copy, FileSpreadsheet, Hash, LayoutGrid, Plus, Table2, Trash2, Type, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChartColumn, Eye, EyeOff, ClipboardCopy, ClipboardPaste, Copy, FileSpreadsheet, Hash, LayoutGrid, Plus, Table2, Trash2, Type, X } from 'lucide-react';
 import { copiarDiapositiva, opsPegarDiapositiva } from '@/lib/edicion/portapapeles';
 import { usarPortapapeles } from './usarPortapapeles';
 import { conjuntoDe, filasDe } from '@/lib/datos';
@@ -235,6 +235,12 @@ function AccionesDiapositiva({ presentacion, diapositiva, indice, periodo, cambi
           <Plus size={16} aria-hidden /> Nueva
         </button>
         <BotonIcono etiqueta="Duplicar la diapositiva" onClick={duplicar} inactivo={llenas}><Copy size={17} /></BotonIcono>
+        <BotonIcono
+          etiqueta={diapositiva.oculta ? 'Mostrar al presentar (ahora está oculta)' : 'Ocultar al presentar (no se borra)'}
+          onClick={() => cambiar({ op: 'diapositiva.oculta', diapositiva: diapositiva.id, valor: !diapositiva.oculta })}
+        >
+          {diapositiva.oculta ? <EyeOff size={17} className="text-primario" /> : <Eye size={17} />}
+        </BotonIcono>
         <BotonIcono etiqueta="Subir la diapositiva" onClick={() => moverA(indice - 1)} inactivo={indice === 0}><ArrowUp size={17} /></BotonIcono>
         <BotonIcono etiqueta="Bajar la diapositiva" onClick={() => moverA(indice + 1)} inactivo={indice === diapositivas.length - 1}><ArrowDown size={17} /></BotonIcono>
         <BotonIcono etiqueta="Copiar la diapositiva (para pegarla aquí o en otra presentación)" onClick={copiar}><ClipboardCopy size={17} /></BotonIcono>
@@ -350,7 +356,7 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
   const lleno = bloques.length >= TOPES.bloquesPorDiapositiva;
 
   return (
-    <section aria-label={nombre} className={`space-y-3 border-t border-linea pt-5 ${oculto ? 'opacity-60' : ''}`}>
+    <section id={`editor-bloque-${bloque.id}`} aria-label={nombre} className={`scroll-mt-4 space-y-3 border-t border-linea pt-5 ${oculto ? 'opacity-60' : ''}`}>
       <div className="flex flex-wrap items-center gap-1">
         <h2 className="mr-auto flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wide text-tinta-suave">
           <Icono size={16} aria-hidden /> {indice + 1}. {nombre}
@@ -369,7 +375,7 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
       </div>
       {oculto && <p className="text-[13px] text-tinta-suave">No se ve en la diapositiva con la disposición "Un bloque".</p>}
       <MarcoBloque bloque={bloque} cambiar={cambiar} />
-      <EditorAspecto diapositiva={diapositiva} bloque={bloque} indice={indice} cambiar={cambiar} />
+      <EditorAspecto fuentePresentacion={presentacion.tema.fuente} diapositiva={diapositiva} bloque={bloque} indice={indice} cambiar={cambiar} />
       {bloque.tipo === 'texto' && <EditorTexto key={`${bloque.id}|${periodo}`} presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {bloque.tipo === 'cifras' && <EditorCifras presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {bloque.tipo === 'tarjetas' && <EditorTarjetas presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}

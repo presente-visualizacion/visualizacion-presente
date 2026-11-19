@@ -78,10 +78,10 @@ describe('disposición libre', () => {
     expect(validarPresentacion(q).ok).toBe(true);
   });
 
-  it('sin ubicación, los bloques van debajo de los demás; un bloque nuevo también', () => {
+  it('sin ubicación, los bloques van debajo de los demás; un bloque nuevo va al primer lugar libre', () => {
     const fijo = { ubicacion: { columna: 1, ancho: 12, fila: 1, alto: 3 } } as Bloque;
     expect(ubicacionesEfectivas([fijo, {} as Bloque])[1]).toEqual({ columna: 1, ancho: 12, fila: 4, alto: 2 });
-    expect(ubicacionNueva([fijo])).toEqual({ columna: 1, ancho: 12, fila: 4, alto: 2 });
+    expect(ubicacionNueva([fijo])).toEqual({ columna: 1, ancho: 6, fila: 4, alto: 3 });
     const p = paraguay();
     const r = opsAgregarBloque(p, 'd-paraguay', 'texto')!;
     expect(r.bloque.ubicacion).toEqual({ columna: 1, ancho: 12, fila: 8, alto: 1 });
