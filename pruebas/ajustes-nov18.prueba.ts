@@ -72,11 +72,11 @@ describe('mover e insertar bloques en la diapositiva', () => {
     expect(ubicacionArrastrada(u, -30, -30, null)).toEqual({ columna: 1, ancho: 16, fila: 1, alto: 12 });
     // Tirar del borde derecho y de abajo, de a una casilla fina.
     expect(ubicacionArrastrada(u, 1, 1, { izq: false, der: true, arr: false, aba: true })).toEqual({ columna: 9, ancho: 17, fila: 5, alto: 13 });
-    // Del izquierdo: no queda más chico que el mínimo (3).
-    expect(ubicacionArrastrada(u, 40, 0, { izq: true, der: false, arr: false, aba: false })).toEqual({ columna: 22, ancho: 3, fila: 5, alto: 12 });
+    // Del izquierdo: no queda más chico que el mínimo (2).
+    expect(ubicacionArrastrada(u, 40, 0, { izq: true, der: false, arr: false, aba: false })).toEqual({ columna: 23, ancho: 2, fila: 5, alto: 12 });
     expect(ubicacionArrastrada(u, -20, -20, { izq: true, der: false, arr: true, aba: false })).toEqual({ columna: 1, ancho: 24, fila: 1, alto: 16 });
-    // Hacia abajo, tampoco menos de 3 filas.
-    expect(ubicacionArrastrada(u, 0, -40, { izq: false, der: false, arr: false, aba: true }).alto).toBe(3);
+    // Hacia abajo, tampoco menos de 2 filas.
+    expect(ubicacionArrastrada(u, 0, -40, { izq: false, der: false, arr: false, aba: true }).alto).toBe(2);
   });
 
   it('busca un lugar libre y, si no hay, hace lugar abajo', () => {

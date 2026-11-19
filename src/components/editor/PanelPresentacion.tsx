@@ -2,7 +2,7 @@
 
 // Pestaña "Presentación" del panel: descripción, meses y colores del tema.
 
-import { CalendarMinus, CalendarPlus, Download, RotateCcw, TriangleAlert } from 'lucide-react';
+import { CalendarMinus, CalendarPlus, Download, Eraser, RotateCcw, TriangleAlert } from 'lucide-react';
 import { contraste, CONTRASTE_MINIMO, esColor } from '@/lib/color';
 import type { Operacion } from '@/lib/edicion/operaciones';
 import { mesSiguiente } from '@/lib/edicion/plantillas';
@@ -12,6 +12,8 @@ import { TEMA_PRESENTE } from '@/lib/tema';
 import type { IdPeriodo, Presentacion, Tema } from '@/lib/tipos';
 import { BotonConfirmar, Campo, CLASE_BOTON, CLASE_BOTON_PRINCIPAL, Subtitulo } from './piezas';
 import { ElegirFuente } from './ElegirFuente';
+import { ElegirTamano } from './ElegirTamano';
+import { opsVaciarMes } from '@/lib/edicion/vaciar';
 
 interface Props {
   presentacion: Presentacion;
@@ -67,7 +69,15 @@ export function PanelPresentacion({ presentacion, periodo, cambiar, onPeriodo }:
             Copia en el mes nuevo todo lo que es propio de cada mes en {nombrePeriodo(ultimo)} (datos, textos y cifras), para que solo cambies lo que se movió.
           </p>
         </div>
-        <div className="flex flex-wrap">
+        <div className="flex flex-wrap gap-2">
+          <BotonConfirmar
+            etiqueta={`Dejar en blanco las cifras de ${nombrePeriodo(periodo)}`}
+            pregunta={`Se borrarán los números de ${nombrePeriodo(periodo)} en los datos y en las cifras escritas a mano que son propios de cada mes. Quedan las filas, los nombres, las etiquetas y los textos, listos para llenar. Lo que es igual en todos los meses no se toca.`}
+            confirmar="Dejar en blanco"
+            icono={<Eraser size={16} aria-hidden />}
+            inactivo={!opsVaciarMes(presentacion, periodo).length}
+            onConfirmar={() => cambiar(opsVaciarMes(presentacion, periodo))}
+          />
           <BotonConfirmar
             etiqueta={`Quitar ${nombrePeriodo(periodo)}`}
             pregunta={`Se quitará ${nombrePeriodo(periodo)} con todos sus datos, textos y cifras propios.`}
@@ -89,6 +99,17 @@ export function PanelPresentacion({ presentacion, periodo, cambiar, onPeriodo }:
           }}
           nota="Figtree es la de siempre. Cada bloque puede tener la suya (en el bloque, Aspecto)."
         />
+        <div className="mt-4">
+          <ElegirTamano
+            etiqueta="Tamaño de toda la letra"
+            valor={tema.letra ?? null}
+            onCambiar={(letra) => {
+              const { letra: _l, ...resto } = tema;
+              cambiar({ op: 'tema', valor: letra ? { ...resto, letra } : resto }, 'tamano-tema');
+            }}
+            nota="Títulos, textos, cifras, tablas y gráficos de todas las diapositivas. Cada bloque y cada título pueden ajustarse aparte."
+          />
+        </div>
       </section>
 
       <section aria-labelledby="panel-colores" className="space-y-3 border-t border-linea pt-5">

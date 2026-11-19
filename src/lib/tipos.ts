@@ -20,6 +20,8 @@ export interface Tema {
   logo: string;
   /** Tipo de letra de las diapositivas (clave de src/lib/fuentes.ts). Si falta, Figtree. */
   fuente?: string;
+  /** Tamaño de toda la letra, en %: 100 es el de siempre (ver TOPES.letra). */
+  letra?: number;
 }
 
 export type TipoColumna = 'texto' | 'numero' | 'porcentaje' | 'moneda';
@@ -147,6 +149,8 @@ interface BaseBloque {
   colorTexto?: string;
   /** Tipo de letra propio del bloque (clave de src/lib/fuentes.ts). Si falta, el de la presentación. */
   fuente?: string;
+  /** Tamaño de la letra del bloque, en %, sobre el de la presentación. Si falta, 100. */
+  letra?: number;
   /** Solo se usa con la disposición "libre". */
   ubicacion?: Ubicacion;
 }
@@ -289,6 +293,8 @@ export interface Diapositiva {
   fondo?: string;
   /** Oculta: se salta al presentar y en el PDF, pero sigue en la presentación. */
   oculta?: boolean;
+  /** Tamaño del título y el subtítulo, en %, sobre el de la presentación. Si falta, 100. */
+  letra?: number;
   /**
    * 'fina': las ubicaciones de sus bloques son de la cuadrícula de 48 x 32.
    * Sin esto y con ubicaciones, son de la vieja de 12 x 8 (ver src/lib/rejilla.ts).

@@ -22,6 +22,9 @@ export const almacenMuestra: Almacen = {
   async revision(id) {
     return presentaciones.some((p) => p.id === id) ? 1 : null;
   },
+  async presencia() {
+    return 0;
+  },
   async aplicar() {
     throw new Error('El almacén de muestra es de solo lectura.');
   },

@@ -9,7 +9,7 @@ import { ChartColumn, Hash, LayoutGrid, Plus, Table2, Type } from 'lucide-react'
 import type { Operacion } from '@/lib/edicion/operaciones';
 import { opsAgregarBloque, type TipoNuevo } from '@/lib/edicion/plantillas';
 import { TOPES } from '@/lib/edicion/validar';
-import type { Diapositiva, Presentacion } from '@/lib/tipos';
+import type { Diapositiva, IdPeriodo, Presentacion } from '@/lib/tipos';
 import { CLASE_BOTON, CLASE_BOTON_PRINCIPAL, CLASE_CAMPO } from './piezas';
 
 const TIPOS: { tipo: TipoNuevo; nombre: string; icono: typeof Type }[] = [
@@ -23,6 +23,8 @@ const TIPOS: { tipo: TipoNuevo; nombre: string; icono: typeof Type }[] = [
 interface Props {
   presentacion: Presentacion;
   diapositiva: Diapositiva;
+  /** Mes que se está editando: lo nuevo nace propio de este mes. */
+  periodo: IdPeriodo;
   cambiar: (ops: Operacion | Operacion[], grupo?: string) => void;
   /** Se llama con el conjunto nuevo, para abrir el editor de datos. */
   onDatosNuevos: (conjunto: string) => void;
@@ -30,7 +32,7 @@ interface Props {
   onDesdeExcel: (tipo: 'grafico' | 'tabla') => void;
 }
 
-export function AgregarBloque({ presentacion, diapositiva, cambiar, onDatosNuevos, onDesdeExcel }: Props) {
+export function AgregarBloque({ presentacion, diapositiva, periodo, cambiar, onDatosNuevos, onDesdeExcel }: Props) {
   const [abierto, setAbierto] = useState(false);
   const [tipo, setTipo] = useState<TipoNuevo | null>(null);
   const [datos, setDatos] = useState('excel');
@@ -48,7 +50,7 @@ export function AgregarBloque({ presentacion, diapositiva, cambiar, onDatosNuevo
       onDesdeExcel(t);
       return;
     }
-    const r = opsAgregarBloque(presentacion, diapositiva.id, t, origen);
+    const r = opsAgregarBloque(presentacion, diapositiva.id, t, origen, periodo);
     if (!r) return;
     cambiar(r.ops);
     cerrar();

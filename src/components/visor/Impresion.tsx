@@ -285,7 +285,7 @@ export function Impresion({ presentacion, periodoInicial, soloInicial, auto }: P
             {error && <p role="alert" className="mx-auto max-w-[1320px] px-4 pb-3 text-[15px] text-[#8E1015]">{error}</p>}
           </header>
 
-          <div ref={contenedor} className="vp-hojas mx-auto flex max-w-[1320px] flex-col items-center gap-6 px-4 py-6">
+          <div ref={contenedor} className="vp-hojas pointer-events-none mx-auto flex max-w-[1320px] flex-col items-center gap-6 px-4 py-6">
             {indices.map((i) => {
               const d = presentacion.diapositivas[i];
               const t = tamanoDe(d.id);

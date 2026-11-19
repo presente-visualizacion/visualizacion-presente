@@ -29,6 +29,14 @@ const SENTENCIAS = [
   `create index if not exists versiones_por_presentacion on versiones (presentacion, creado desc)`,
   // Etapa 5: nombre de las copias guardadas a mano.
   `alter table versiones add column if not exists nota text`,
+  // 2026-11-19: quién está editando ahora (una fila por pestaña, se renueva
+  // cada pocos segundos). Ver "Varias personas a la vez" en PLAN.md.
+  `create table if not exists presencia (
+     presentacion text not null,
+     sesion       text not null,
+     visto        timestamptz not null default now(),
+     primary key (presentacion, sesion)
+   )`,
 ];
 
 /**

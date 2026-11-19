@@ -7,7 +7,7 @@ import { formatear } from '@/lib/formato';
 import { trozos } from '@/lib/formatoTexto';
 import { contraste } from '@/lib/color';
 import { fuenteCss } from '@/lib/fuentes';
-import { FuenteActual } from './graficoComun';
+import { Editando, EscalaLetra, FuenteActual } from './graficoComun';
 import { conMes } from '@/lib/periodos';
 import { armarTabla, type ColumnaVista, type TablaArmada } from '@/lib/tablas';
 import type {
@@ -51,10 +51,16 @@ function useMedida<T extends HTMLElement>() {
 
 /**
  * Tamaño de letra (en px del lienzo) para que el contenido quepa en su caja
- * sin desplazamiento: prueba tamaños entre `base` y el 60 % de `base` y deja
- * el mayor que cabe. Vuelve a calcular si cambian el contenido o la caja.
+ * sin desplazamiento: prueba tamaños entre `base` y el 40 % de `base` y deja
+ * el mayor que cabe. Vuelve a calcular si cambian el contenido o la caja. La
+ * base se multiplica por el tamaño de letra elegido (EscalaLetra).
  */
-function useAjuste<T extends HTMLElement>(clave: string, base: number) {
+/** Hasta dónde se achica la letra para caber (2026-11-19: antes 60 %, para cuadros chicos). */
+const MINIMO_AJUSTE = 0.4;
+
+function useAjuste<T extends HTMLElement>(clave: string, baseSinEscala: number) {
+  const escala = useContext(EscalaLetra);
+  const base = baseSinEscala * escala;
   const [el, setEl] = useState<T | null>(null);
   const [tamano, setTamano] = useState(base);
   // Otro tipo de letra ocupa otro espacio: se vuelve a calcular al cambiarlo.
@@ -65,7 +71,7 @@ function useAjuste<T extends HTMLElement>(clave: string, base: number) {
     const ajustar = () => {
       el.style.fontSize = `${base}px`;
       if (cabe()) return setTamano(base);
-      let bajo = base * 0.6;
+      let bajo = base * MINIMO_AJUSTE;
       let alto = base;
       for (let i = 0; i < 7; i++) {
         const medio = (bajo + alto) / 2;
@@ -97,22 +103,45 @@ function useAjuste<T extends HTMLElement>(clave: string, base: number) {
       document.fonts?.removeEventListener('loadingdone', alCargar);
     };
   }, [el, clave, base, fuente]);
-  return [setEl, tamano, tamano <= base * 0.6 + 0.1] as const;
+  return [setEl, tamano, tamano <= base * MINIMO_AJUSTE + 0.1] as const;
 }
 
 export function VistaBloque({ bloque, ...contexto }: Contexto & { bloque: Bloque }) {
+  const escalaDiapositiva = useContext(EscalaLetra);
+  const escala = escalaDiapositiva * (bloque.letra ?? 100) / 100;
   // data-vp-bloque: lo usa el editor para dibujar el marco que mueve el bloque.
-  const interior = <VistaBloqueInterior bloque={bloque} {...contexto} />;
-  if (!bloque.fuente) return <div data-vp-bloque={bloque.id} className="h-full min-h-0 min-w-0">{interior}</div>;
-  const css = fuenteCss(bloque.fuente);
-  return (
-    <FuenteActual.Provider value={css}>
-      <div data-vp-bloque={bloque.id} className="h-full min-h-0 min-w-0" style={{ fontFamily: css }}>{interior}</div>
-    </FuenteActual.Provider>
-  );
+  let interior = <VistaBloqueInterior bloque={bloque} {...contexto} />;
+  const estilo: React.CSSProperties & Record<string, string | number> = {};
+  if (bloque.fuente) {
+    const css = fuenteCss(bloque.fuente);
+    estilo.fontFamily = css;
+    interior = <FuenteActual.Provider value={css}>{interior}</FuenteActual.Provider>;
+  }
+  if (escala !== escalaDiapositiva) {
+    estilo['--vp-letra'] = escala;
+    interior = <EscalaLetra.Provider value={escala}>{interior}</EscalaLetra.Provider>;
+  }
+  return <div data-vp-bloque={bloque.id} className="h-full min-h-0 min-w-0" style={estilo}>{interior}</div>;
+}
+
+/** true si el bloque no tiene nada que mostrar en ese mes. */
+export function vacioEnMes(bloque: Bloque, presentacion: Presentacion, periodo: IdPeriodo): boolean {
+  switch (bloque.tipo) {
+    case 'texto': return !valorDe(bloque.contenido, periodo)?.trim();
+    case 'cifras': return !valorDe(bloque.cifras, periodo)?.length;
+    case 'tarjetas': return !valorDe(bloque.tarjetas, periodo)?.length;
+    default: {
+      const conjunto = conjuntoDe(presentacion, bloque.datos);
+      return !conjunto || !filasDe(conjunto, periodo)?.length;
+    }
+  }
 }
 
 function VistaBloqueInterior({ bloque, ...contexto }: Contexto & { bloque: Bloque }) {
+  const editando = useContext(Editando);
+  // Fuera de la edición, un bloque sin nada en este mes no se ve (ni su
+  // título, ni su nota, ni su fondo).
+  if (!editando && vacioEnMes(bloque, contexto.presentacion, contexto.periodo)) return null;
   const contenido = (() => {
     switch (bloque.tipo) {
       case 'grafico': return <VistaGrafico bloque={bloque} {...contexto} />;
@@ -125,10 +154,10 @@ function VistaBloqueInterior({ bloque, ...contexto }: Contexto & { bloque: Bloqu
   const conMarco = !bloque.titulo && !bloque.nota ? contenido : (
     <div className="flex h-full min-h-0 flex-col">
       {bloque.titulo && (
-        <h3 className="mb-[12px] shrink-0 text-[16px] font-bold uppercase tracking-[0.06em] text-primario">{conMes(bloque.titulo, contexto.periodo)}</h3>
+        <h3 className="mb-[12px] shrink-0 text-[length:calc(16px*var(--vp-letra,1))] font-bold uppercase tracking-[0.06em] text-primario">{conMes(bloque.titulo, contexto.periodo)}</h3>
       )}
       <div className="min-h-0 flex-1">{contenido}</div>
-      {bloque.nota && <p className="mt-[8px] shrink-0 text-[13px] leading-[1.4] text-tinta-suave"><ConNegritas texto={conMes(bloque.nota, contexto.periodo)} /></p>}
+      {bloque.nota && <p className="mt-[8px] shrink-0 text-[length:calc(13px*var(--vp-letra,1))] leading-[1.4] text-tinta-suave"><ConNegritas texto={conMes(bloque.nota, contexto.periodo)} /></p>}
     </div>
   );
   const { colorFondo } = bloque;
@@ -185,6 +214,7 @@ function Tabla({ tabla, resaltar }: { tabla: TablaArmada; resaltar?: Resaltado }
   // Las filas se reparten el alto disponible para que la tabla quepa completa
   // en la diapositiva; solo aparece desplazamiento si hay demasiadas filas.
   const [caja, { alto }] = useMedida<HTMLDivElement>();
+  const escala = useContext(EscalaLetra);
   const { columnas, filas, grupos } = tabla;
   // Densa: muchas columnas, o poco alto para tantas filas (como en una cuadrícula).
   const densa = columnas.length > 10 || (alto > 0 && (alto - (grupos ? 92 : 46)) / filas.length < 26);
@@ -192,11 +222,11 @@ function Tabla({ tabla, resaltar }: { tabla: TablaArmada; resaltar?: Resaltado }
   const encabezados = grupos ? altoEncabezado * 2 : altoEncabezado;
   const minimo = densa ? 21 : 26;
   const altoFila = Math.min(54, Math.max(minimo, Math.floor((alto - encabezados - 2) / filas.length)));
-  const letra = densa
+  const letra = escala * (densa
     ? (altoFila >= 30 ? 14 : altoFila >= 26 ? 13 : 12)
-    : (altoFila >= 40 ? 18 : altoFila >= 34 ? 17 : altoFila >= 29 ? 15 : 13.5);
+    : (altoFila >= 40 ? 18 : altoFila >= 34 ? 17 : altoFila >= 29 ? 15 : 13.5));
   const margen = densa ? 'px-[7px]' : 'px-[18px]';
-  const letraEncabezado = densa ? 'text-[12.5px]' : 'text-[15px]';
+  const letraEncabezado = densa ? 'text-[length:calc(12.5px*var(--vp-letra,1))]' : 'text-[length:calc(15px*var(--vp-letra,1))]';
 
   // Alineación: la primera columna de texto a la izquierda; números (y textos
   // con forma de número) a la derecha.
@@ -353,6 +383,7 @@ function VistaTexto({ bloque, periodo }: Contexto & { bloque: BloqueTexto }) {
 
 function VistaCifras({ bloque, presentacion, periodo }: Contexto & { bloque: BloqueCifras }) {
   const [caja, { ancho, alto }] = useMedida<HTMLDivElement>();
+  const escala = useContext(EscalaLetra);
   const cifras = valorDe(bloque.cifras, periodo);
   if (!cifras?.length) return <SinDatos periodo={periodo} que="cifras" />;
 
@@ -372,7 +403,8 @@ function VistaCifras({ bloque, presentacion, periodo }: Contexto & { bloque: Blo
   const chica = !vertical && alto > 0 && alto < 130;
   const porAncho = anchoColumna > 0 ? anchoColumna / (largo * 0.6) : base;
   const porAlto = !vertical && alto > 0 ? (alto - (chica ? 20 : 26) - (conDetalle ? (chica ? 22 : 28) : 0)) / 1.12 : base;
-  const valorGrande = Math.round(Math.max(20, Math.min(base, porAncho, porAlto)));
+  // El tamaño elegido agranda o achica el número, sin que se salga de su caja.
+  const valorGrande = Math.round(Math.max(14, Math.min(base * escala, porAncho, porAlto)));
 
   return (
     <div ref={caja} className="h-full">
@@ -382,12 +414,12 @@ function VistaCifras({ bloque, presentacion, periodo }: Contexto & { bloque: Blo
       >
         {vistas.map((cifra, i) => (
           <div key={i} className={vertical ? '' : 'px-[28px] first:pl-0'}>
-            <dt className={`${chica ? 'text-[15px]' : 'text-[17px]'} text-tinta-suave`}>{cifra.etiqueta}</dt>
+            <dt className={`${chica ? 'text-[length:calc(15px*var(--vp-letra,1))]' : 'text-[length:calc(17px*var(--vp-letra,1))]'} text-tinta-suave`}>{cifra.etiqueta}</dt>
             <dd className="mt-[4px] font-bold leading-[1.1] tracking-[-0.02em] text-tinta" style={{ fontSize: valorGrande }}>
               {cifra.valor}
               {cifra.unidad && <span className="ml-[0.25em] text-[0.5em] font-semibold tracking-normal text-tinta-suave">{cifra.unidad}</span>}
             </dd>
-            {cifra.detalle && <dd className={`${chica ? 'mt-[2px] text-[14px]' : 'mt-[6px] text-[16px]'} text-tinta-suave`}>{cifra.detalle}</dd>}
+            {cifra.detalle && <dd className={`${chica ? 'mt-[2px] text-[length:calc(14px*var(--vp-letra,1))]' : 'mt-[6px] text-[length:calc(16px*var(--vp-letra,1))]'} text-tinta-suave`}>{cifra.detalle}</dd>}
           </div>
         ))}
       </dl>

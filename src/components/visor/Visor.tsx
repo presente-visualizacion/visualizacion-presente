@@ -3,8 +3,9 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Columns2, EyeOff, History, Maximize, Pencil, Redo2, RotateCcw, Undo2, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Columns2, EyeOff, History, Maximize, Pencil, Redo2, RotateCcw, Undo2, Users, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Diapositiva } from '@/components/diapositivas/Diapositiva';
+import { Editando } from '@/components/bloques/graficoComun';
 import { EstadoGuardado } from '@/components/editor/EstadoGuardado';
 import { usarEdicion } from '@/components/editor/usarEdicion';
 import { TOPES } from '@/lib/edicion/validar';
@@ -43,7 +44,8 @@ interface Props {
 export function Visor({ presentacion: inicial, revision, editable: puedeEditar, indiceInicial, periodoInicial, compararInicial = false, copia }: Props) {
   // La presentación que se dibuja es la del estado de edición: trae aplicados
   // los cambios locales, aunque todavía se estén guardando.
-  const edicion = usarEdicion(inicial, revision, { seguir: !copia });
+  const [editando, setEditando] = useState(false);
+  const edicion = usarEdicion(inicial, revision, { seguir: !copia, editando });
   const editable = puedeEditar && !copia;
   const { presentacion, cambiar, deshacer, rehacer } = edicion;
   const { diapositivas, periodos, tema } = presentacion;
@@ -54,7 +56,6 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
   const indice = Math.min(indiceElegido, total - 1);
   const [periodoElegido, setPeriodo] = useState(periodoInicial);
   const periodo = periodos.includes(periodoElegido) ? periodoElegido : periodos[periodos.length - 1];
-  const [editando, setEditando] = useState(false);
 
   // Comparar con otro mes: por defecto el anterior al que se está viendo.
   const [comparando, setComparando] = useState(Boolean(compararInicial));
@@ -77,6 +78,11 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
   const [presentando, setPresentando] = useState(false);
   const [controles, setControles] = useState(true);
   const raiz = useRef<HTMLDivElement>(null);
+  // Zoom sobre el tamaño que cabe (1). Ver "Zoom" en PLAN.md.
+  const [zoom, setZoom] = useState(1);
+  const lienzo = useRef<HTMLDivElement>(null);
+  const acercar = useCallback(() => setZoom((z) => PASOS_ZOOM.find((p) => p > z + 0.01) ?? ZOOM_MAXIMO), []);
+  const alejar = useCallback(() => setZoom((z) => [...PASOS_ZOOM].reverse().find((p) => p < z - 0.01) ?? ZOOM_MINIMO), []);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toque = useRef<{ x: number; y: number } | null>(null);
 
@@ -107,7 +113,7 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
   const [bloqueElegido, setBloqueElegido] = useState<string | null>(null);
   useEffect(() => setBloqueElegido(null), [indice, editando]);
   const insertar = (tipo: Bloque['tipo']) => {
-    const r = opsInsertarBloque(presentacion, diapositivas[indice].id, tipo);
+    const r = opsInsertarBloque(presentacion, diapositivas[indice].id, tipo, periodo);
     if (!r) return;
     cambiar(r.ops);
     setBloqueElegido(r.bloque.id);
@@ -177,11 +183,30 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
       else if (e.key === 'End') { e.preventDefault(); ir(total - 1); }
       else if (e.key === 'f' || e.key === 'F') { if (presentando) salir(); else presentar(); }
       else if (e.key === 'c' || e.key === 'C') alternarComparar();
+      else if (e.key === '+' || e.key === '=') { e.preventDefault(); acercar(); }
+      else if (e.key === '-' || e.key === '_') { e.preventDefault(); alejar(); }
+      else if (e.key === '0') { e.preventDefault(); setZoom(1); }
       else if (e.key === 'Escape' && presentando) salir();
     };
     window.addEventListener('keydown', alTeclear);
     return () => window.removeEventListener('keydown', alTeclear);
-  }, [anterior, siguiente, ir, total, presentando, presentar, salir, editando, datosAbiertos, excel, deshacer, rehacer, alternarComparar]);
+  }, [anterior, siguiente, ir, total, presentando, presentar, salir, editando, datosAbiertos, excel, deshacer, rehacer, alternarComparar, acercar, alejar]);
+
+  // Ctrl + rueda (o pellizcar el panel táctil, que llega igual) sobre la
+  // diapositiva: zoom de la diapositiva, no de toda la página.
+  useEffect(() => {
+    const alRodarZoom = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (!(e.target as HTMLElement | null)?.closest?.('[data-vp-lienzo]')) return;
+      e.preventDefault();
+      const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      setZoom((z) => Math.min(ZOOM_MAXIMO, Math.max(ZOOM_MINIMO, Math.round(z * Math.exp(-delta * 0.01) * 100) / 100)));
+    };
+    window.addEventListener('wheel', alRodarZoom, { passive: false });
+    return () => window.removeEventListener('wheel', alRodarZoom);
+  }, []);
+  // Al entrar o salir de la presentación se vuelve a ver completa.
+  useEffect(() => setZoom(1), [presentando]);
 
   // En modo presentación los controles aparecen al mover el mouse o tocar la
   // pantalla y se esconden solos.
@@ -206,6 +231,8 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
     const dx = t.clientX - toque.current.x;
     const dy = t.clientY - toque.current.y;
     toque.current = null;
+    // Con zoom, deslizar recorre la diapositiva.
+    if (zoom > 1) return;
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       if (dx < 0) siguiente(); else anterior();
     } else if (presentando && Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx) * 1.5 && !dentroDeDesplazable(e.target, dy > 0 ? -1 : 1, 'y')) {
@@ -219,6 +246,8 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
   // mandando movimiento un rato después de soltar.
   const rueda = useRef({ acumulado: 0, bloqueada: false, temporizador: null as ReturnType<typeof setTimeout> | null });
   const alRodar = (e: React.WheelEvent) => {
+    // Con zoom, la rueda recorre la diapositiva; Ctrl + rueda es el zoom.
+    if (zoom > 1 || e.ctrlKey || e.metaKey) return;
     const r = rueda.current;
     const horizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
     const delta = horizontal ? e.deltaX : e.deltaY;
@@ -235,15 +264,24 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
   };
 
   // Arrastrar con el mouse, como deslizar con el dedo.
-  const arrastre = useRef<{ x: number; y: number } | null>(null);
+  // Con zoom, arrastrar mueve la vista por la diapositiva en vez de pasarla.
+  const arrastre = useRef<{ x: number; y: number; izquierda: number; arriba: number; mover: boolean } | null>(null);
   const alApretar = (e: React.PointerEvent) => {
     if (e.pointerType !== 'mouse' || e.button !== 0 || (e.target as HTMLElement).closest('button, a, select, input, label')) return;
-    arrastre.current = { x: e.clientX, y: e.clientY };
+    const el = lienzo.current;
+    arrastre.current = { x: e.clientX, y: e.clientY, izquierda: el?.scrollLeft ?? 0, arriba: el?.scrollTop ?? 0, mover: zoom > 1 };
+  };
+  const alMoverPuntero = (e: React.PointerEvent) => {
+    const a = arrastre.current;
+    const el = lienzo.current;
+    if (!a?.mover || !el) return;
+    el.scrollLeft = a.izquierda - (e.clientX - a.x);
+    el.scrollTop = a.arriba - (e.clientY - a.y);
   };
   const alLevantar = (e: React.PointerEvent) => {
     const inicio = arrastre.current;
     arrastre.current = null;
-    if (!inicio || e.pointerType !== 'mouse') return;
+    if (!inicio || inicio.mover || e.pointerType !== 'mouse') return;
     const dx = e.clientX - inicio.x;
     const dy = e.clientY - inicio.y;
     const [mayor, menor] = Math.abs(dx) >= Math.abs(dy) ? [dx, dy] : [dy, dx];
@@ -254,9 +292,12 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
 
   const estiloTema = variablesTema(tema) as React.CSSProperties;
 
+  // Al editar se ven los bloques que no tienen nada en este mes, para llenarlos.
   const diapositiva = (
     <div key={diapositivas[indice].id} className="aparecer h-full w-full">
-      <Diapositiva presentacion={presentacion} diapositiva={diapositivas[indice]} periodo={periodo} numero={numeroDe(indice)} />
+      <Editando.Provider value={editando && !presentando}>
+        <Diapositiva presentacion={presentacion} diapositiva={diapositivas[indice]} periodo={periodo} numero={numeroDe(indice)} />
+      </Editando.Provider>
     </div>
   );
 
@@ -316,9 +357,10 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
         onTouchEnd={alSoltar}
         onWheel={alRodar}
         onPointerDown={alApretar}
+        onPointerMove={alMoverPuntero}
         onPointerUp={alLevantar}
       >
-        {comparando ? vistaComparada(true) : <Lienzo marco={false}>{diapositiva}</Lienzo>}
+        {comparando ? vistaComparada(true) : <Lienzo ref={lienzo} marco={false} zoom={zoom}>{diapositiva}</Lienzo>}
         <div
           className={`absolute inset-x-0 bottom-4 flex justify-center px-3 transition-opacity duration-200 focus-within:opacity-100 ${controles ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         >
@@ -326,6 +368,7 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
             <BotonRedondo etiqueta="Diapositiva anterior" onClick={anterior} inactivo={indice === 0} oscuro><ChevronLeft size={20} /></BotonRedondo>
             <span className="min-w-16 text-center text-sm">{diapositivas[indice]?.oculta ? 'Oculta' : `${visibles.indexOf(indice) + 1} de ${visibles.length}`}</span>
             <BotonRedondo etiqueta="Diapositiva siguiente" onClick={siguiente} inactivo={indice === total - 1} oscuro><ChevronRight size={20} /></BotonRedondo>
+            {!comparando && <ControlZoom zoom={zoom} onAlejar={alejar} onAcercar={acercar} onAjustar={() => setZoom(1)} oscuro />}
             <label className="ml-1">
               <span className="sr-only">Mes</span>
               <select
@@ -358,6 +401,11 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
           <div className="ml-auto flex shrink-0 items-center gap-2">
             {editando && (
               <div className="hidden items-center gap-1 lg:flex">
+                {edicion.otros > 0 && (
+                  <span className="flex items-center gap-1.5 rounded-full bg-[#E8F1FB] px-2.5 py-1 text-[13px] font-semibold text-[#1F5E9E]" title="Lo que guarden se ve aquí en unos segundos. Si los dos cambian lo mismo, queda el último cambio.">
+                    <Users size={14} aria-hidden /> {edicion.otros === 1 ? 'Otra persona' : `${edicion.otros} personas más`} editando
+                  </span>
+                )}
                 <EstadoGuardado estado={edicion.estado} detalle={edicion.error} />
                 <span className="mx-1 h-6 w-px bg-linea" aria-hidden />
                 <BotonRedondo etiqueta="Deshacer (Ctrl+Z)" onClick={deshacer} inactivo={!edicion.puedeDeshacer}><Undo2 size={18} /></BotonRedondo>
@@ -419,7 +467,7 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
           )}
           <div className="relative m-3 min-h-0 flex-1 lg:mx-8 lg:mt-7" onTouchStart={alTocar} onTouchEnd={alSoltar}>
             {comparando ? vistaComparada(false) : (
-              <Lienzo>
+              <Lienzo ref={lienzo} zoom={zoom}>
                 {editando && diapositivas[indice].tipo === 'contenido' ? (
                   <div className="relative h-full w-full">
                     {diapositiva}
@@ -447,6 +495,7 @@ export function Visor({ presentacion: inicial, revision, editable: puedeEditar, 
               </span>
             )}
             <BotonRedondo etiqueta="Diapositiva siguiente" onClick={siguiente} inactivo={indice === total - 1}><ChevronRight size={20} /></BotonRedondo>
+            {!comparando && <span className="ml-2 hidden sm:flex"><ControlZoom zoom={zoom} onAlejar={alejar} onAcercar={acercar} onAjustar={() => setZoom(1)} /></span>}
           </div>
           <div className={editando ? 'xl:hidden' : 'lg:hidden'}>
             <ListaDiapositivas diapositivas={diapositivas} indice={indice} periodo={periodo} onIr={ir} horizontal />
@@ -514,6 +563,34 @@ function NombreEditable({ nombre, onCambiar }: { nombre: string; onCambiar: (nom
       onBlur={() => setBorrador(null)}
       className="min-w-0 flex-1 truncate rounded-lg border border-linea-fuerte bg-white px-2.5 py-1 text-lg font-semibold hover:border-tinta-suave focus:border-primario focus:outline-none focus:ring-2 focus:ring-primario/25"
     />
+  );
+}
+
+const PASOS_ZOOM = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4];
+const ZOOM_MINIMO = 0.5;
+const ZOOM_MAXIMO = 4;
+
+/** − 100 % +. Tocar el porcentaje vuelve a la diapositiva completa. */
+function ControlZoom({ zoom, onAlejar, onAcercar, onAjustar, oscuro = false }: {
+  zoom: number;
+  onAlejar: () => void;
+  onAcercar: () => void;
+  onAjustar: () => void;
+  oscuro?: boolean;
+}) {
+  return (
+    <div role="group" aria-label="Zoom" className="flex items-center gap-0.5">
+      <BotonRedondo etiqueta="Alejar (tecla −)" onClick={onAlejar} inactivo={zoom <= ZOOM_MINIMO} oscuro={oscuro}><ZoomOut size={18} /></BotonRedondo>
+      <button
+        type="button"
+        onClick={onAjustar}
+        title="Ver la diapositiva completa (tecla 0)"
+        className={`h-9 min-w-14 rounded-full px-1.5 text-[13px] tabular-nums transition-colors ${oscuro ? 'hover:bg-white/15' : 'text-tinta-suave hover:bg-tinte hover:text-tinta'}`}
+      >
+        {Math.round(zoom * 100)} %
+      </button>
+      <BotonRedondo etiqueta="Acercar (tecla +)" onClick={onAcercar} inactivo={zoom >= ZOOM_MAXIMO} oscuro={oscuro}><ZoomIn size={18} /></BotonRedondo>
+    </div>
   );
 }
 

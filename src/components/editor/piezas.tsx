@@ -111,6 +111,11 @@ export function SelectorModo({ porPeriodo, periodo, que, onCambiar }: {
           Propio de cada mes
         </button>
       </div>
+      {porPeriodo && !confirmando && (
+        <p className="mt-1.5 text-[13px] leading-snug text-tinta-suave">
+          Solo se ve en los meses en que tiene contenido. &quot;Nuevo mes&quot; lo copia al mes siguiente; &quot;Igual en todos los meses&quot; lo lleva a todos.
+        </p>
+      )}
       {confirmando && porPeriodo && (
         <div role="alert" className="mt-2 rounded-lg border border-linea-fuerte bg-tinte p-3 text-[13px] leading-snug text-tinta">
           <p>

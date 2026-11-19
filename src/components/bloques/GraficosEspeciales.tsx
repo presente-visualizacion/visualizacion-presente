@@ -4,13 +4,14 @@
 // cascada. Los de varias series están en Grafico.tsx. Qué usa cada uno está
 // en "Tipos de gráfico" de PLAN.md.
 
+import { useContext } from 'react';
 import {
   Bar, BarChart, CartesianGrid, Cell, LabelList, Pie, PieChart, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import {
-  anchoTexto, BLANCO, CajaGlobo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, FilaGlobo, LINEA, marcaEje, Muestra, usarAnimar, usarFuenteMedida, SUAVE, TINTA,
+  anchoTexto, BLANCO, L, CajaGlobo, DetalleFijo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, FilaGlobo, LINEA, marcaEje, Muestra, usarAnimar, usarFuenteMedida, SUAVE, TINTA,
   type PropsGrafico,
 } from './graficoComun';
 
@@ -28,6 +29,8 @@ export function Circular({ bloque, conjunto, filas, tema }: PropsGrafico) {
   const columna = columnaDe(conjunto, serie.clave);
   const animar = usarAnimar();
   usarFuenteMedida();
+  // En el PDF no hay mouse: sin globos.
+  const enPdf = useContext(DetalleFijo);
 
   let porciones = filas
     .map((f) => ({ nombre: formatear(f[bloque.ejeX], columnaDe(conjunto, bloque.ejeX)) || '—', valor: f[serie.clave] }))
@@ -49,27 +52,29 @@ export function Circular({ bloque, conjunto, filas, tema }: PropsGrafico) {
               data={datos} dataKey="valor" nameKey="nombre" innerRadius="58%" outerRadius="92%" paddingAngle={1}
               stroke={BLANCO} strokeWidth={2} startAngle={90} endAngle={-270} isAnimationActive={animar} animationDuration={450}
             />
-            <Tooltip
-              isAnimationActive={false}
-              content={(p: any) => {
-                const e = p.active && p.payload?.[0]?.payload;
-                if (!e) return null;
-                return (
-                  <CajaGlobo titulo={e.nombre}>
-                    <FilaGlobo nombre={columna?.nombre ?? serie.clave} valor={formatear(e.valor, columna)} color={e.fill} />
-                    <FilaGlobo nombre="Participación" valor={porcentaje(e.valor, total)} fuerte={false} />
-                  </CajaGlobo>
-                );
-              }}
-            />
+            {!enPdf && (
+              <Tooltip
+                isAnimationActive={false}
+                content={(p: any) => {
+                  const e = p.active && p.payload?.[0]?.payload;
+                  if (!e) return null;
+                  return (
+                    <CajaGlobo titulo={e.nombre}>
+                      <FilaGlobo nombre={columna?.nombre ?? serie.clave} valor={formatear(e.valor, columna)} color={e.fill} />
+                      <FilaGlobo nombre="Participación" valor={porcentaje(e.valor, total)} fuerte={false} />
+                    </CajaGlobo>
+                  );
+                }}
+              />
+            )}
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-[16px] text-tinta-suave">Total</span>
-          <span className="text-[30px] font-bold leading-tight tracking-[-0.01em] text-tinta">{formatear(total, columna)}</span>
+          <span className="text-[length:calc(16px*var(--vp-letra,1))] text-tinta-suave">Total</span>
+          <span className="text-[length:calc(30px*var(--vp-letra,1))] font-bold leading-tight tracking-[-0.01em] text-tinta">{formatear(total, columna)}</span>
         </div>
       </div>
-      <ul className="w-[340px] shrink-0 space-y-[12px] text-[17px]">
+      <ul className="w-[340px] shrink-0 space-y-[12px] text-[length:calc(17px*var(--vp-letra,1))]">
         {datos.map((d, i) => (
           <li key={i} className="flex items-baseline gap-[10px]">
             <span aria-hidden className="h-[12px] w-[12px] shrink-0 translate-y-[1px] rounded-[3px]" style={{ background: d.fill }} />
@@ -93,17 +98,19 @@ export function Dispersion({ bloque, conjunto, filas, tema }: PropsGrafico) {
   const columnaNombre = bloque.nombres ? columnaDe(conjunto, bloque.nombres) : undefined;
   const animar = usarAnimar();
   usarFuenteMedida();
+  // En el PDF no hay mouse: sin globos.
+  const enPdf = useContext(DetalleFijo);
   const color = serie.color ?? tema.series[0];
   const destacado = (f: Record<string, unknown>) => Boolean(bloque.resaltar && String(f[bloque.resaltar.columna]) === bloque.resaltar.valor);
 
   const puntos = filas.filter((f) => typeof f[bloque.ejeX] === 'number' && typeof f[serie.clave] === 'number');
   const maximoY = Math.max(0, ...puntos.map((f) => f[serie.clave] as number));
   const minimoY = Math.min(0, ...puntos.map((f) => f[serie.clave] as number));
-  const anchoY = Math.ceil(Math.max(anchoTexto(marcaEje(Math.ceil(maximoY * 1.2), columnaY), 15), anchoTexto(marcaEje(Math.floor(minimoY), columnaY), 15)) + 14);
+  const anchoY = Math.ceil(Math.max(anchoTexto(marcaEje(Math.ceil(maximoY * 1.2), columnaY), L(15)), anchoTexto(marcaEje(Math.floor(minimoY), columnaY), L(15))) + 14);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <ul className="mb-[14px] flex flex-wrap gap-x-[24px] text-[16px] text-tinta-suave">
+      <ul className="mb-[14px] flex flex-wrap gap-x-[24px] text-[length:calc(16px*var(--vp-letra,1))] text-tinta-suave">
         <li>Vertical: <strong className="font-semibold text-tinta">{columnaY?.nombre}</strong></li>
         <li>Horizontal: <strong className="font-semibold text-tinta">{columnaX?.nombre}</strong></li>
         {bloque.resaltar && (
@@ -117,22 +124,24 @@ export function Dispersion({ bloque, conjunto, filas, tema }: PropsGrafico) {
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 34, right: 48, bottom: 4, left: 0 }}>
             <CartesianGrid stroke={LINEA} />
-            <XAxis type="number" dataKey={bloque.ejeX} name={columnaX?.nombre} domain={['auto', 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaX)} {...ejeCategorias} />
-            <YAxis type="number" dataKey={serie.clave} name={columnaY?.nombre} width={anchoY} {...dominioEje(bloque.rangoEje, ['auto', 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaY)} {...ejeValores} />
-            <Tooltip
-              isAnimationActive={false}
-              cursor={{ stroke: '#CFC6CB', strokeDasharray: '4 4' }}
-              content={(p: any) => {
-                const f = p.active && p.payload?.[0]?.payload;
-                if (!f) return null;
-                return (
-                  <CajaGlobo titulo={columnaNombre ? String(f[columnaNombre.clave] ?? '') : undefined}>
-                    <FilaGlobo nombre={columnaY?.nombre} valor={formatear(f[serie.clave], columnaY)} />
-                    <FilaGlobo nombre={columnaX?.nombre} valor={formatear(f[bloque.ejeX], columnaX)} />
-                  </CajaGlobo>
-                );
-              }}
-            />
+            <XAxis type="number" dataKey={bloque.ejeX} name={columnaX?.nombre} domain={['auto', 'auto']} tickFormatter={(v: number) => marcaEje(v, columnaX)} {...ejeCategorias()} />
+            <YAxis type="number" dataKey={serie.clave} name={columnaY?.nombre} width={anchoY} {...dominioEje(bloque.rangoEje, ['auto', 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaY)} {...ejeValores()} />
+            {!enPdf && (
+              <Tooltip
+                isAnimationActive={false}
+                cursor={{ stroke: '#CFC6CB', strokeDasharray: '4 4' }}
+                content={(p: any) => {
+                  const f = p.active && p.payload?.[0]?.payload;
+                  if (!f) return null;
+                  return (
+                    <CajaGlobo titulo={columnaNombre ? String(f[columnaNombre.clave] ?? '') : undefined}>
+                      <FilaGlobo nombre={columnaY?.nombre} valor={formatear(f[serie.clave], columnaY)} />
+                      <FilaGlobo nombre={columnaX?.nombre} valor={formatear(f[bloque.ejeX], columnaX)} />
+                    </CajaGlobo>
+                  );
+                }}
+              />
+            )}
             <Scatter data={puntos} fill={color} isAnimationActive={animar} animationDuration={450}
               shape={(props: any) => {
                 const resaltado = destacado(props.payload);
@@ -141,7 +150,7 @@ export function Dispersion({ bloque, conjunto, filas, tema }: PropsGrafico) {
               }}
             >
               {bloque.etiquetas && columnaNombre && (
-                <LabelList dataKey={columnaNombre.clave} position="top" offset={12} fontSize={14} fill={TINTA} />
+                <LabelList dataKey={columnaNombre.clave} position="top" offset={12} fontSize={L(14)} fill={TINTA} />
               )}
             </Scatter>
           </ScatterChart>
@@ -171,6 +180,8 @@ export function Cascada({ bloque, conjunto, filas, tema }: PropsGrafico) {
   const columna = columnaDe(conjunto, serie.clave);
   const animar = usarAnimar();
   usarFuenteMedida();
+  // En el PDF no hay mouse: sin globos.
+  const enPdf = useContext(DetalleFijo);
   const colores = { sube: tema.series[3 % tema.series.length], baja: tema.primario, total: SUAVE };
 
   const conSigno = (v: number) => (v < 0 ? '' : '+') + formatear(v, columna);
@@ -187,11 +198,11 @@ export function Cascada({ bloque, conjunto, filas, tema }: PropsGrafico) {
 
   const maximo = Math.max(0, ...escalones.map((e) => e.base + e.alto));
   const minimo = Math.min(0, ...escalones.map((e) => e.base));
-  const anchoY = Math.ceil(Math.max(anchoTexto(marcaEje(Math.ceil(maximo * 1.2), columna), 15), anchoTexto(marcaEje(Math.floor(minimo), columna), 15)) + 14);
+  const anchoY = Math.ceil(Math.max(anchoTexto(marcaEje(Math.ceil(maximo * 1.2), columna), L(15)), anchoTexto(marcaEje(Math.floor(minimo), columna), L(15))) + 14);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <ul className="mb-[14px] flex gap-x-[24px] text-[16px] text-tinta">
+      <ul className="mb-[14px] flex gap-x-[24px] text-[length:calc(16px*var(--vp-letra,1))] text-tinta">
         <Muestra color={colores.sube} nombre="Sube" />
         <Muestra color={colores.baja} nombre="Baja" />
         {bloque.total && <Muestra color={colores.total} nombre="Total" />}
@@ -200,33 +211,35 @@ export function Cascada({ bloque, conjunto, filas, tema }: PropsGrafico) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={escalones} margin={{ top: 24, right: 16, bottom: 0, left: 0 }} barCategoryGap="22%">
             <CartesianGrid vertical={false} stroke={LINEA} />
-            <XAxis dataKey="nombre" interval={0} {...ejeCategorias} />
-            <YAxis width={anchoY} {...dominioEje(bloque.rangoEje, [minimo < 0 ? 'auto' : 0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columna)} {...ejeValores} />
-            <Tooltip
-              isAnimationActive={false}
-              cursor={{ fill: '#F5EFF2' }}
-              content={(p: any) => {
-                const e: Escalon | undefined = p.active ? p.payload?.[0]?.payload : undefined;
-                if (!e) return null;
-                return (
-                  <CajaGlobo titulo={e.nombre}>
-                    {e.clase === 'total' ? (
-                      <FilaGlobo nombre="Total" valor={formatear(e.acumulado, columna)} color={colores.total} />
-                    ) : (
-                      <>
-                        <FilaGlobo nombre="Variación" valor={e.etiqueta} color={colores[e.clase]} />
-                        <FilaGlobo nombre="Acumulado" valor={formatear(e.acumulado, columna)} fuerte={false} />
-                      </>
-                    )}
-                  </CajaGlobo>
-                );
-              }}
-            />
+            <XAxis dataKey="nombre" interval={0} {...ejeCategorias()} />
+            <YAxis width={anchoY} {...dominioEje(bloque.rangoEje, [minimo < 0 ? 'auto' : 0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columna)} {...ejeValores()} />
+            {!enPdf && (
+              <Tooltip
+                isAnimationActive={false}
+                cursor={{ fill: '#F5EFF2' }}
+                content={(p: any) => {
+                  const e: Escalon | undefined = p.active ? p.payload?.[0]?.payload : undefined;
+                  if (!e) return null;
+                  return (
+                    <CajaGlobo titulo={e.nombre}>
+                      {e.clase === 'total' ? (
+                        <FilaGlobo nombre="Total" valor={formatear(e.acumulado, columna)} color={colores.total} />
+                      ) : (
+                        <>
+                          <FilaGlobo nombre="Variación" valor={e.etiqueta} color={colores[e.clase]} />
+                          <FilaGlobo nombre="Acumulado" valor={formatear(e.acumulado, columna)} fuerte={false} />
+                        </>
+                      )}
+                    </CajaGlobo>
+                  );
+                }}
+              />
+            )}
             <Bar dataKey="base" stackId="cascada" fill="transparent" isAnimationActive={false} />
             <Bar dataKey="alto" stackId="cascada" radius={[3, 3, 3, 3]} maxBarSize={56} isAnimationActive={animar} animationDuration={450}>
               {escalones.map((e, i) => <Cell key={i} fill={colores[e.clase]} />)}
               {bloque.etiquetas && (
-                <LabelList dataKey="etiqueta" position="top" offset={8} fontSize={15} fontWeight={600} fill={TINTA} />
+                <LabelList dataKey="etiqueta" position="top" offset={8} fontSize={L(15)} fontWeight={600} fill={TINTA} />
               )}
             </Bar>
             {lineasReferencia(bloque, columna, 'y')}

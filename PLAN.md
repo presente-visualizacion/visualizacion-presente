@@ -91,6 +91,10 @@ Pendiente de decidir con la empresa (no bloquea el desarrollo):
   o arrastrando al presentar, PDF descargado directo con hojas que crecen y
   detalle fijo en los gráficos.
 
+- [x] **Ajustes de la tarde del 2026-11-19** (ver esa sección): arreglo del
+  rango del eje, lo nuevo propio del mes, cuadros más chicos, tamaño de
+  letra, varias personas a la vez, zoom, dejar en blanco, PDF sin
+  interacción y con el recuadro de Presente.
 - [x] **Cuadrícula fina** (2026-11-19, ver "Cuadrícula fina"): 48 x 32 en
   vez de 12 x 8, con paso automático de lo existente.
 - [x] **Ajustes del 2026-11-18** (ver "Ajustes del 2026-11-18"): plantilla
@@ -1819,7 +1823,8 @@ mucho, quedaban muy grandes o muy chicos y sobraba espacio.
   (`MEDIO_X` 14 px, `MEDIO_Y` 7 px, en Diapositiva.tsx) y la cuadrícula se
   estira ese medio espacio por fuera del cuerpo. Así los bordes siguen
   alineados con el título y entre vecinos quedan 28 x 14 px, como antes.
-- Tamaño mínimo de un bloque al arrastrar: 3 x 3 casillas finas.
+- Tamaño mínimo de un bloque al arrastrar: 2 x 2 casillas finas (3 x 3 hasta
+  los ajustes de la tarde del 2026-11-19).
 - Mientras se arrastra se ven líneas finas en cada casilla y más marcadas
   cada 4. El minimapa del panel es un solo dibujo (tocar lleva el bloque
   ahí); los números van de 1 a 48 y de 1 a 32.
@@ -1841,6 +1846,101 @@ mucho, quedaban muy grandes o muy chicos y sobraba espacio.
 - Una pestaña abierta desde antes del cambio puede mandar una ubicación
   vieja; hay que recargarla (se recarga sola al volver a ella si alguien
   guardó).
+
+## Ajustes de la tarde del 2026-11-19
+
+Pedidos de la usuaria, en el orden en que los pidió.
+
+### Arreglo: la configuración de gráficos y tablas se descartaba
+
+En un gráfico o tabla con lugar en la disposición libre, fondo, colores o
+letra propia, **cualquier** cambio de configuración (el rango del eje, por
+ejemplo) se descartaba con "Llave desconocida: ubicacion". `EditorGrafico`,
+`EditorTabla` y la inversa de `grafico.config` y `tabla.config` mandaban el
+bloque entero. Ahora usan `configGraficoDe` y `configTablaDe`
+(operaciones.ts), que quitan el marco (`Marco`: título, nota, fondo, lugar,
+colores, letra y tamaño de letra). La validación acepta el marco si llega
+(pestañas viejas) y lo ignora en vez de descartar el cambio.
+
+### Lo nuevo, propio del mes
+
+- Texto, cifras, tarjetas, gráficos y tablas nuevos (barra "Insertar" y
+  "Agregar bloque") nacen **propios de cada mes** con contenido solo en el
+  mes que se está editando (`bloqueNuevo`, `conjuntoEjemplo` y
+  `opsAgregarBloque` / `opsInsertarBloque` con `periodo`). Sin `periodo`
+  siguen como antes (igual en todos), y así los usan las pruebas viejas.
+- **Un bloque sin nada en el mes no se ve** al ver, presentar y en el PDF
+  (ni su título, nota o fondo): `vacioEnMes` en Bloques.tsx y el contexto
+  `Editando` (graficoComun.tsx). Al editar se ve un recuadro punteado
+  ("Sin texto en Octubre 2026"); en un cuadro chico, solo el borde. Esto
+  cambia lo acordado en la etapa 1 (antes se veía el aviso "Sin datos para…"
+  también al presentar).
+- Pasar a "Igual en todos los meses" deja lo del mes elegido en todos (era
+  así desde la 2A; ahora lo explica una línea bajo el selector). El formato
+  (colores, letra, tamaño, lugar) es del bloque, igual en todos los meses.
+- "Nuevo mes" ya copiaba lo propio de cada mes del mes anterior.
+
+### Cuadros más chicos
+
+Mínimo 2 x 2 casillas finas (antes 3 x 3), y el ajuste automático del
+texto baja hasta el 40 % del tamaño (antes 60 %) para caber.
+
+### Tamaño de letra
+
+- `Tema.letra`, `Diapositiva.letra` (título y subtítulo) y `BaseBloque.letra`,
+  en % (40 a 300; 100 no se guarda). Operaciones `bloque.tamano` y
+  `diapositiva.tamano`; el de la presentación va en `tema`.
+- Controles A− / A+ (`ElegirTamano`): en Aspecto de cada bloque, bajo el
+  subtítulo de la diapositiva y en la pestaña Presentación.
+- Cómo se aplica: la diapositiva pone las variables CSS `--vp-letra` y
+  `--vp-letra-titulo` y el contexto `EscalaLetra`; cada bloque con tamaño
+  propio los multiplica. Las clases de letra son
+  `text-[length:calc(16px*var(--vp-letra,1))]`; los números de Recharts
+  usan `L(16)` (graficoComun.tsx, toma la escala en `usarFuenteMedida`).
+  Textos y tarjetas: la base del ajuste automático se multiplica, así que si
+  el texto ya llena el cuadro, agrandar no se nota hasta agrandar el cuadro.
+  Cifras: el número crece hasta donde quepa.
+
+### Varias personas a la vez
+
+Ya se podía (operaciones pequeñas, gana el último cambio de cada campo),
+pero lo de la otra persona llegaba solo al guardar o al volver a la pestaña.
+Ahora, mientras se edita, cada 8 s (`LATIDO` en usarEdicion.ts) se pregunta
+`?solo=revision&sesion=…`: si alguien guardó y no hay cambios propios
+pendientes, se trae; y la respuesta dice cuántas otras pestañas editan
+(tabla `presencia`, una fila por pestaña, vale 30 s; `presencia()` en el
+almacén). Arriba se ve "Otra persona editando". Es por pestaña, no por
+persona (no hay usuarios): dos pestañas propias cuentan como dos. No hay
+cursores ni edición en vivo letra por letra.
+
+### Zoom
+
+Botones − 100 % + al ver, editar y presentar; teclas +, − y 0; Ctrl + rueda
+o pellizcar el panel táctil sobre la diapositiva. De 50 % a 400 %. `Lienzo`
+recibe `zoom` y, si pasa de 1, se desplaza (barras, rueda o, al presentar,
+arrastrando). Al presentar con zoom la rueda y el arrastre recorren la
+diapositiva en vez de pasarla. Al entrar o salir de presentar vuelve a 100 %.
+
+### Dejar en blanco
+
+`src/lib/edicion/vaciar.ts`. En cada bloque, "Dejar … en blanco" (texto
+vacío; cifras sin valor pero con etiqueta; tarjetas sin texto pero con
+título; datos con filas y columnas de texto pero sin números). En la pestaña
+Presentación, "Dejar en blanco las cifras de {mes}": los números de todos
+los datos y cifras escritas a mano propios de cada mes. Lo igual en todos
+los meses y los textos no se tocan. Todo se deshace con Deshacer.
+
+### PDF sin interacción y con el recuadro de información
+
+- En el PDF no hay globos al pasar el mouse, la leyenda es texto (no
+  botones) y la página no responde al mouse (`pointer-events-none`).
+- Debajo de cada gráfico de series va **siempre** el recuadro con lo que
+  saldría al pasar el mouse: de la entidad resaltada (en los benchmark,
+  Presente) o del último dato; con todas las cifras de esa fila que el
+  dibujo no muestra (# desembolsos, $ desembolsos, TPP...). Si no hay
+  resaltada y el gráfico no es de tiempo, se busca una fila que diga
+  "Presente". Sin dato se escribe "—".
+- Circular, dispersión y cascada ya muestran sus cifras en el dibujo.
 
 ## Cómo trabajar
 

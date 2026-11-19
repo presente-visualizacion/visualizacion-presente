@@ -5,7 +5,7 @@
 // presentación (meses y colores). Ver "Pantalla de edición" en PLAN.md (2A y 2B).
 
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ChartColumn, Eye, EyeOff, ClipboardCopy, ClipboardPaste, Copy, FileSpreadsheet, Hash, LayoutGrid, Plus, Table2, Trash2, Type, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChartColumn, Eye, EyeOff, ClipboardCopy, ClipboardPaste, Copy, Eraser, FileSpreadsheet, Hash, LayoutGrid, Plus, Table2, Trash2, Type, X } from 'lucide-react';
 import { copiarDiapositiva, opsPegarDiapositiva } from '@/lib/edicion/portapapeles';
 import { usarPortapapeles } from './usarPortapapeles';
 import { conjuntoDe, filasDe } from '@/lib/datos';
@@ -16,6 +16,8 @@ import type { DestinoExcel } from '@/lib/excel/cargar';
 import { nombrePeriodo } from '@/lib/periodos';
 import type { Bloque, Diapositiva, Disposicion, IdPeriodo, Presentacion } from '@/lib/tipos';
 import { AgregarBloque } from './AgregarBloque';
+import { ElegirTamano } from './ElegirTamano';
+import { opsVaciarBloque } from '@/lib/edicion/vaciar';
 import { ElegirColor, FONDOS_SUGERIDOS, FormatoSeleccion } from './Colores';
 import { DiapositivasGuardadas } from './DiapositivasGuardadas';
 import { esOscuro } from '@/components/bloques/Bloques';
@@ -122,6 +124,11 @@ function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEdi
           onCambiar={(valor) => cambiar({ op: 'diapositiva.subtitulo', diapositiva: diapositiva.id, valor })}
           nota={<>El título y el subtítulo son iguales en todos los meses. Escribe <code>{'{mes}'}</code> donde deba ir el mes elegido.</>}
         />
+        <ElegirTamano
+          etiqueta="Tamaño del título"
+          valor={diapositiva.letra ?? null}
+          onCambiar={(valor) => cambiar({ op: 'diapositiva.tamano', diapositiva: diapositiva.id, valor }, `tamano-${diapositiva.id}`)}
+        />
         <ElegirColor
           etiqueta="Fondo de la diapositiva"
           valor={diapositiva.fondo ?? null}
@@ -161,6 +168,7 @@ function PestanaDiapositiva({ presentacion, diapositiva, periodo, cambiar, onEdi
           <AgregarBloque
             presentacion={presentacion}
             diapositiva={diapositiva}
+            periodo={periodo}
             cambiar={cambiar}
             onDatosNuevos={onEditarDatos}
             onDesdeExcel={(tipo) => onCargarExcel({ modo: 'nuevo', diapositiva: diapositiva.id, tipo })}
@@ -388,9 +396,35 @@ function TarjetaBloque({ presentacion, diapositiva, bloque, indice, periodo, cam
           onCargarExcel={() => onCargarExcel({ modo: 'conjunto', conjunto: bloque.datos })}
         />
       )}
+      <VaciarBloque presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />
       {bloque.tipo === 'grafico' && <EditorGrafico presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
       {bloque.tipo === 'tabla' && <EditorTabla presentacion={presentacion} bloque={bloque} periodo={periodo} cambiar={cambiar} />}
     </section>
+  );
+}
+
+/** "Dejar en blanco": borra lo del mes sin quitar la estructura (ver src/lib/edicion/vaciar.ts). */
+function VaciarBloque({ presentacion, bloque, periodo, cambiar }: { presentacion: Presentacion; bloque: Bloque; periodo: IdPeriodo; cambiar: Props['cambiar'] }) {
+  const ops = opsVaciarBloque(presentacion, bloque, periodo);
+  if (!ops.length) return null;
+  const mes = nombrePeriodo(periodo);
+  const deDatos = bloque.tipo === 'grafico' || bloque.tipo === 'tabla';
+  const conjunto = deDatos ? presentacion.datos[bloque.datos] : undefined;
+  const propio = deDatos ? Boolean(conjunto?.porPeriodo) : (bloque.tipo === 'texto' ? bloque.contenido : bloque.tipo === 'cifras' ? bloque.cifras : bloque.tarjetas).porPeriodo;
+  const etiqueta = {
+    texto: 'Dejar el texto en blanco', cifras: 'Dejar las cifras en blanco', tarjetas: 'Dejar los textos en blanco',
+    grafico: 'Dejar los números en blanco', tabla: 'Dejar los números en blanco',
+  }[bloque.tipo];
+  const que = {
+    texto: 'el texto', cifras: 'los valores (quedan las etiquetas)', tarjetas: 'los textos (quedan los títulos)',
+    grafico: 'los números (quedan las filas y los nombres)', tabla: 'los números (quedan las filas y los nombres)',
+  }[bloque.tipo];
+  const otros = deDatos ? presentacion.diapositivas.flatMap((d) => d.bloques).filter((b) => b.id !== bloque.id && (b.tipo === 'grafico' || b.tipo === 'tabla') && b.datos === bloque.datos).length : 0;
+  const pregunta = `Se borrarán ${que}${propio ? ` de ${mes}` : ' en todos los meses, porque son iguales en todos'}${otros ? `. Estos datos también los usan ${otros === 1 ? 'otro bloque' : `otros ${otros} bloques`}` : ''}.`;
+  return (
+    <div className="flex flex-wrap">
+      <BotonConfirmar etiqueta={etiqueta} pregunta={pregunta} confirmar="Dejar en blanco" icono={<Eraser size={16} aria-hidden />} onConfirmar={() => cambiar(ops)} />
+    </div>
   );
 }
 

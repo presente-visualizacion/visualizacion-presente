@@ -57,7 +57,7 @@ export function lineasReferencia(bloque: BloqueGrafico, columna: Columna | undef
         value: r.etiqueta?.trim() || marcaEje(r.valor, columna),
         position: eje === 'y' ? 'insideTopRight' : 'insideTopLeft',
         fill: TINTA,
-        fontSize: 15,
+        fontSize: L(15),
         fontWeight: 700,
       }}
     />
@@ -97,11 +97,35 @@ export const SinAnimacion = createContext(false);
 /** font-family del bloque o de la presentación: con él se mide el texto de los ejes. */
 export const FuenteActual = createContext<string>(fuenteCss(undefined));
 
+/**
+ * Tamaño de la letra: 1 es el de siempre. Lo ponen la diapositiva (tamaño de
+ * toda la presentación) y cada bloque (el suyo, multiplicado). Ver
+ * "Tamaño de letra" en PLAN.md.
+ */
+export const EscalaLetra = createContext(1);
+
 let fuenteMedida = fuenteCss(undefined);
-/** Llamar al comienzo de cada gráfico: `anchoTexto` mide con su tipo de letra. */
+let escalaMedida = 1;
+/**
+ * Llamar al comienzo de cada gráfico: `anchoTexto` mide con su tipo de letra
+ * y `L` da los tamaños con su escala.
+ */
 export function usarFuenteMedida(): void {
   fuenteMedida = useContext(FuenteActual);
+  escalaMedida = useContext(EscalaLetra);
 }
+
+/** Tamaño de letra en px del lienzo, con la escala del gráfico que se está dibujando. */
+export function L(px: number): number {
+  return Math.round(px * escalaMedida * 10) / 10;
+}
+
+/**
+ * true mientras se edita. Fuera de la edición (al ver, presentar y en el PDF)
+ * un bloque sin contenido en el mes elegido no se muestra; al editar se ve
+ * un recuadro para llenarlo (ver "Lo nuevo, propio del mes" en PLAN.md).
+ */
+export const Editando = createContext(false);
 
 /** true en el PDF: debajo del gráfico va fijo lo que sale al pasar el mouse, si no se ve en el dibujo. */
 export const DetalleFijo = createContext(false);
@@ -132,8 +156,8 @@ export function marcaEje(valor: number, columna?: Columna): string {
 }
 
 
-export const ejeValores = { tick: { fontSize: 15, fill: SUAVE }, axisLine: false, tickLine: false } as const;
-export const ejeCategorias = { tick: { fontSize: 15, fill: SUAVE }, axisLine: { stroke: LINEA }, tickLine: false } as const;
+export const ejeValores = () => ({ tick: { fontSize: L(15), fill: SUAVE }, axisLine: false, tickLine: false }) as const;
+export const ejeCategorias = () => ({ tick: { fontSize: L(15), fill: SUAVE }, axisLine: { stroke: LINEA }, tickLine: false }) as const;
 
 /** Muestra de color de una leyenda que no se puede ocultar. */
 export function Muestra({ color, nombre, linea = false }: { color: string; nombre: React.ReactNode; linea?: boolean }) {
@@ -148,8 +172,8 @@ export function Muestra({ color, nombre, linea = false }: { color: string; nombr
 /** Recuadro del globo (lo que aparece al pasar el mouse). */
 export function CajaGlobo({ titulo, children }: { titulo?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="min-w-[220px] rounded-[10px] border border-linea-fuerte bg-white px-[16px] py-[12px] text-[15px] shadow-[0_8px_24px_-8px_rgba(36,26,32,0.25)]">
-      {titulo !== undefined && <p className="mb-[8px] text-[16px] font-semibold text-tinta">{titulo}</p>}
+    <div className="min-w-[220px] rounded-[10px] border border-linea-fuerte bg-white px-[16px] py-[12px] text-[length:calc(15px*var(--vp-letra,1))] shadow-[0_8px_24px_-8px_rgba(36,26,32,0.25)]">
+      {titulo !== undefined && <p className="mb-[8px] text-[length:calc(16px*var(--vp-letra,1))] font-semibold text-tinta">{titulo}</p>}
       <table className="w-full"><tbody>{children}</tbody></table>
     </div>
   );

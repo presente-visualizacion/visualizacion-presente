@@ -57,6 +57,11 @@ export interface Almacen {
   obtener(id: string): Promise<Guardada | null>;
   /** Solo el número de revisión, para saber si hay cambios sin traer todo. */
   revision(id: string): Promise<number | null>;
+  /**
+   * Marca que esa pestaña está editando (o que salió, con `salir`) y dice
+   * cuántas otras pestañas editan la misma presentación en este momento.
+   */
+  presencia(id: string, sesion: string, salir?: boolean): Promise<number>;
   /** Aplica las operaciones sobre la versión más reciente y guarda. */
   aplicar(id: string, revisionBase: number, ops: Operacion[]): Promise<ResultadoGuardado>;
   /** Para importar presentaciones completas (etapas 3 a 5). */

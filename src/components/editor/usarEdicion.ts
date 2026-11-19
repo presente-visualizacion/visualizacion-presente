@@ -29,6 +29,8 @@ export interface Edicion {
   /** Mensaje pasajero, por ejemplo al recibir cambios de otra persona. */
   aviso: string | null;
   descartarAviso(): void;
+  /** Cuántas otras pestañas están editando esta presentación ahora (solo al editar). */
+  otros: number;
 }
 
 /** Espera sin cambios nuevos antes de guardar. */
@@ -42,6 +44,8 @@ const TOPE_BYTES = 180_000;
 const TOPE_AL_CERRAR = 60_000;
 const TOPE_DESHACER = 200;
 const SEGUNDO = 1000;
+/** Mientras se edita, cada cuánto se pregunta si alguien más guardó (y se avisa que se está editando). */
+const LATIDO = 8 * SEGUNDO;
 
 interface Entrada {
   ida: Operacion[];
@@ -65,13 +69,18 @@ function tomarLote(ops: Operacion[]): Operacion[] {
 /**
  * `seguir: false` (copias del historial): no consulta si alguien más guardó,
  * porque lo que se muestra no es la presentación actual.
+ * `editando`: mientras es true, cada pocos segundos trae lo que guardaron
+ * otras personas y avisa que esta pestaña está editando.
  */
-export function usarEdicion(inicial: Presentacion, revisionInicial: number, { seguir = true }: { seguir?: boolean } = {}): Edicion {
+export function usarEdicion(inicial: Presentacion, revisionInicial: number, { seguir = true, editando = false }: { seguir?: boolean; editando?: boolean } = {}): Edicion {
   const [presentacion, setPresentacion] = useState(inicial);
   const [estado, setEstado] = useState<EstadoGuardado>('guardado');
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [pilas, setPilas] = useState({ deshacer: 0, rehacer: 0 });
+  const [otros, setOtros] = useState(0);
+  // Una por pestaña: así se cuentan las demás.
+  const [sesion] = useState(() => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `s-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`));
 
   // Lo que cambia sin tener que redibujar vive aquí.
   const r = useRef({
@@ -276,6 +285,37 @@ export function usarEdicion(inicial: Presentacion, revisionInicial: number, { se
     };
   }, [r, url, enviar, recargar, seguir]);
 
+  // Mientras se edita: traer lo que guardaron otras personas sin tener que
+  // cambiar de pestaña, y avisar que aquí también se está editando.
+  useEffect(() => {
+    if (!seguir || !editando) {
+      setOtros(0);
+      return;
+    }
+    let vivo = true;
+    const latir = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const respuesta = await fetch(`${url}?solo=revision&sesion=${sesion}`, { cache: 'no-store' });
+        if (!respuesta.ok || !vivo) return;
+        const { revision, otros: cuantos } = (await respuesta.json()) as { revision: number; otros?: number };
+        setOtros(cuantos ?? 0);
+        r.ultimaConsulta = Date.now();
+        const hayPendientes = r.pendientes.length > 0 || r.enVuelo !== null;
+        if (revision !== r.revision && !hayPendientes) await recargar('Se actualizó con cambios de otra persona.');
+      } catch {
+        // Sin red: el siguiente latido lo intenta de nuevo.
+      }
+    };
+    void latir();
+    const intervalo = setInterval(() => void latir(), LATIDO);
+    return () => {
+      vivo = false;
+      clearInterval(intervalo);
+      void fetch(`${url}?solo=revision&sesion=${sesion}&salir=1`, { cache: 'no-store', keepalive: true }).catch(() => {});
+    };
+  }, [r, url, recargar, seguir, editando, sesion]);
+
   // El aviso pasajero se quita solo.
   useEffect(() => {
     if (!aviso) return;
@@ -297,5 +337,6 @@ export function usarEdicion(inicial: Presentacion, revisionInicial: number, { se
       setAviso(null);
       setError(null);
     }, []),
+    otros,
   };
 }

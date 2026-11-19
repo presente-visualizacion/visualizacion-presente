@@ -1,7 +1,7 @@
 'use client';
 
 import { ConNegritas, esOscuro, VistaBloque } from '@/components/bloques/Bloques';
-import { FuenteActual } from '@/components/bloques/graficoComun';
+import { EscalaLetra, FuenteActual } from '@/components/bloques/graficoComun';
 import { fuenteCss } from '@/lib/fuentes';
 import { Logo } from '@/components/Logo';
 import { COLUMNAS_LIBRE, FILAS_LIBRE, ubicacionesEfectivas } from '@/lib/disposicion';
@@ -29,9 +29,16 @@ export function Diapositiva(props: Props) {
   const { diapositiva, presentacion } = props;
   const css = fuenteCss(presentacion.tema.fuente);
   const vista = diapositiva.tipo === 'portada' ? <Portada {...props} /> : diapositiva.tipo === 'cierre' ? <Cierre {...props} /> : <Contenido {...props} />;
+  // Tamaño de letra: el de toda la presentación y, para el título, también el
+  // de esta diapositiva (ver "Tamaño de letra" en PLAN.md).
+  const escala = (presentacion.tema.letra ?? 100) / 100;
+  const escalaTitulo = escala * (diapositiva.letra ?? 100) / 100;
+  const estilo = { fontFamily: css, '--vp-letra': escala, '--vp-letra-titulo': escalaTitulo } as React.CSSProperties;
   return (
     <FuenteActual.Provider value={css}>
-      <div className="h-full w-full" style={{ fontFamily: css }}>{vista}</div>
+      <EscalaLetra.Provider value={escala}>
+        <div className="h-full w-full" style={estilo}>{vista}</div>
+      </EscalaLetra.Provider>
     </FuenteActual.Provider>
   );
 }
@@ -61,8 +68,8 @@ function Portada({ presentacion, diapositiva, periodo }: Props) {
     <div className={`flex h-full w-full ${fondo.className}`} style={fondo.style}>
       <PanelMarca logo={presentacion.tema.logo} />
       <div className="flex min-w-0 flex-1 flex-col justify-center px-[76px]">
-        <h1 className="text-[78px] font-bold leading-[1.02] tracking-[-0.03em] text-tinta"><ConNegritas texto={conMes(diapositiva.titulo, periodo)} /></h1>
-        {diapositiva.subtitulo && <p className="mt-[22px] text-[34px] font-medium text-primario"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
+        <h1 className="text-[length:calc(78px*var(--vp-letra-titulo,1))] font-bold leading-[1.02] tracking-[-0.03em] text-tinta"><ConNegritas texto={conMes(diapositiva.titulo, periodo)} /></h1>
+        {diapositiva.subtitulo && <p className="mt-[22px] text-[length:calc(34px*var(--vp-letra-titulo,1))] font-medium text-primario"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
       </div>
     </div>
   );
@@ -73,8 +80,8 @@ function Cierre({ presentacion, diapositiva, periodo }: Props) {
   return (
     <div className={`flex h-full w-full ${fondo.className}`} style={fondo.style}>
       <div className="flex min-w-0 flex-1 flex-col justify-center px-[76px]">
-        <h1 className="text-[78px] font-bold leading-[1.02] tracking-[-0.03em] text-tinta"><ConNegritas texto={conMes(diapositiva.titulo, periodo)} /></h1>
-        {diapositiva.subtitulo && <p className="mt-[22px] text-[30px] font-medium text-tinta-suave"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
+        <h1 className="text-[length:calc(78px*var(--vp-letra-titulo,1))] font-bold leading-[1.02] tracking-[-0.03em] text-tinta"><ConNegritas texto={conMes(diapositiva.titulo, periodo)} /></h1>
+        {diapositiva.subtitulo && <p className="mt-[22px] text-[length:calc(30px*var(--vp-letra-titulo,1))] font-medium text-tinta-suave"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
       </div>
       <PanelMarca logo={presentacion.tema.logo} />
     </div>
@@ -159,12 +166,12 @@ function Contenido({ presentacion, diapositiva, periodo, numero }: Props) {
       <header className="flex shrink-0 gap-[20px]">
         <span aria-hidden className="w-[6px] shrink-0 rounded-full" style={{ background: 'var(--vp-degradado)' }} />
         <div className="min-w-0">
-          <h2 className="text-[38px] font-bold leading-[1.12] tracking-[-0.02em] text-tinta"><ConNegritas texto={conMes(diapositiva.titulo, periodo)} /></h2>
-          {diapositiva.subtitulo && <p className="mt-[5px] text-[19px] text-tinta-suave"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
+          <h2 className="text-[length:calc(38px*var(--vp-letra-titulo,1))] font-bold leading-[1.12] tracking-[-0.02em] text-tinta"><ConNegritas texto={conMes(diapositiva.titulo, periodo)} /></h2>
+          {diapositiva.subtitulo && <p className="mt-[5px] text-[length:calc(19px*var(--vp-letra-titulo,1))] text-tinta-suave"><ConNegritas texto={conMes(diapositiva.subtitulo, periodo)} /></p>}
         </div>
       </header>
       <div data-vp-cuerpo className="mt-[28px] min-h-0 flex-1">{cuerpo}</div>
-      <footer className="mt-[18px] flex shrink-0 items-center gap-[20px] text-[15px] text-tinta-suave">
+      <footer className="mt-[18px] flex shrink-0 items-center gap-[20px] text-[length:calc(15px*var(--vp-letra,1))] text-tinta-suave">
         <Logo alto={26} src={presentacion.tema.logo} />
         <span className="ml-auto">{nombrePeriodo(periodo)}</span>
         <span className="min-w-[24px] text-right font-semibold text-tinta">{numero > 0 ? numero : ''}</span>

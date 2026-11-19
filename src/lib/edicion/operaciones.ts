@@ -25,7 +25,7 @@ import type {
  * El título y la nota van por `bloque.marco`, y el fondo y la ubicación por
  * `bloque.aspecto`; no por la configuración del gráfico o la tabla.
  */
-type Marco = 'id' | 'tipo' | 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto' | 'fuente';
+type Marco = 'id' | 'tipo' | 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto' | 'fuente' | 'letra';
 export type ConfigGrafico = Omit<BloqueGrafico, Marco>;
 export type ConfigTabla = Omit<BloqueTabla, Marco>;
 
@@ -52,6 +52,10 @@ export type Operacion =
   | { op: 'diapositiva.oculta'; diapositiva: string; valor: boolean }
   /** Tipo de letra propio del bloque; null usa el de la presentación. */
   | { op: 'bloque.letra'; bloque: string; valor: string | null }
+  /** Tamaño de la letra del bloque en % (null: el de la presentación). */
+  | { op: 'bloque.tamano'; bloque: string; valor: number | null }
+  /** Tamaño del título y subtítulo de la diapositiva en % (null: el de la presentación). */
+  | { op: 'diapositiva.tamano'; diapositiva: string; valor: number | null }
   /** Guarda (o reemplaza) una diapositiva quitada, arriba de la lista. */
   | { op: 'guardada.poner'; guardada: DiapositivaGuardada }
   /** La saca de la lista de guardadas (al volver a ponerla o al borrarla para siempre). */
@@ -318,19 +322,20 @@ function marcarFina(p: Presentacion, cual: (d: Diapositiva) => boolean): Present
 
 /** La configuración de un gráfico sin su marco (lo que va en `grafico.config`). */
 export function configGraficoDe(b: BloqueGrafico): ConfigGrafico {
-  const { id: _id, tipo: _tipo, titulo: _t, nota: _n, fondo: _fo, ubicacion: _u, colorFondo: _cf, colorTexto: _ct, fuente: _f, ...config } = b;
+  const { id: _id, tipo: _tipo, titulo: _t, nota: _n, fondo: _fo, ubicacion: _u, colorFondo: _cf, colorTexto: _ct, fuente: _f, letra: _l, ...config } = b;
   return config;
 }
 
 /** La configuración de una tabla sin su marco (lo que va en `tabla.config`). */
 export function configTablaDe(b: BloqueTabla): ConfigTabla {
-  const { id: _id, tipo: _tipo, titulo: _t, nota: _n, fondo: _fo, ubicacion: _u, colorFondo: _cf, colorTexto: _ct, fuente: _f, ...config } = b;
+  const { id: _id, tipo: _tipo, titulo: _t, nota: _n, fondo: _fo, ubicacion: _u, colorFondo: _cf, colorTexto: _ct, fuente: _f, letra: _l, ...config } = b;
   return config;
 }
 
-function marcoDe(b: Bloque): Pick<Bloque, 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto' | 'fuente'> {
+function marcoDe(b: Bloque): Pick<Bloque, 'titulo' | 'nota' | 'fondo' | 'ubicacion' | 'colorFondo' | 'colorTexto' | 'fuente' | 'letra'> {
   return {
     ...(b.fuente ? { fuente: b.fuente } : {}),
+    ...(b.letra ? { letra: b.letra } : {}),
     ...(b.colorFondo ? { colorFondo: b.colorFondo } : {}),
     ...(b.colorTexto ? { colorTexto: b.colorTexto } : {}),
     ...(b.titulo ? { titulo: b.titulo } : {}),
@@ -425,6 +430,12 @@ export function aplicar(p: Presentacion, op: Operacion): Presentacion {
 
     case 'bloque.letra':
       return conBloque(p, op.bloque, ({ fuente: _fuente, ...b }) => (op.valor ? { ...b, fuente: op.valor } : b) as Bloque);
+
+    case 'bloque.tamano':
+      return conBloque(p, op.bloque, ({ letra: _letra, ...b }) => (op.valor && op.valor !== 100 ? { ...b, letra: op.valor } : b) as Bloque);
+
+    case 'diapositiva.tamano':
+      return conDiapositiva(p, op.diapositiva, ({ letra: _letra, ...d }) => (op.valor && op.valor !== 100 ? { ...d, letra: op.valor } : d));
 
     case 'guardada.poner': {
       const resto = (p.guardadas ?? []).filter((g) => g.diapositiva.id !== op.guardada.diapositiva.id);
@@ -702,6 +713,16 @@ export function inversa(p: Presentacion, op: Operacion): Operacion[] {
       return b ? [{ op: op.op, bloque: b.id, valor: b.fuente ?? null }] : [];
     }
 
+    case 'bloque.tamano': {
+      const b = bloqueDe(p, op.bloque);
+      return b ? [{ op: op.op, bloque: b.id, valor: b.letra ?? null }] : [];
+    }
+
+    case 'diapositiva.tamano': {
+      const d = p.diapositivas.find((x) => x.id === op.diapositiva);
+      return d ? [{ op: op.op, diapositiva: d.id, valor: d.letra ?? null }] : [];
+    }
+
     case 'guardada.poner': {
       const antes = p.guardadas?.find((g) => g.diapositiva.id === op.guardada.diapositiva.id);
       return antes ? [{ op: op.op, guardada: antes }] : [{ op: 'guardada.quitar', diapositiva: op.guardada.diapositiva.id }];
@@ -899,9 +920,11 @@ export function claveDe(op: Operacion): string | null {
     case 'bloque.aspecto':
     case 'bloque.colores':
     case 'bloque.letra':
+    case 'bloque.tamano':
       return `${op.op}|${op.bloque}`;
     case 'diapositiva.fondo':
     case 'diapositiva.oculta':
+    case 'diapositiva.tamano':
       return `${op.op}|${op.diapositiva}`;
     case 'guardada.poner':
     case 'guardada.quitar':

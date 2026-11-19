@@ -9,6 +9,7 @@ import { COLUMNAS_LIBRE, FILAS_LIBRE, ajustarUbicacion, ubicacionesEfectivas } f
 import type { Operacion } from '@/lib/edicion/operaciones';
 import { ElegirColor, FONDOS_SUGERIDOS, LETRAS_SUGERIDAS } from './Colores';
 import { ElegirFuente } from './ElegirFuente';
+import { ElegirTamano } from './ElegirTamano';
 import type { Bloque, Diapositiva, FondoBloque, Ubicacion } from '@/lib/tipos';
 
 const FONDOS: { valor: FondoBloque | ''; nombre: string; soloTexto?: boolean }[] = [
@@ -58,6 +59,14 @@ export function EditorAspecto({ diapositiva, bloque, indice, cambiar, fuentePres
         valor={bloque.fuente ?? null}
         heredada={fuentePresentacion ?? 'figtree'}
         onCambiar={(valor) => cambiar({ op: 'bloque.letra', bloque: bloque.id, valor })}
+      />
+      <ElegirTamano
+        etiqueta="Tamaño de la letra"
+        valor={bloque.letra ?? null}
+        onCambiar={(valor) => cambiar({ op: 'bloque.tamano', bloque: bloque.id, valor }, `tamano-${bloque.id}`)}
+        nota={bloque.tipo === 'texto' || bloque.tipo === 'tarjetas'
+          ? 'Si el texto no cabe en el cuadro, la letra igual se achica sola para que quepa.'
+          : 'Agranda o achica toda la letra del bloque, también la de su título y su nota.'}
       />
       <ElegirColor
         etiqueta="Color de fondo"

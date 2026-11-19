@@ -11,9 +11,12 @@ export { COLUMNAS_LIBRE, FILAS_LIBRE };
 const C = COLUMNAS_LIBRE / 12;
 const F = FILAS_LIBRE / 8;
 
-/** Lo mínimo que puede medir un bloque, en casillas finas. */
-export const MIN_ANCHO = 3;
-export const MIN_ALTO = 3;
+/**
+ * Lo mínimo que puede medir un bloque, en casillas finas (2026-11-19: antes
+ * 3 x 3). Dos filas dejan lugar a una línea de texto chico.
+ */
+export const MIN_ANCHO = 2;
+export const MIN_ALTO = 2;
 
 /** Reparte `total` en `partes` enteros que suman `total` (los primeros, uno más). */
 function repartir(total: number, partes: number): number[] {

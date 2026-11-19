@@ -3,7 +3,7 @@
 // de un gráfico cuando cambia de tipo. Sin React: se prueba aparte.
 
 import type {
-  Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, FormaGrafico, IdPeriodo, Presentacion, Serie, Ubicacion,
+  Bloque, BloqueGrafico, Cifra, Columna, ConjuntoDatos, Diapositiva, Disposicion, FormaGrafico, IdPeriodo, PorPeriodo, Presentacion, Serie, Ubicacion,
 } from '../tipos';
 import { hacerLugar, ubicacionesDesde, ubicacionesEfectivas, ubicacionNueva } from '../disposicion';
 import type { ConfigGrafico, Operacion } from './operaciones';
@@ -75,8 +75,12 @@ export function diapositivaNueva(tipo: Diapositiva['tipo'], enUso: Set<string>):
 
 export type TipoNuevo = 'grafico' | 'tabla' | 'texto' | 'cifras' | 'tarjetas';
 
-/** Conjunto con columnas y tres filas de ejemplo, según lo que pide la forma. */
-export function conjuntoEjemplo(id: string, forma: FormaGrafico | 'tabla'): ConjuntoDatos {
+/**
+ * Conjunto con columnas y tres filas de ejemplo, según lo que pide la forma.
+ * Con `periodo`, los datos son propios de cada mes y solo ese mes los tiene
+ * (lo nuevo nace en el mes en que se crea; ver "Lo nuevo, propio del mes").
+ */
+export function conjuntoEjemplo(id: string, forma: FormaGrafico | 'tabla', periodo?: IdPeriodo): ConjuntoDatos {
   const texto = (clave: string, nombre: string): Columna => ({ clave, nombre, tipo: 'texto' });
   const numero = (clave: string, nombre: string): Columna => ({ clave, nombre, tipo: 'numero' });
   let columnas: Columna[];
@@ -98,6 +102,7 @@ export function conjuntoEjemplo(id: string, forma: FormaGrafico | 'tabla'): Conj
       columnas = [texto('col1', 'Categoría'), numero('col2', 'Serie 1'), numero('col3', 'Serie 2')];
       filas = [{ col1: 'Ejemplo A', col2: 12, col3: 8 }, { col1: 'Ejemplo B', col2: 18, col3: 14 }, { col1: 'Ejemplo C', col2: 15, col3: 20 }];
   }
+  if (periodo) return { id, nombre: 'Datos nuevos', columnas, porPeriodo: true, filasPorPeriodo: { [periodo]: filas } };
   return { id, nombre: 'Datos nuevos', columnas, porPeriodo: false, filas };
 }
 
@@ -105,11 +110,13 @@ export function conjuntoEjemplo(id: string, forma: FormaGrafico | 'tabla'): Conj
  * Bloque nuevo. Para gráfico y tabla, `conjunto` es el que mostrará (nuevo o
  * uno que ya existe).
  */
-export function bloqueNuevo(tipo: TipoNuevo, enUso: Set<string>, conjunto?: ConjuntoDatos): Bloque {
+export function bloqueNuevo(tipo: TipoNuevo, enUso: Set<string>, conjunto?: ConjuntoDatos, periodo?: IdPeriodo): Bloque {
   const id = nuevoId('b', enUso);
-  if (tipo === 'texto') return { id, tipo, contenido: { porPeriodo: false, valor: 'Escribe aquí el texto.' } };
-  if (tipo === 'cifras') return { id, tipo, cifras: { porPeriodo: false, valor: [{ etiqueta: 'Indicador', valor: '0' }] } };
-  if (tipo === 'tarjetas') return { id, tipo, tarjetas: { porPeriodo: false, valor: [{ titulo: 'Título', texto: 'Escribe aquí el texto.' }] } };
+  // Con `periodo`: propio de cada mes, con contenido solo en ese mes.
+  const dato = <T>(valor: T): PorPeriodo<T> => (periodo ? { porPeriodo: true, valores: { [periodo]: valor } } : { porPeriodo: false, valor });
+  if (tipo === 'texto') return { id, tipo, contenido: dato('Escribe aquí el texto.') };
+  if (tipo === 'cifras') return { id, tipo, cifras: dato([{ etiqueta: 'Indicador', valor: '0' }]) };
+  if (tipo === 'tarjetas') return { id, tipo, tarjetas: dato([{ titulo: 'Título', texto: 'Escribe aquí el texto.' }]) };
   if (!conjunto) throw new Error('Un gráfico o una tabla necesita un conjunto de datos.');
   if (tipo === 'tabla') return { id, tipo, datos: conjunto.id };
   const eje = conjunto.columnas.find((c) => !esNumerica(c)) ?? conjunto.columnas[0];
@@ -348,10 +355,10 @@ export function opsUbicarBloque(d: Diapositiva, bloque: string, ubicacion: Ubica
  * diapositiva pasa a libre si no lo era). Si no hay lugar, se achica lo de
  * abajo para dejar dos filas.
  */
-export function opsInsertarBloque(p: Presentacion, diapositiva: string, tipo: TipoNuevo): { ops: Operacion[]; bloque: Bloque } | null {
+export function opsInsertarBloque(p: Presentacion, diapositiva: string, tipo: TipoNuevo, periodo?: IdPeriodo): { ops: Operacion[]; bloque: Bloque } | null {
   const d = p.diapositivas.find((x) => x.id === diapositiva);
   if (!d) return null;
-  const agregado = opsAgregarBloque(p, diapositiva, tipo);
+  const agregado = opsAgregarBloque(p, diapositiva, tipo, 'nuevo', periodo);
   if (!agregado) return null;
   const lugares = lugaresLibres(d);
   const { ubicacion, cambios } = hacerLugar(d.bloques.map((b, i) => ({ id: b.id, ubicacion: lugares[i] })));
@@ -392,7 +399,7 @@ export function opsDuplicarBloque(p: Presentacion, bloque: string): Operacion[] 
  * de ejemplo; si no, el id de un conjunto que ya existe.
  */
 export function opsAgregarBloque(
-  p: Presentacion, diapositiva: string, tipo: TipoNuevo, datos: 'nuevo' | string = 'nuevo',
+  p: Presentacion, diapositiva: string, tipo: TipoNuevo, datos: 'nuevo' | string = 'nuevo', periodo?: IdPeriodo,
 ): { ops: Operacion[]; bloque: Bloque; conjuntoNuevo: string | null } | null {
   const d = p.diapositivas.find((x) => x.id === diapositiva);
   if (!d) return null;
@@ -402,7 +409,7 @@ export function opsAgregarBloque(
   let conjuntoNuevo: string | null = null;
   if (tipo === 'grafico' || tipo === 'tabla') {
     if (datos === 'nuevo') {
-      conjunto = conjuntoEjemplo(nuevoId('c', enUso), tipo === 'tabla' ? 'tabla' : 'barras');
+      conjunto = conjuntoEjemplo(nuevoId('c', enUso), tipo === 'tabla' ? 'tabla' : 'barras', periodo);
       conjuntoNuevo = conjunto.id;
       ops.push({ op: 'conjunto.poner', conjunto });
     } else {
@@ -410,7 +417,7 @@ export function opsAgregarBloque(
       if (!conjunto) return null;
     }
   }
-  const bloque = conLugar(d, bloqueNuevo(tipo, enUso, conjunto));
+  const bloque = conLugar(d, bloqueNuevo(tipo, enUso, conjunto, periodo));
   ops.push({ op: 'bloque.poner', diapositiva: d.id, bloque, despues: d.bloques.at(-1)?.id ?? null });
   ops.push(...opsDisposicionPara(d, d.bloques.length + 1));
   return { ops, bloque, conjuntoNuevo };

@@ -106,6 +106,9 @@ function json<T>(valor: unknown): T {
   return (typeof valor === 'string' ? JSON.parse(valor) : valor) as T;
 }
 
+/** Una pestaña cuenta como "editando" si avisó en los últimos segundos (avisa cada 8). */
+const PRESENCIA_SEGUNDOS = 30;
+
 export function almacenBd(obtenerMotor: () => Promise<Motor>, opciones: OpcionesBd = {}): Almacen {
   const { minutosEntreCopias = 10, topeCopias = 150 } = opciones;
 
@@ -167,6 +170,27 @@ export function almacenBd(obtenerMotor: () => Promise<Motor>, opciones: Opciones
         [id],
       );
       return fila ? Number(fila.revision) : null;
+    },
+
+    async presencia(id, sesion, salir = false) {
+      const m = await motor();
+      if (salir) {
+        await m.consultar(`delete from presencia where presentacion = $1 and sesion = $2`, [id, sesion]);
+      } else {
+        await m.consultar(
+          `insert into presencia (presentacion, sesion, visto) values ($1, $2, now())
+           on conflict (presentacion, sesion) do update set visto = now()`,
+          [id, sesion],
+        );
+      }
+      // Lo viejo se borra de paso (pestañas que se cerraron sin avisar).
+      await m.consultar(`delete from presencia where visto < now() - interval '10 minutes'`);
+      const [fila] = await m.consultar<{ otros: number }>(
+        `select count(*)::int as otros from presencia
+         where presentacion = $1 and sesion <> $2 and visto > now() - interval '${PRESENCIA_SEGUNDOS} seconds'`,
+        [id, sesion],
+      );
+      return Number(fila?.otros ?? 0);
     },
 
     async aplicar(id, revisionBase, ops: Operacion[]): Promise<ResultadoGuardado> {

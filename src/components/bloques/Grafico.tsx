@@ -9,7 +9,7 @@ import { columnaDe } from '@/lib/datos';
 import { formatear } from '@/lib/formato';
 import type { Columna, Fila } from '@/lib/tipos';
 import {
-  anchoTexto, BLANCO, DetalleFijo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, usarAnimar, usarFuenteMedida, SUAVE, TINTA,
+  anchoTexto, BLANCO, L, DetalleFijo, dominioEje, ejeCategorias, lineasReferencia, ejeValores, LINEA, marcaEje, partirTexto, PUNTEADA, usarAnimar, usarFuenteMedida, SUAVE, TINTA,
   type PropsGrafico, type SerieLista,
 } from './graficoComun';
 import { Cascada, Circular, Dispersion } from './GraficosEspeciales';
@@ -90,16 +90,16 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   }, [filas, visibles, apilado]);
   const anchoValores = Math.ceil(
     Math.max(
-      anchoTexto(marcaEje(Math.ceil(extremos.maximo * 1.2), columnaValor), 15),
-      anchoTexto(marcaEje(bloque.rangoEje?.hasta ?? 0, columnaValor), 15),
-      anchoTexto(marcaEje(bloque.rangoEje?.desde ?? 0, columnaValor), 15),
-      anchoTexto(marcaEje(Math.floor(extremos.minimo), columnaValor), 15),
-      anchoTexto(columnaValor?.tipo === 'porcentaje' ? '00,5%' : '0', 15),
+      anchoTexto(marcaEje(Math.ceil(extremos.maximo * 1.2), columnaValor), L(15)),
+      anchoTexto(marcaEje(bloque.rangoEje?.hasta ?? 0, columnaValor), L(15)),
+      anchoTexto(marcaEje(bloque.rangoEje?.desde ?? 0, columnaValor), L(15)),
+      anchoTexto(marcaEje(Math.floor(extremos.minimo), columnaValor), L(15)),
+      anchoTexto(columnaValor?.tipo === 'porcentaje' ? '00,5%' : '0', L(15)),
     ) + 14,
   );
-  const anchoCategorias = Math.ceil(Math.min(380, Math.max(...filas.map((f) => anchoTexto(String(f[bloque.ejeX] ?? ''), 16))) + 16));
+  const anchoCategorias = Math.ceil(Math.min(380, Math.max(...filas.map((f) => anchoTexto(String(f[bloque.ejeX] ?? ''), L(16)))) + 16));
   const anchoEtiqueta = bloque.etiquetas && series[0]
-    ? Math.ceil(Math.max(...filas.map((f) => anchoTexto(formatear(f[series[0].clave], series[0].columna), 16, 600))) + 22)
+    ? Math.ceil(Math.max(...filas.map((f) => anchoTexto(formatear(f[series[0].clave], series[0].columna), L(16), 600))) + 22)
     : 24;
 
 
@@ -111,12 +111,12 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   const ejeAMano = (bloque.forma === 'barras' || bloque.forma === 'combinado')
     && (Boolean(columnaDetalleEje) || Boolean(bloque.resaltar) || filas.length <= 12);
   const porCategoriaEje = ((ancho || 800) - anchoValores - 16) / Math.max(1, filas.length);
-  const letraEje = porCategoriaEje < 66 ? 11.5 : porCategoriaEje < 90 ? 12.5 : 14;
+  const letraEje = L(porCategoriaEje < 66 ? 11.5 : porCategoriaEje < 90 ? 12.5 : 14);
   const renglonesEje = Math.max(1, ...filas.map((f) => partirTexto(String(f[bloque.ejeX] ?? ''), letraEje, Math.max(44, porCategoriaEje - 6), porCategoriaEje < 90 ? 3 : 2).length));
   const esResaltada = (f: Fila | undefined) => Boolean(bloque.resaltar && f && String(f[bloque.resaltar.columna]) === bloque.resaltar.valor);
   const ejeCategoriasBarras = ejeAMano
     ? {
-        ...ejeCategorias,
+        ...ejeCategorias(),
         interval: 0,
         height: columnaDetalleEje || bloque.resaltar ? (columnaDetalleEje ? 74 : 58) : renglonesEje * (letraEje + 2) + 12,
         tick: (t: any) => {
@@ -140,9 +140,10 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
           );
         },
       }
-    : { ...ejeCategorias, minTickGap: 24 };
+    : { ...ejeCategorias(), minTickGap: 24 };
 
-  const globo = (
+  // En el PDF no hay mouse: sin globo; lo que mostraría va escrito debajo.
+  const globo = enPdf ? null : (
     <Tooltip
       cursor={deTiempo ? { stroke: '#CFC6CB', strokeWidth: 1 } : { fill: '#F5EFF2' }}
       isAnimationActive={false}
@@ -158,8 +159,8 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
     grafico = (
       <BarChart data={filas} layout="vertical" margin={{ top: 4, right: anchoEtiqueta, bottom: 0, left: 0 }} barCategoryGap="28%">
         <CartesianGrid horizontal={false} stroke={LINEA} />
-        <XAxis type="number" {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
-        <YAxis type="category" dataKey={bloque.ejeX} width={anchoCategorias} interval={0} {...ejeCategorias} tick={{ fontSize: 16, fill: TINTA }} />
+        <XAxis type="number" {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores()} />
+        <YAxis type="category" dataKey={bloque.ejeX} width={anchoCategorias} interval={0} {...ejeCategorias()} tick={{ fontSize: L(16), fill: TINTA }} />
         {globo}
         {visibles.map((s) => (
           <Bar key={s.clave} dataKey={s.clave} name={s.nombre} fill={s.color} radius={[0, 4, 4, 0]} maxBarSize={26} isAnimationActive={animar} animationDuration={450}>
@@ -167,7 +168,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
               <Cell key={i} fill={String(f[bloque.resaltar!.columna]) === bloque.resaltar!.valor ? tema.primario : tema.neutro} />
             ))}
             {bloque.etiquetas && (
-              <LabelList dataKey={s.clave} position="right" offset={10} fontSize={16} fontWeight={600} fill={TINTA} formatter={(v: any) => formatear(v, s.columna)} />
+              <LabelList dataKey={s.clave} position="right" offset={10} fontSize={L(16)} fontWeight={600} fill={TINTA} formatter={(v: any) => formatear(v, s.columna)} />
             )}
           </Bar>
         ))}
@@ -180,7 +181,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
       <BarChart data={filas} margin={{ top: bloque.etiquetas ? 26 : 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
         <CartesianGrid vertical={false} stroke={LINEA} />
         <XAxis dataKey={bloque.ejeX} {...ejeCategoriasBarras} />
-        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores()} />
         {/* Con varias series, la categoría resaltada lleva una franja de fondo. */}
         {bloque.resaltar && series.length > 1 && filas.filter(esResaltada).map((f, i) => (
           <ReferenceArea key={i} x1={String(f[bloque.ejeX])} x2={String(f[bloque.ejeX])} fill="#FCEEF4" fillOpacity={1} strokeOpacity={0} />
@@ -199,7 +200,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
               <Cell key={i} fill={esResaltada(f) ? tema.primario : tema.neutro} />
             ))}
             {bloque.etiquetas && !apilado && (
-              <LabelList dataKey={s.clave} position="top" offset={8} fontSize={15} fontWeight={600} fill={TINTA} formatter={(v: any) => formatear(v, s.columna)} />
+              <LabelList dataKey={s.clave} position="top" offset={8} fontSize={L(15)} fontWeight={600} fill={TINTA} formatter={(v: any) => formatear(v, s.columna)} />
             )}
           </Bar>
         ))}
@@ -212,7 +213,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
       <ComposedChart data={filas} margin={{ top: bloque.etiquetas ? 26 : 8, right: 16, bottom: 0, left: 0 }} barCategoryGap="24%">
         <CartesianGrid vertical={false} stroke={LINEA} />
         <XAxis dataKey={bloque.ejeX} {...ejeCategoriasBarras} />
-        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [minimo < 0 ? 'auto' : 0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [minimo < 0 ? 'auto' : 0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores()} />
         {globo}
         {visibles.map((s) => (s.tipo === 'lineas' ? (
           <Line
@@ -223,7 +224,7 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
         ) : (
           <Bar key={s.clave} dataKey={s.clave} name={s.nombre} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={animar} animationDuration={450}>
             {bloque.etiquetas && (
-              <LabelList dataKey={s.clave} position="top" offset={8} fontSize={15} fontWeight={600} fill={TINTA} formatter={(v: any) => formatear(v, s.columna)} />
+              <LabelList dataKey={s.clave} position="top" offset={8} fontSize={L(15)} fontWeight={600} fill={TINTA} formatter={(v: any) => formatear(v, s.columna)} />
             )}
           </Bar>
         )))}
@@ -234,8 +235,8 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
     grafico = (
       <RadarChart data={filas} outerRadius="78%" margin={{ top: 8, right: 24, bottom: 8, left: 24 }}>
         <PolarGrid stroke={LINEA} />
-        <PolarAngleAxis dataKey={bloque.ejeX} tick={{ fontSize: 15, fill: TINTA }} />
-        <PolarRadiusAxis angle={90} {...dominioEje(bloque.rangoEje, [0, 'auto'])} axisLine={false} tick={{ fontSize: 13, fill: SUAVE }} tickFormatter={(v: number) => marcaEje(v, columnaValor)} />
+        <PolarAngleAxis dataKey={bloque.ejeX} tick={{ fontSize: L(15), fill: TINTA }} />
+        <PolarRadiusAxis angle={90} {...dominioEje(bloque.rangoEje, [0, 'auto'])} axisLine={false} tick={{ fontSize: L(13), fill: SUAVE }} tickFormatter={(v: number) => marcaEje(v, columnaValor)} />
         {globo}
         {visibles.map((s) => (
           <Radar
@@ -249,8 +250,8 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
     grafico = (
       <AreaChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke={LINEA} />
-        <XAxis dataKey={bloque.ejeX} minTickGap={24} {...ejeCategorias} />
-        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        <XAxis dataKey={bloque.ejeX} minTickGap={24} {...ejeCategorias()} />
+        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, [0, 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores()} />
         {globo}
         {visibles.map((s) => (
           <Area
@@ -266,8 +267,8 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
     grafico = (
       <LineChart data={filas} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke={LINEA} />
-        <XAxis dataKey={bloque.ejeX} minTickGap={24} {...ejeCategorias} />
-        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, ['auto', 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores} />
+        <XAxis dataKey={bloque.ejeX} minTickGap={24} {...ejeCategorias()} />
+        <YAxis width={anchoValores} {...dominioEje(bloque.rangoEje, ['auto', 'auto'])} tickFormatter={(v: number) => marcaEje(v, columnaValor)} {...ejeValores()} />
         {globo}
         {visibles.map((s) => (
           <Line
@@ -281,6 +282,9 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
     );
   }
 
+  // En el PDF la leyenda es solo texto: no se puede tocar.
+  const Leyenda = enPdf ? 'span' : 'button';
+
   return (
     <div ref={caja} className="flex h-full min-h-0 flex-col">
       {series.length > 1 && (
@@ -289,12 +293,14 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
             const oculta = ocultas.has(s.clave);
             return (
               <li key={s.clave}>
-                <button
-                  type="button"
-                  onClick={() => alternar(s.clave)}
-                  aria-pressed={!oculta}
-                  title={oculta ? `Mostrar ${s.nombre}` : `Ocultar ${s.nombre}`}
-                  className={`flex items-center gap-[9px] rounded-full px-[12px] py-[5px] text-[16px] transition-colors hover:bg-fondo-app ${oculta ? 'text-tinta-suave line-through decoration-1' : 'text-tinta'}`}
+                <Leyenda
+                  {...(enPdf ? {} : {
+                    type: 'button' as const,
+                    onClick: () => alternar(s.clave),
+                    'aria-pressed': !oculta,
+                    title: oculta ? `Mostrar ${s.nombre}` : `Ocultar ${s.nombre}`,
+                  })}
+                  className={`flex items-center gap-[9px] rounded-full px-[12px] py-[5px] text-[length:calc(16px*var(--vp-letra,1))] ${enPdf ? '' : 'transition-colors hover:bg-fondo-app'} ${oculta ? 'text-tinta-suave line-through decoration-1' : 'text-tinta'}`}
                 >
                   <span
                     aria-hidden
@@ -309,14 +315,14 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
                   {deTiempo && !oculta && ultima && (
                     <span className="font-semibold">{formatear(ultima[s.clave], s.columna)}</span>
                   )}
-                </button>
+                </Leyenda>
               </li>
             );
           })}
         </ul>
       )}
       {bloque.resaltar && series.length === 1 && (
-        <ul className="mb-[14px] flex gap-x-[24px] text-[16px] text-tinta">
+        <ul className="mb-[14px] flex gap-x-[24px] text-[length:calc(16px*var(--vp-letra,1))] text-tinta">
           <li className="flex items-center gap-[9px]"><span aria-hidden className="h-[12px] w-[12px] rounded-[3px]" style={{ background: tema.primario }} />{bloque.resaltar.valor}</li>
           <li className="flex items-center gap-[9px]"><span aria-hidden className="h-[12px] w-[12px] rounded-[3px]" style={{ background: tema.neutro }} />Los demás</li>
         </ul>
@@ -328,23 +334,29 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
       </div>
       {(() => {
         // Lo que sale al pasar el mouse, escrito debajo: de la entidad
-        // resaltada o del último dato. En el PDF va solo si hay cifras que el
-        // dibujo no muestra (sin mouse no habría cómo verlas).
+        // resaltada (en los benchmark, Presente) o del último dato. En el PDF
+        // va siempre (2026-11-19), con todas las cifras de esa fila.
+        const filaPresente = !bloque.resaltar && !deTiempo && enPdf
+          ? filas.find((f) => conjunto.columnas.some((c) => c.tipo === 'texto' && /\bpresente\b/i.test(String(f[c.clave] ?? ''))))
+          : undefined;
         const fila = bloque.resaltar
           ? filas.find((f) => String(f[bloque.resaltar!.columna]) === bloque.resaltar!.valor)
-          : ultima;
+          : filaPresente ?? ultima;
         if (!fila) return null;
-        const escondidas = columnasDetalle.length > 0 || (!deTiempo && bloque.forma !== 'radar' && !bloque.etiquetas);
-        if (!bloque.detalleFijo && !(enPdf && escondidas)) return null;
+        if (!bloque.detalleFijo && !enPdf) return null;
+        const destacada = Boolean(bloque.resaltar || filaPresente);
         const nombre = formatear(fila[bloque.ejeX], columnaX);
-        // También lo que va debajo de cada barra (la tasa, por ejemplo).
-        const extras = columnaDetalleEje && !columnasDetalle.some((c) => c.clave === columnaDetalleEje.clave)
-          ? [...columnasDetalle, columnaDetalleEje]
-          : columnasDetalle;
+        // También lo que va debajo de cada barra (la tasa, por ejemplo) y, en
+        // el PDF, cada número de la fila que el gráfico no dibuja
+        // (desembolsos, número de desembolsos...).
+        const yaVan = new Set([bloque.ejeX, ...visibles.map((v) => v.clave)]);
+        const deLaFila = enPdf ? conjunto.columnas.filter((c) => c.tipo !== 'texto' && !yaVan.has(c.clave)) : columnasDetalle;
+        // Sin dato se escribe "—" (por ejemplo, Presente sin desembolsos ese mes).
+        const extras = [...deLaFila, ...(columnaDetalleEje && !deLaFila.some((c) => c.clave === columnaDetalleEje.clave) && !yaVan.has(columnaDetalleEje.clave) ? [columnaDetalleEje] : [])];
         return (
-          <p className="mt-[8px] flex shrink-0 flex-wrap items-baseline gap-x-[18px] gap-y-[2px] rounded-[8px] bg-fondo-app px-[12px] py-[6px] text-[16px] leading-[1.35] text-tinta">
-            <span className="font-bold" style={bloque.resaltar ? { color: tema.primario } : undefined}>
-              {nombre}{bloque.resaltar ? '' : ' (último dato)'}
+          <p className="mt-[8px] flex shrink-0 flex-wrap items-baseline gap-x-[18px] gap-y-[2px] rounded-[8px] bg-fondo-app px-[12px] py-[6px] text-[length:calc(16px*var(--vp-letra,1))] leading-[1.35] text-tinta">
+            <span className="font-bold" style={destacada ? { color: tema.primario } : undefined}>
+              {nombre}{destacada ? '' : ' (último dato)'}
             </span>
             {visibles.map((s) => (
               <span key={s.clave}><span className="text-tinta-suave">{s.nombre}</span> <span className="font-semibold">{formatear(fila[s.clave], s.columna)}</span></span>
@@ -382,8 +394,8 @@ function Globo({ activo, entradas, etiqueta, series, total, detalle }: PropsGlob
   const suma = filasGlobo.reduce((acumulado, e) => acumulado + (typeof e.valor === 'number' ? e.valor : 0), 0);
 
   return (
-    <div className="min-w-[220px] rounded-[10px] border border-linea-fuerte bg-white px-[16px] py-[12px] text-[15px] shadow-[0_8px_24px_-8px_rgba(36,26,32,0.25)]">
-      <p className="mb-[8px] text-[16px] font-semibold text-tinta">{etiqueta}</p>
+    <div className="min-w-[220px] rounded-[10px] border border-linea-fuerte bg-white px-[16px] py-[12px] text-[length:calc(15px*var(--vp-letra,1))] shadow-[0_8px_24px_-8px_rgba(36,26,32,0.25)]">
+      <p className="mb-[8px] text-[length:calc(16px*var(--vp-letra,1))] font-semibold text-tinta">{etiqueta}</p>
       <table className="w-full">
         <tbody>
           {filasGlobo.map(({ serie, valor }) => (

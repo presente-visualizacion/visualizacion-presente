@@ -44,6 +44,9 @@ export const TOPES = {
   /** Tamaño de un envío de guardado, en bytes. */
   envio: 256_000,
   operacionesPorEnvio: 200,
+  /** Tamaño de letra, en % (bloque, título de diapositiva y presentación). */
+  letraMinima: 40,
+  letraMaxima: 300,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -62,6 +65,7 @@ const tema = z.strictObject({
   // Ruta del propio sitio o dirección https; nada de `javascript:` ni `data:`.
   logo: z.string().max(300).regex(/^(\/(?!\/)|https:\/\/)/, 'debe ser una ruta del sitio o una dirección https'),
   fuente: z.enum(CLAVES_FUENTE).optional(),
+  letra: z.number().int().min(TOPES.letraMinima).max(TOPES.letraMaxima).optional(),
 }) satisfies z.ZodType<Tema>;
 
 const columna = z.strictObject({
@@ -197,8 +201,11 @@ const ubicacion = z.strictObject({
 
 const fuente = z.enum(CLAVES_FUENTE);
 
+const tamanoLetra = z.number().int().min(TOPES.letraMinima).max(TOPES.letraMaxima);
+
 const marco = {
   fuente: fuente.optional(),
+  letra: tamanoLetra.optional(),
   fondo: fondo.optional(),
   colorFondo: color.optional(),
   colorTexto: color.optional(),
@@ -210,7 +217,7 @@ const marco = {
 // colores, letra): eso lo conserva `aplicar`. Si llega (pestañas abiertas con
 // una versión anterior lo mandaban), se ignora en vez de descartar el cambio.
 const sinMarco = <T extends Record<string, unknown>>(v: T) => {
-  const { fuente: _f, fondo: _fo, colorFondo: _cf, colorTexto: _ct, ubicacion: _u, titulo: _t, nota: _n, ...resto } = v;
+  const { fuente: _f, letra: _l, fondo: _fo, colorFondo: _cf, colorTexto: _ct, ubicacion: _u, titulo: _t, nota: _n, ...resto } = v;
   return resto;
 };
 const configGrafico = z.strictObject({ ...camposGrafico, ...marco }).transform(sinMarco) satisfies z.ZodType<ConfigGrafico, unknown>;
@@ -236,6 +243,7 @@ const diapositiva = z.strictObject({
   disposicion: disposicion.optional(),
   fondo: color.optional(),
   oculta: z.boolean().optional(),
+  letra: tamanoLetra.optional(),
   rejilla: z.literal('fina').optional(),
   bloques: z.array(bloque).max(TOPES.bloquesPorDiapositiva),
 }) satisfies z.ZodType<Diapositiva>;
@@ -277,6 +285,8 @@ const operacion = z.discriminatedUnion('op', [
   z.strictObject({ op: z.literal('diapositiva.fondo'), diapositiva: id, valor: color.nullable() }),
   z.strictObject({ op: z.literal('diapositiva.oculta'), diapositiva: id, valor: z.boolean() }),
   z.strictObject({ op: z.literal('bloque.letra'), bloque: id, valor: fuente.nullable() }),
+  z.strictObject({ op: z.literal('bloque.tamano'), bloque: id, valor: tamanoLetra.nullable() }),
+  z.strictObject({ op: z.literal('diapositiva.tamano'), diapositiva: id, valor: tamanoLetra.nullable() }),
   z.strictObject({ op: z.literal('guardada.poner'), guardada }),
   z.strictObject({ op: z.literal('guardada.quitar'), diapositiva: id }),
   z.strictObject({
