@@ -409,7 +409,16 @@ function MarcoBloque({ bloque, cambiar }: { bloque: Bloque; cambiar: Props['camb
   return (
     <div className="grid gap-2">
       <Campo etiqueta="Título del bloque" valor={bloque.titulo ?? ''} maximo={TOPES.titulo} marcador="Opcional: va arriba, en mayúsculas" onCambiar={(v) => poner(v, bloque.nota ?? '', 'titulo')} />
-      <Campo etiqueta="Nota" valor={bloque.nota ?? ''} maximo={TOPES.titulo} marcador="Opcional: va debajo, en letra chica (fuentes, aclaraciones)" onCambiar={(v) => poner(bloque.titulo ?? '', v, 'nota')} />
+      <Campo
+        etiqueta="Nota"
+        valor={bloque.nota ?? ''}
+        maximo={TOPES.nota}
+        multilinea
+        filas={2}
+        marcador="Opcional: va debajo, en letra chica (fuentes, aclaraciones)"
+        onCambiar={(v) => poner(bloque.titulo ?? '', v, 'nota')}
+        herramientas={(id) => <FormatoSeleccion idCampo={id} valor={bloque.nota ?? ''} onCambiar={(v) => poner(bloque.titulo ?? '', v, 'nota')} />}
+      />
     </div>
   );
 }

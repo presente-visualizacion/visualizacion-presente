@@ -106,24 +106,30 @@ function GraficoSeries({ bloque, conjunto, filas, tema }: Props) {
   // Barras con detalle bajo cada categoría o con una categoría resaltada: el
   // eje se dibuja a mano (dos renglones, el detalle y la resaltada en negrita).
   const columnaDetalleEje = bloque.detalleEje ? columnaDe(conjunto, bloque.detalleEje) : undefined;
-  const ejeAMano = (bloque.forma === 'barras' || bloque.forma === 'combinado') && (Boolean(columnaDetalleEje) || Boolean(bloque.resaltar));
+  // Con pocas categorías (o detalle o resaltado), las etiquetas van todas y en
+  // renglones; si no, Recharts escondía las que no cabían en una línea.
+  const ejeAMano = (bloque.forma === 'barras' || bloque.forma === 'combinado')
+    && (Boolean(columnaDetalleEje) || Boolean(bloque.resaltar) || filas.length <= 12);
+  const porCategoriaEje = ((ancho || 800) - anchoValores - 16) / Math.max(1, filas.length);
+  const letraEje = porCategoriaEje < 66 ? 11.5 : porCategoriaEje < 90 ? 12.5 : 14;
+  const renglonesEje = Math.max(1, ...filas.map((f) => partirTexto(String(f[bloque.ejeX] ?? ''), letraEje, Math.max(44, porCategoriaEje - 6), porCategoriaEje < 90 ? 3 : 2).length));
   const esResaltada = (f: Fila | undefined) => Boolean(bloque.resaltar && f && String(f[bloque.resaltar.columna]) === bloque.resaltar.valor);
   const ejeCategoriasBarras = ejeAMano
     ? {
         ...ejeCategorias,
         interval: 0,
-        height: columnaDetalleEje ? 74 : 58,
+        height: columnaDetalleEje || bloque.resaltar ? (columnaDetalleEje ? 74 : 58) : renglonesEje * (letraEje + 2) + 12,
         tick: (t: any) => {
           const fila: Fila | undefined = filas[t.index] ?? filas.find((f) => String(f[bloque.ejeX]) === String(t.payload?.value));
-          const porCategoria = ((ancho || 800) - anchoValores - 16) / Math.max(1, filas.length);
-          const letra = porCategoria < 66 ? 11.5 : porCategoria < 90 ? 12.5 : 14;
+          const porCategoria = porCategoriaEje;
+          const letra = letraEje;
           const destacada = esResaltada(fila);
           const renglones = partirTexto(String(t.payload?.value ?? ''), letra, Math.max(44, porCategoria - 6), porCategoria < 90 ? 3 : 2);
           return (
             <g transform={`translate(${t.x},${t.y})`}>
               <text textAnchor="middle" fontSize={letra} fill={destacada ? tema.primario : TINTA} fontWeight={destacada ? 700 : 400}>
                 {renglones.map((r, i) => <tspan key={i} x={0} dy={i === 0 ? letra + 1 : letra + 2}>{r}</tspan>)}
-                {renglones.length === 1 && <tspan x={0} dy={letra + 2}>{' '}</tspan>}
+                {renglones.length === 1 && (columnaDetalleEje || bloque.resaltar) && <tspan x={0} dy={letra + 2}>{' '}</tspan>}
                 {columnaDetalleEje && fila && (
                   <tspan x={0} dy={letra + 5} fontSize={letra - 1} fontWeight={destacada ? 700 : 400} fill={destacada ? tema.primario : SUAVE}>
                     {`${columnaDetalleEje.nombre} ${formatear(fila[columnaDetalleEje.clave], columnaDetalleEje)}`}

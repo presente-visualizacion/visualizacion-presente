@@ -128,7 +128,7 @@ function VistaBloqueInterior({ bloque, ...contexto }: Contexto & { bloque: Bloqu
         <h3 className="mb-[12px] shrink-0 text-[16px] font-bold uppercase tracking-[0.06em] text-primario">{conMes(bloque.titulo, contexto.periodo)}</h3>
       )}
       <div className="min-h-0 flex-1">{contenido}</div>
-      {bloque.nota && <p className="mt-[8px] shrink-0 text-[13px] leading-[1.4] text-tinta-suave">{conMes(bloque.nota, contexto.periodo)}</p>}
+      {bloque.nota && <p className="mt-[8px] shrink-0 text-[13px] leading-[1.4] text-tinta-suave"><ConNegritas texto={conMes(bloque.nota, contexto.periodo)} /></p>}
     </div>
   );
   const { colorFondo } = bloque;

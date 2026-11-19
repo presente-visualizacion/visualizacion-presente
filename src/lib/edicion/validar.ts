@@ -34,6 +34,8 @@ export const TOPES = {
   tarjetaTexto: 600,
   calculadasPorTabla: 12,
   conjuntos: 300,
+  /** Nota bajo un bloque (fuentes, aclaraciones). */
+  nota: 600,
   /** Diapositivas quitadas que se guardan para volver a ponerlas. */
   guardadas: 60,
   /** Tamaño de la presentación completa, en bytes de su JSON. */
@@ -200,7 +202,7 @@ const marco = {
   colorTexto: color.optional(),
   ubicacion: ubicacion.optional(),
   titulo: z.string().max(TOPES.titulo).optional(),
-  nota: z.string().max(TOPES.titulo).optional(),
+  nota: z.string().max(TOPES.nota).optional(),
 };
 const configGrafico = z.strictObject(camposGrafico) satisfies z.ZodType<ConfigGrafico>;
 const configTabla = z.strictObject(camposTabla) satisfies z.ZodType<ConfigTabla>;
@@ -258,7 +260,7 @@ const operacion = z.discriminatedUnion('op', [
   z.strictObject({ op: z.literal('datos.filas'), conjunto: id, periodo: idPeriodo.nullable(), valor: filas.nullable() }),
   z.strictObject({ op: z.literal('tarjetas.valor'), bloque: id, periodo: idPeriodo.nullable(), valor: tarjetas.nullable() }),
   z.strictObject({
-    op: z.literal('bloque.marco'), bloque: id, titulo: z.string().max(TOPES.titulo), nota: z.string().max(TOPES.titulo),
+    op: z.literal('bloque.marco'), bloque: id, titulo: z.string().max(TOPES.titulo), nota: z.string().max(TOPES.nota),
   }),
   z.strictObject({ op: z.literal('bloque.aspecto'), bloque: id, fondo: fondo.nullable(), ubicacion: ubicacion.nullable() }),
   z.strictObject({ op: z.literal('bloque.colores'), bloque: id, fondo: color.nullable(), texto: color.nullable() }),

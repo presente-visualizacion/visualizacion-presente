@@ -1716,7 +1716,21 @@ diapositivas 11 y 20 (CDATs) en hoja más larga, unos 6 MB, unos 20 segundos.
 
 ### Plantilla de la Ley de Rescate
 
-- "Nueva presentación" → "Partir de: Colombia: Ley de Rescate Económico"
+- **2026-11-19: pasó a la versión 3** del prototipo de la usuaria
+  (`ley-rescate-slide-v3.html`), que reemplaza a la v2: fila "Qué es" con los
+  cinco ejes del proyecto, cifras nuevas (ajuste fiscal a 2030, deuda neta
+  del GNC, intereses / recaudo, TRM), gráfico "lo que proponía el texto
+  radicado" con hogar y vehículo y el anuncio del 18-nov, la lectura de
+  Seguros Presente como nota del gráfico, y los textos nuevos del mercado y
+  del sector. Las fuentes van como nota bajo las cifras (abajo no cabían).
+  Columna derecha de 6 columnas. Las presentaciones ya creadas con la v2 no
+  cambian.
+- Para que entrara: las notas de bloque admiten hasta 600 caracteres (antes
+  200, igual que el título), negrita y colores, y en el panel tienen cuadro de
+  dos renglones con los botones de formato. En gráficos de barras con 12
+  categorías o menos, todas las etiquetas del eje se ven, en renglones (antes
+  Recharts escondía las que no cabían en una línea).
+- (v2) "Nueva presentación" → "Partir de: Colombia: Ley de Rescate Económico"
   (`presentacionLeyRescate` en `nueva.ts`, clave `ley-rescate`): portada, la
   diapositiva y cierre. Pasada a bloques desde el prototipo de la usuaria
   (`ley-rescate-slide-v2.html`): franja de cifras (filas 1-2), gráfico de

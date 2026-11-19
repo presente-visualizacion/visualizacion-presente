@@ -189,11 +189,12 @@ export function presentacionParaguay({ nombre, periodo, tema, ahora = new Date()
 
 // Plantilla "Ley de Rescate Económico" (Colombia, PL 477 de 2026).
 //
-// Pasada a bloques desde el prototipo que armó la usuaria (ley-rescate-slide-
-// v2.html, 18-nov-2026): franja de cifras, IVA de pólizas y seguros en cada
-// versión del proyecto, reacción del mercado e implicaciones para el sector.
-// Cifras públicas de prensa y fuentes oficiales citadas en la diapositiva; no
-// son datos de Presente. Ver "Plantilla de la Ley de Rescate" en PLAN.md.
+// Pasada a bloques desde el prototipo de la usuaria (ley-rescate-slide-v3.html,
+// 19-nov-2026; reemplaza a la v2 del 18-nov): qué es el proyecto y sus cinco
+// ejes, franja de cifras, IVA de pólizas y seguros (lo que proponía el texto
+// radicado y el anuncio del 18-nov), la lectura de Seguros Presente, reacción
+// del mercado e implicaciones para el sector. Cifras públicas de las fuentes
+// citadas en la diapositiva. Ver "Plantilla de la Ley de Rescate" en PLAN.md.
 
 export function presentacionLeyRescate({ nombre, periodo, tema, ahora = new Date().toISOString() }: {
   nombre: string;
@@ -209,18 +210,18 @@ export function presentacionLeyRescate({ nombre, periodo, tema, ahora = new Date
     datos: {
       [iva]: {
         id: iva,
-        nombre: 'IVA de pólizas y seguros por versión del proyecto',
+        nombre: 'IVA de pólizas y seguros: hoy, texto radicado y anuncio del 18-nov',
         porPeriodo: false,
         columnas: [
           { clave: 'producto', nombre: 'Producto', tipo: 'texto' },
           { clave: 'hoy', nombre: 'Hoy', tipo: 'porcentaje', decimales: 0 },
           { clave: 'radicado', nombre: 'Texto radicado (desde 2028)', tipo: 'porcentaje', decimales: 0 },
-          { clave: 'ajustes', nombre: 'Tras ajustes del 18-nov', tipo: 'porcentaje', decimales: 0 },
+          { clave: 'anuncio', nombre: 'Anuncio 18-nov', tipo: 'porcentaje', decimales: 0 },
         ],
         filas: [
-          { producto: 'Pólizas de salud', hoy: 5, radicado: 0, ajustes: 5 },
-          { producto: 'Medicina prepagada', hoy: 5, radicado: 19, ajustes: 5 },
-          { producto: 'Seguro agropecuario', hoy: 5, radicado: 19, ajustes: null },
+          { producto: 'Pólizas de salud (Sura)', hoy: 5, radicado: 0, anuncio: 5 },
+          { producto: 'Prepagada (Coomeva)', hoy: 5, radicado: 19, anuncio: 5 },
+          { producto: 'Hogar y vehículo', hoy: 19, radicado: 19, anuncio: 19 },
         ],
       },
     },
@@ -234,45 +235,47 @@ export function presentacionLeyRescate({ nombre, periodo, tema, ahora = new Date
         disposicion: 'libre',
         bloques: [
           {
+            id: 'b-ley-rescate-que-es',
+            tipo: 'texto',
+            contenido: {
+              porPeriodo: false,
+              valor:
+                '**{magenta:QUÉ ES}**  Proyecto del Gobierno De la Espriella que combina **recorte del gasto** y **cambios tributarios** para frenar la deuda y financiar el presupuesto de 2027: ' +
+                '**{magenta:1}** Fiscal · **{magenta:2}** Social: devolución del IVA a 19 M de personas · **{magenta:3}** Salud · **{magenta:4}** Inversión: régimen RUGE · **{magenta:5}** Anticorrupción y menos burocracia.',
+            },
+            ubicacion: { columna: 1, ancho: 12, fila: 1, alto: 1 },
+          },
+          {
             id: 'b-ley-rescate-cifras',
             tipo: 'cifras',
             cifras: {
               porPeriodo: false,
               valor: [
-                { etiqueta: 'Ajuste a 2030', valor: '4,7 % del PIB', detalle: '~70 % vía recorte de gasto' },
-                { etiqueta: 'Deuda pública', valor: '+50 %', detalle: 'De $800 a $1.200 billones' },
-                { etiqueta: 'Pago de intereses', valor: '1 de cada 3', detalle: 'pesos de impuestos' },
+                { etiqueta: 'Ajuste fiscal a 2030', valor: '4,7 % del PIB', detalle: '~70 % por reducción del Estado' },
+                { etiqueta: 'Deuda neta del GNC', valor: '58,6 % del PIB', detalle: 'en 2025' },
+                { etiqueta: 'Intereses / recaudo', valor: '28,6 %', detalle: 'de los impuestos en 2025' },
                 { etiqueta: 'Dólar (TRM)', valor: '+4,7 %', detalle: 'desde la radicación: $3.310' },
               ],
             },
-            ubicacion: { columna: 1, ancho: 12, fila: 1, alto: 2 },
+            nota: 'Fuentes: PL 477/2026 y exposición de motivos (Cámara); ANDI; BDO; Superfinanciera; FMI; Fasecolda; Presente Agencia de Seguros; Portafolio e Infobae. Proyecto en trámite.',
+            ubicacion: { columna: 1, ancho: 12, fila: 2, alto: 2 },
           },
           {
             id: 'b-ley-rescate-iva',
             tipo: 'grafico',
-            titulo: 'Pólizas y seguros: tarifa de IVA en cada versión del proyecto',
-            nota: 'Pólizas de salud y planes complementarios. Excluida = 0 %. Agropecuario tras los ajustes: por confirmar.',
+            titulo: 'Pólizas y seguros: lo que proponía el texto radicado (IVA)',
+            nota:
+              '**{magenta:Seguros Presente:}** intermedia pólizas de salud y prepagada, las líneas que tocaba el proyecto. La prepagada habría subido hasta ~13 % para el asociado; las pólizas de salud y planes complementarios quedarían sin IVA, pero sin poder descontarlo de sus costos (excluido ≠ exento). Tras el 18-nov, no cambian. Hogar y vehículo no cambian.',
             datos: iva,
             forma: 'barras',
             ejeX: 'producto',
             series: [
               { clave: 'hoy', color: '#B7C3CE' },
               { clave: 'radicado', color: '#D4145A' },
-              { clave: 'ajustes', color: '#2A2330' },
+              { clave: 'anuncio', color: '#2A2330' },
             ],
             etiquetas: true,
-            ubicacion: { columna: 1, ancho: 7, fila: 3, alto: 4 },
-          },
-          {
-            id: 'b-ley-rescate-fasecolda',
-            tipo: 'texto',
-            contenido: {
-              porPeriodo: false,
-              valor:
-                '**Fasecolda:** si las pólizas de salud quedan excluidas, no podrían descontar el IVA de sus costos y podrían encarecerse. El 18-nov el Gobierno retiró el cambio a seguros de salud y prepagada.\n\n' +
-                'Fuentes: PL 477/2026 (MinHacienda) vía ANDI; Superintendencia Financiera (TRM 29-oct y 18-nov); FMI vía El Colombiano; Fasecolda vía Blu Radio; Portafolio, Infobae y La República (18-nov-26).',
-            },
-            ubicacion: { columna: 1, ancho: 7, fila: 7, alto: 2 },
+            ubicacion: { columna: 1, ancho: 6, fila: 4, alto: 5 },
           },
           {
             id: 'b-ley-rescate-mercado',
@@ -281,12 +284,12 @@ export function presentacionLeyRescate({ nombre, periodo, tema, ahora = new Date
             contenido: {
               porPeriodo: false,
               valor:
-                '**{magenta:CÓMO REACCIONÓ EL MERCADO}**\n\n' +
+                '**{magenta:CÓMO REACCIONÓ EL MERCADO}**\n' +
                 '- El **dólar superó los $3.300** con las dudas fiscales; también pesan EE. UU. y el petróleo.\n' +
-                '- El **FMI respalda el tamaño del ajuste**, pero pide acuerdos en el Congreso.\n' +
+                '- El **FMI ve el tamaño del ajuste como base sólida** para estabilizar la deuda, pero pide acuerdos.\n' +
                 '- Los inversionistas esperan la aprobación para **reducir la prima de riesgo**.',
             },
-            ubicacion: { columna: 8, ancho: 5, fila: 3, alto: 3 },
+            ubicacion: { columna: 7, ancho: 6, fila: 4, alto: 2 },
           },
           {
             id: 'b-ley-rescate-sector',
@@ -295,12 +298,12 @@ export function presentacionLeyRescate({ nombre, periodo, tema, ahora = new Date
             contenido: {
               porPeriodo: false,
               valor:
-                '**QUÉ IMPLICA PARA LAS ENTIDADES FINANCIERAS**\n\n' +
-                '- **Sobretasa de renta de +5 pp** entre 2027 y 2030 (texto radicado).\n' +
-                '- Se grava **todo el rendimiento de los CDT** de personas: captar sería más exigente.\n' +
+                '**QUÉ IMPLICA PARA LAS ENTIDADES FINANCIERAS**\n' +
+                '- **Sobretasa de renta de 5 pp** a financieras y aseguradoras: hoy vence en 2027 y se **prorrogaría hasta 2030**.\n' +
+                '- Fin del beneficio del **componente inflacionario** de rendimientos de personas: más carga para algunos ahorradores.\n' +
                 '- Más retención a asalariados: **vigilar la morosidad** de la cartera.',
             },
-            ubicacion: { columna: 8, ancho: 5, fila: 6, alto: 3 },
+            ubicacion: { columna: 7, ancho: 6, fila: 6, alto: 3 },
           },
         ],
       },
